@@ -48,7 +48,10 @@ def create_report(
         status=request.status,
     )
 
-    return Report.model_validate(report, from_attributes=True)
+    return Report.model_validate(
+        report,
+        from_attributes=True,
+    )
 
 
 @router.get(
@@ -73,7 +76,10 @@ def get_report_by_user_and_period(
             detail="Report not found",
         )
 
-    return Report.model_validate(report, from_attributes=True)
+    return Report.model_validate(
+        report,
+        from_attributes=True,
+    )
 
 
 @router.get(
@@ -82,11 +88,19 @@ def get_report_by_user_and_period(
 )
 def get_reports_by_user_id(
     user_id: str,
-    service: Annotated[ReportService, Depends(get_report_service)],
+    report_type: Annotated[ReportType | None, Query()] = None,
+    service: Annotated[ReportService, Depends(get_report_service)] = None,
 ) -> list[Report]:
-    reports = service.get_reports_by_user_id(user_id)
+    reports = service.get_reports_by_user_id(
+        user_id,
+        report_type=report_type,
+    )
+
     return [
-        Report.model_validate(report, from_attributes=True)
+        Report.model_validate(
+            report,
+            from_attributes=True,
+        )
         for report in reports
     ]
 
@@ -107,4 +121,7 @@ def get_report_by_id(
             detail="Report not found",
         )
 
-    return Report.model_validate(report, from_attributes=True)
+    return Report.model_validate(
+        report,
+        from_attributes=True,
+    )

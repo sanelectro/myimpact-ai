@@ -201,3 +201,51 @@ def test_create_report_with_explicit_version_and_status():
 
     session.add.assert_called_once_with(result)
     session.flush.assert_called_once()
+    
+    
+    
+def test_get_by_user_id_filters_by_report_type():
+    session = MagicMock(spec=Session)
+
+    report_1 = MagicMock(spec=ReportDB)
+    report_2 = MagicMock(spec=ReportDB)
+
+    query = session.query.return_value
+    user_filtered_query = query.filter.return_value
+    type_filtered_query = user_filtered_query.filter.return_value
+    type_filtered_query.all.return_value = [report_1, report_2]
+
+    repository = ReportRepository(session)
+
+    result = repository.get_by_user_id(
+        "user-123",
+        report_type=ReportType.MONTHLY_IMPACT,
+    )
+
+    assert result == [report_1, report_2]
+
+    session.query.assert_called_once_with(ReportDB)
+    assert query.filter.call_count == 1
+    assert user_filtered_query.filter.call_count == 1
+    type_filtered_query.all.assert_called_once()
+    
+    
+def test_get_by_user_id_without_report_type_returns_all_reports():
+    session = MagicMock(spec=Session)
+
+    report_1 = MagicMock(spec=ReportDB)
+    report_2 = MagicMock(spec=ReportDB)
+
+    query = session.query.return_value
+    filtered_query = query.filter.return_value
+    filtered_query.all.return_value = [report_1, report_2]
+
+    repository = ReportRepository(session)
+
+    result = repository.get_by_user_id("user-123")
+
+    assert result == [report_1, report_2]
+
+    session.query.assert_called_once_with(ReportDB)
+    query.filter.assert_called_once()
+    filtered_query.all.assert_called_once()

@@ -14,12 +14,20 @@ class ReportRepository(BaseRepository):
     def get_by_id(self, report_id: str) -> ReportDB | None:
         return self.session.get(ReportDB, report_id)
 
-    def get_by_user_id(self, user_id: str) -> list[ReportDB]:
-        return (
+    def get_by_user_id(
+        self,
+        user_id: str,
+        report_type: ReportType | None = None,
+    ) -> list[ReportDB]:
+        query = (
             self.session.query(ReportDB)
             .filter(ReportDB.user_id == user_id)
-            .all()
         )
+
+        if report_type is not None:
+            query = query.filter(ReportDB.report_type == report_type)
+
+        return query.all()
 
     def get_by_user_id_and_period(
         self,

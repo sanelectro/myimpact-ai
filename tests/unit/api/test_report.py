@@ -78,3 +78,48 @@ def test_get_report_by_user_and_period_returns_404():
         assert response.status_code == 404
     finally:
         app.dependency_overrides.clear()
+
+def test_get_reports_by_user_id_with_report_type():
+    service = MagicMock(spec=ReportService)
+    service.get_reports_by_user_id.return_value = [_report()]
+
+    app.dependency_overrides[get_report_service] = lambda: service
+
+    try:
+        response = client.get(
+            "/reports/user/user-1",
+            params={"report_type": "monthly_impact"},
+        )
+
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+        assert response.json()[0]["report_type"] == "monthly_impact"
+
+        service.get_reports_by_user_id.assert_called_once_with(
+            "user-1",
+            report_type=ReportType.MONTHLY_IMPACT,
+        )
+    finally:
+        app.dependency_overrides.clear()
+        
+        
+def test_get_reports_by_user_id_without_report_type():
+    service = MagicMock(spec=ReportService)
+    service.get_reports_by_user_id.return_value = [_report()]
+
+    app.dependency_overrides[get_report_service] = lambda: service
+
+    try:
+        response = client.get("/reports/user/user-1")
+
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+
+        service.get_reports_by_user_id.assert_called_once_with(
+            "user-1",
+            report_type=None,
+        )
+    finally:
+        app.dependency_overrides.clear()
+        
+        

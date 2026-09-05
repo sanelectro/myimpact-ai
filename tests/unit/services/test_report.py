@@ -102,7 +102,10 @@ def test_get_reports_by_user_id():
     service.repository = repository
 
     assert service.get_reports_by_user_id("user-1") == expected
-    repository.get_by_user_id.assert_called_once_with("user-1")
+    repository.get_by_user_id.assert_called_once_with(
+        "user-1",
+        report_type=None,
+    )
 
 
 def test_get_report_by_user_and_period():
@@ -127,3 +130,50 @@ def test_get_report_by_user_and_period():
         period_start,
         period_end,
     )
+
+def test_get_reports_by_user_id_with_report_type():
+    session = MagicMock(spec=Session)
+    repository = MagicMock(spec=ReportRepository)
+
+    expected_reports = [
+        MagicMock(spec=ReportDB),
+        MagicMock(spec=ReportDB),
+    ]
+    repository.get_by_user_id.return_value = expected_reports
+
+    service = ReportService(session)
+    service.repository = repository
+
+    result = service.get_reports_by_user_id(
+        "user-123",
+        report_type=ReportType.MONTHLY_IMPACT,
+    )
+
+    assert result == expected_reports
+
+    repository.get_by_user_id.assert_called_once_with(
+        "user-123",
+        report_type=ReportType.MONTHLY_IMPACT,
+    )
+    session.commit.assert_not_called()
+    
+    
+def test_get_reports_by_user_id_without_report_type():
+    session = MagicMock(spec=Session)
+    repository = MagicMock(spec=ReportRepository)
+
+    expected_reports = [MagicMock(spec=ReportDB)]
+    repository.get_by_user_id.return_value = expected_reports
+
+    service = ReportService(session)
+    service.repository = repository
+
+    result = service.get_reports_by_user_id("user-123")
+
+    assert result == expected_reports
+
+    repository.get_by_user_id.assert_called_once_with(
+        "user-123",
+        report_type=None,
+    )
+    session.commit.assert_not_called()

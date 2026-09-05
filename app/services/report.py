@@ -8,7 +8,6 @@ from app.models.report import ReportStatus, ReportType
 from app.repositories.report import ReportRepository
 from app.services.base import BaseService
 
-
 class ReportService(BaseService):
     def __init__(self, session: Session):
         super().__init__(session)
@@ -41,8 +40,15 @@ class ReportService(BaseService):
     def get_report_by_id(self, report_id: str) -> ReportDB | None:
         return self.repository.get_by_id(report_id)
 
-    def get_reports_by_user_id(self, user_id: str) -> list[ReportDB]:
-        return self.repository.get_by_user_id(user_id)
+    def get_reports_by_user_id(
+        self,
+        user_id: str,
+        report_type: ReportType | None = None,
+    ) -> list[ReportDB]:
+        return self.repository.get_by_user_id(
+            user_id,
+            report_type=report_type,
+        )
 
     def get_report_by_user_and_period(
         self,
