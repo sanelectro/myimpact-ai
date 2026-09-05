@@ -1,12 +1,11 @@
+from datetime import UTC
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_mapping import EvidenceMappingDB
-from app.repositories.evidence_mapping import EvidenceMappingRepository
-from datetime import UTC, datetime
-
 from app.models.evidence_mapping import EvidenceRelevance
+from app.repositories.evidence_mapping import EvidenceMappingRepository
 
 
 def test_get_by_id_returns_mapping():
@@ -40,28 +39,6 @@ def test_get_by_id_returns_none_when_not_found():
         EvidenceMappingDB,
         "missing-mapping",
     )
-    
-    
-def test_get_by_evidence_id_returns_mappings():
-    session = MagicMock(spec=Session)
-
-    mapping_1 = MagicMock(spec=EvidenceMappingDB)
-    mapping_2 = MagicMock(spec=EvidenceMappingDB)
-
-    expected_mappings = [mapping_1, mapping_2]
-
-    query = session.query.return_value
-    filtered_query = query.filter.return_value
-    filtered_query.all.return_value = expected_mappings
-
-    repository = EvidenceMappingRepository(session)
-
-    result = repository.get_by_evidence_id("evidence-123")
-
-    assert result == expected_mappings
-    session.query.assert_called_once_with(EvidenceMappingDB)
-    query.filter.assert_called_once()
-    filtered_query.all.assert_called_once()
     
     
 def test_get_by_evidence_id_returns_mappings():
@@ -138,33 +115,7 @@ def test_get_by_goal_id_returns_empty_list_when_not_found():
     session.query.assert_called_once_with(EvidenceMappingDB)
     query.filter.assert_called_once()
     filtered_query.all.assert_called_once()
-    
-def test_get_by_evidence_and_goal_returns_mapping():
-    session = MagicMock(spec=Session)
-    expected_mapping = MagicMock(spec=EvidenceMappingDB)
 
-    query = session.query.return_value
-    filtered_query = query.filter.return_value
-    filtered_query.first.return_value = expected_mapping
-
-    repository = EvidenceMappingRepository(session)
-
-    result = repository.get_by_evidence_and_goal(
-        "evidence-123",
-        "goal-123",
-    )
-
-    assert result is expected_mapping
-    session.query.assert_called_once_with(EvidenceMappingDB)
-    query.filter.assert_called_once()
-    filtered_query.first.assert_called_once()
-
-    filter_arguments = query.filter.call_args.args
-
-    assert len(filter_arguments) == 2
-    assert filter_arguments[0].right.value == "evidence-123"
-    assert filter_arguments[1].right.value == "goal-123"
-    
 def test_get_by_evidence_and_goal_returns_mapping():
     session = MagicMock(spec=Session)
     expected_mapping = MagicMock(spec=EvidenceMappingDB)

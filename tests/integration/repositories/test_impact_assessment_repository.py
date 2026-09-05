@@ -63,7 +63,7 @@ def test_create_and_get_impact_assessment():
 
         repository = ImpactAssessmentRepository(session)
 
-        assessment = repository.create(
+        repository.create(
             assessment_id=assessment_id,
             evidence_id=evidence_id,
             goal_id=goal_id,

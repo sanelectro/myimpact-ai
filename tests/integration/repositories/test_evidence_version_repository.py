@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
-from sqlalchemy.exc import IntegrityError
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 
 from app.db.models.evidence import EvidenceDB
 from app.db.models.evidence_version import EvidenceVersionDB

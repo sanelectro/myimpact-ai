@@ -1,5 +1,7 @@
-from sqlalchemy.orm import Session
 from datetime import UTC, datetime
+
+from sqlalchemy.orm import Session
+
 from app.db.models.impact_assessment import ImpactAssessmentDB
 from app.models.impact_assessment import ImpactType
 from app.repositories.base import BaseRepository

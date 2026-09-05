@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 
 from app.db.models.evidence import EvidenceDB
 from app.db.models.evidence_mapping import EvidenceMappingDB
@@ -14,7 +15,7 @@ from app.models.evidence_mapping import EvidenceRelevance
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.evidence_mapping import EvidenceMappingRepository
 from app.repositories.goal import GoalRepository
-from sqlalchemy.exc import IntegrityError
+
 
 @pytest.mark.integration
 def test_create_and_get_evidence_mapping():
@@ -63,7 +64,7 @@ def test_create_and_get_evidence_mapping():
 
         repository = EvidenceMappingRepository(session)
 
-        mapping = repository.create(
+        repository.create(
             mapping_id=mapping_id,
             evidence_id=evidence_id,
             goal_id=goal_id,

@@ -1,9 +1,10 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from app.db.models.user import UserDB
-from app.utils.email import normalize_email
 from app.repositories.base import BaseRepository
-from datetime import UTC, datetime
+from app.utils.email import normalize_email
 
 
 class UserRepository(BaseRepository):

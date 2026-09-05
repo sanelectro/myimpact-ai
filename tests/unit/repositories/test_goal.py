@@ -1,14 +1,11 @@
+from datetime import UTC, date, datetime
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
-from app.repositories.goal import GoalRepository
-
-from datetime import UTC, date, datetime
-from unittest.mock import MagicMock
-
 from app.models.goal import GoalStatus
+from app.repositories.goal import GoalRepository
 
 
 def test_get_by_id_returns_goal():

@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
@@ -7,7 +8,6 @@ from app.db.models.user import UserDB
 from app.db.session import SessionLocal
 from app.repositories.user import UserRepository
 
-import pytest
 
 @pytest.mark.integration
 def test_create_and_get_user():

@@ -36,7 +36,7 @@ def test_create_and_get_evidence():
 
         captured_at = datetime.now(UTC)
 
-        evidence = repository.create(
+        repository.create(
             evidence_id=evidence_id,
             user_id=user_id,
             source_type=EvidenceSourceType.GITHUB,

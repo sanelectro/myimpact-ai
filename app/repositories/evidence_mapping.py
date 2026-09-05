@@ -1,9 +1,10 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.models.evidence_mapping import EvidenceRelevance
 from app.repositories.base import BaseRepository
-from datetime import UTC, datetime
 
 
 class EvidenceMappingRepository(BaseRepository):

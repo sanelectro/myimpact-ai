@@ -1,5 +1,4 @@
 from datetime import UTC, date
-
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session

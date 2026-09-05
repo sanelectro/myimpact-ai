@@ -1,12 +1,11 @@
+from datetime import UTC
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
 
 from app.db.models.impact_assessment import ImpactAssessmentDB
-from app.repositories.impact_assessment import ImpactAssessmentRepository
-from datetime import UTC
-
 from app.models.impact_assessment import ImpactType
+from app.repositories.impact_assessment import ImpactAssessmentRepository
 
 
 def test_get_by_id_returns_impact_assessment():

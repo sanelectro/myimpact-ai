@@ -1,10 +1,11 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.repositories.evidence_version import EvidenceVersionRepository
-from datetime import UTC, datetime
+
 
 def test_get_by_id_returns_evidence_version():
     session = MagicMock(spec=Session)

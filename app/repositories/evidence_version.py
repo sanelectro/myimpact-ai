@@ -1,8 +1,10 @@
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.repositories.base import BaseRepository
-from datetime import UTC, datetime
+
 
 class EvidenceVersionRepository(BaseRepository):
     def __init__(self, session: Session):
