@@ -8,7 +8,6 @@ from app.db.models.user import UserDB
 from app.main import app
 from app.services.user import UserService
 
-
 client = TestClient(app)
 
 def test_create_user():

@@ -8,7 +8,6 @@ from app.db.models.user import UserDB
 from app.db.session import SessionLocal
 from app.main import app
 
-
 client = TestClient(app)
 
 

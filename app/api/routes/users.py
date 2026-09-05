@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -5,12 +7,11 @@ from app.db.session import get_db
 from app.models.user import User, UserCreate
 from app.services.user import UserService
 
-
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 def get_user_service(
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> UserService:
     return UserService(db)
 
@@ -22,11 +23,10 @@ def get_user_service(
 )
 def create_user(
     user_data: UserCreate,
-    service: UserService = Depends(get_user_service),
+    service: Annotated[UserService, Depends(get_user_service)],
 ) -> User:
     user = service.create_user(user_data)
-
-    return User.model_validate(user)
+    return User.model_validate(user, from_attributes=True)
 
 
 @router.get(
@@ -35,7 +35,7 @@ def create_user(
 )
 def get_user_by_email(
     email: str,
-    service: UserService = Depends(get_user_service),
+    service: Annotated[UserService, Depends(get_user_service)],
 ) -> User:
     user = service.get_user_by_email(email)
 
@@ -45,7 +45,7 @@ def get_user_by_email(
             detail="User not found",
         )
 
-    return User.model_validate(user)
+    return User.model_validate(user, from_attributes=True)
 
 
 @router.get(
@@ -54,7 +54,7 @@ def get_user_by_email(
 )
 def get_user_by_id(
     user_id: str,
-    service: UserService = Depends(get_user_service),
+    service: Annotated[UserService, Depends(get_user_service)],
 ) -> User:
     user = service.get_user_by_id(user_id)
 
@@ -64,4 +64,4 @@ def get_user_by_id(
             detail="User not found",
         )
 
-    return User.model_validate(user)
+    return User.model_validate(user, from_attributes=True)
