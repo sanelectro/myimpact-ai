@@ -18,6 +18,9 @@ class Settings(BaseSettings):
 
     ai_service_host: str = "127.0.0.1"
     ai_service_port: int = 8000
+    
+    # Application-DB
+    database_url: str 
 
     # LLM
     llm_provider: str = "groq"
@@ -39,8 +42,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
-
-
+    
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

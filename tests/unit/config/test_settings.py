@@ -17,7 +17,7 @@ def test_llm_provider_is_configured():
 
     settings = get_settings()
 
-    assert settings.llm_provider in LLMProvider
+    assert settings.llm_provider in [provider.value for provider in LLMProvider]
 
 def test_groq_configuration():
 
