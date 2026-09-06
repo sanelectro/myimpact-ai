@@ -31,7 +31,7 @@ def test_document_repository_create_and_read():
 
         repository = DocumentRepository(session)
 
-        document = repository.create(
+        repository.create(
             document_id=document_id,
             user_id=user_id,
             document_type=DocumentType.GOAL,
