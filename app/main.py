@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.api.routes.document import router as documents_router
 from app.api.routes.evidence import router as evidence_router
 from app.api.routes.evidence_mapping import router as evidence_mapping_router
 from app.api.routes.evidence_version import router as evidence_version_router
@@ -26,7 +27,7 @@ app.include_router(evidence_version_router)
 app.include_router(evidence_mapping_router)
 app.include_router(impact_assessment_router)
 app.include_router(report_router)
-
+app.include_router(documents_router)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
