@@ -26,6 +26,7 @@ def test_create_user():
         return_value="user-123",
     ):
         repository = MagicMock(spec=UserRepository)
+        repository.get_by_email.return_value = None
         repository.create.return_value = expected_user
 
         service = UserService(session)
@@ -124,9 +125,10 @@ def test_create_user_raises_user_already_exists_on_duplicate_email():
     )
 
     repository = MagicMock(spec=UserRepository)
+    repository.get_by_email.return_value = None
 
     database_error = MagicMock()
-    database_error.diag.constraint_name = "ix_users_email"
+    database_error.diag.constraint_name = "uq_users_email"
 
     integrity_error = IntegrityError(
         "duplicate",
@@ -160,6 +162,7 @@ def test_create_user_reraises_other_integrity_error():
     )
 
     repository = MagicMock(spec=UserRepository)
+    repository.get_by_email.return_value = None
 
     database_error = MagicMock()
     database_error.diag.constraint_name = "some_other_constraint"

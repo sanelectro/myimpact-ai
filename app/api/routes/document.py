@@ -1,11 +1,20 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.document import Document, DocumentType
+from app.exceptions import DocumentExtractionError
+from app.models.document import Document, DocumentScopeType, DocumentType
 from app.services.document import DocumentService
 from app.storage.interface import FileStorage
 from app.storage.local import LocalFileStorage
@@ -59,12 +68,13 @@ def _validate_upload(
             detail="Only PDF and DOCX files are supported.",
         )
 
-    allowed_content_types = ALLOWED_DOCUMENT_TYPES[extension]
-
-    if content_type not in allowed_content_types:
+    if content_type not in ALLOWED_DOCUMENT_TYPES[extension]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File content type does not match the supported document type.",
+            detail=(
+                "File content type does not match the supported "
+                "document type."
+            ),
         )
 
     if len(content) == 0:
@@ -90,6 +100,8 @@ def upload_document(
     document_type: Annotated[DocumentType, Form()],
     file: Annotated[UploadFile, File()],
     service: Annotated[DocumentService, Depends(get_document_service)],
+    scope_type: Annotated[DocumentScopeType, Form()] = DocumentScopeType.EMPLOYEE,
+    scope_id: Annotated[str | None, Form()] = None,
 ) -> Document:
     content = file.file.read()
 
@@ -102,10 +114,39 @@ def upload_document(
     document = service.upload_document(
         user_id=user_id,
         document_type=document_type,
+        scope_type=scope_type,
+        scope_id=scope_id,
         file_name=file.filename,
         content_type=file.content_type or "application/octet-stream",
         content=content,
     )
+
+    return Document.model_validate(
+        document,
+        from_attributes=True,
+    )
+
+
+@router.post(
+    "/{document_id}/process",
+    response_model=Document,
+)
+def process_document(
+    document_id: str,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> Document:
+    try:
+        document = service.process_document(document_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except DocumentExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
     return Document.model_validate(
         document,

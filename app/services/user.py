@@ -16,6 +16,12 @@ class UserService(BaseService):
         self.repository = UserRepository(session)
 
     def create_user(self, user_data: UserCreate) -> UserDB:
+        existing_user = self.repository.get_by_email(user_data.email)
+
+        if existing_user is not None:
+            raise UserAlreadyExistsError(
+                f"A user with email '{user_data.email}' already exists."
+            )
         try:
             user = self.repository.create(
                 user_id=str(uuid4()),
@@ -37,7 +43,7 @@ class UserService(BaseService):
                 None,
             )
 
-            if constraint_name == "ix_users_email":
+            if constraint_name == "uq_users_email":
                 raise UserAlreadyExistsError(
                     "A user with this email already exists."
                 ) from exc

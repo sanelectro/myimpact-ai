@@ -1,10 +1,10 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.document import DocumentStatus, DocumentType
+from app.models.document import DocumentScopeType, DocumentStatus, DocumentType
 
 
 class DocumentDB(Base):
@@ -12,6 +12,7 @@ class DocumentDB(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
 
+    # user_id is the uploader/owner. Applicability is determined by scope.
     user_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -22,6 +23,17 @@ class DocumentDB(Base):
     document_type: Mapped[DocumentType] = mapped_column(
         Enum(DocumentType, name="document_type"),
         nullable=False,
+    )
+
+    scope_type: Mapped[DocumentScopeType] = mapped_column(
+        Enum(DocumentScopeType, name="document_scope_type"),
+        nullable=False,
+        default=DocumentScopeType.EMPLOYEE,
+    )
+
+    scope_id: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
     )
 
     file_name: Mapped[str] = mapped_column(
@@ -39,7 +51,36 @@ class DocumentDB(Base):
         nullable=False,
     )
 
-    extracted_text: Mapped[str | None] = mapped_column(Text)
+    # The extracted/normalized Markdown is kept in file storage.
+    extracted_content_path: Mapped[str | None] = mapped_column(
+        String(2000),
+        nullable=True,
+    )
+
+    classification_type: Mapped[DocumentType | None] = mapped_column(
+        Enum(DocumentType, name="document_type"),
+        nullable=True,
+    )
+
+    classification_confidence: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    classification_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    classification_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    classified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     source: Mapped[str | None] = mapped_column(String(500))
 
@@ -68,3 +109,11 @@ class DocumentDB(Base):
     )
 
     user = relationship("UserDB")
+
+    __table_args__ = (
+        Index(
+            "ix_documents_scope",
+            "scope_type",
+            "scope_id",
+        ),
+    )

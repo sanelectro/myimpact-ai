@@ -1095,3 +1095,11 @@ The foundation is now ready for the MyImpact-specific intelligence layer.
 # License
 
 This project is currently under development.
+
+## Database schema ownership
+
+Database schema migrations are owned by the `myimpact-db` repository and executed with Flyway. This repository uses SQLAlchemy only for runtime database access and does not contain Alembic migrations.
+
+## Document processing
+
+Docling converts uploaded PDF/DOCX documents to normalized Markdown. The Markdown is stored in file storage; PostgreSQL stores the `extracted_content_path` pointer and document processing status.

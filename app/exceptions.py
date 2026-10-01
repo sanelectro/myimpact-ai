@@ -6,3 +6,10 @@ class EvidenceMappingAlreadyExistsError(Exception):
     
 class StorageFileNotFoundError(FileNotFoundError):
     """Raised when a requested stored file does not exist."""
+    
+class DocumentExtractionError(RuntimeError):
+    """Raised when text cannot be extracted from a document."""
+
+
+class DocumentClassificationError(RuntimeError):
+    """Raised when a document cannot be classified safely."""

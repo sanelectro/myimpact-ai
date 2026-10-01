@@ -73,18 +73,18 @@ def test_create_user_rejects_duplicate_email():
         )
 
         user_id = first_user.id
+        duplicate_user = UserCreate(
+            name="Second User",
+            email=email.upper(),
+            role="Engineer",
+        )
 
-        with pytest.raises(
-            UserAlreadyExistsError,
-            match="A user with this email already exists.",
-        ):
-            service.create_user(
-                UserCreate(
-                    name="Second User",
-                    email=email.upper(),
-                    role="Engineer",
-                )
-            )
+        with pytest.raises(UserAlreadyExistsError) as error:
+            service.create_user(duplicate_user)
+
+        assert str(error.value) == (
+            f"A user with email '{duplicate_user.email}' already exists."
+        )
 
     finally:
         if user_id is not None:

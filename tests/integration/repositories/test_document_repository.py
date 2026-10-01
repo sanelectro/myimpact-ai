@@ -70,6 +70,27 @@ def test_document_repository_create_and_read():
         assert len(by_type) == 1
         assert by_type[0].id == document_id
 
+        repository.update_classification(
+            document_id=document_id,
+            classification_type=DocumentType.GOAL,
+            classification_confidence=0.94,
+            classification_reason="Contains annual objectives.",
+            classification_error=None,
+        )
+        session.commit()
+        session.expire_all()
+
+        classified = repository.get_by_id(document_id)
+
+        assert classified is not None
+        assert classified.classification_type == DocumentType.GOAL
+        assert classified.classification_confidence == 0.94
+        assert classified.classification_reason == (
+            "Contains annual objectives."
+        )
+        assert classified.classification_error is None
+        assert classified.classified_at is not None
+
     finally:
         session.execute(
             delete(DocumentDB).where(DocumentDB.id == document_id)

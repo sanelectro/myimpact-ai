@@ -61,6 +61,8 @@ def test_upload_document_api_persists_file_and_record(tmp_path: Path):
         assert data["file_name"] == "annual_goals.pdf"
         assert data["content_type"] == "application/pdf"
         assert data["status"] == "uploaded"
+        assert data["scope_type"] == "employee"
+        assert data["scope_id"] == user_id
 
         stored = session.get(DocumentDB, document_id)
 

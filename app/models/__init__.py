@@ -1,4 +1,10 @@
-from .document import Document, DocumentCreate, DocumentStatus, DocumentType
+from .document import (
+    Document,
+    DocumentClassification,
+    DocumentCreate,
+    DocumentStatus,
+    DocumentType,
+)
 from .evidence import Evidence, EvidenceCreate, EvidenceSourceType, EvidenceStatus
 from .evidence_mapping import EvidenceMapping, EvidenceRelevance
 from .evidence_version import EvidenceVersion
@@ -9,6 +15,7 @@ from .user import User, UserCreate
 
 __all__ = [
     "Document",
+    "DocumentClassification",
     "DocumentCreate",
     "DocumentStatus",
     "DocumentType",

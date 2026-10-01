@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from sqlalchemy.orm import Session
 
 from app.db.models.document import DocumentDB
-from app.models.document import DocumentStatus, DocumentType
+from app.models.document import DocumentScopeType, DocumentStatus, DocumentType
 from app.repositories.document import DocumentRepository
 
 
@@ -124,4 +124,87 @@ def test_create_document_with_minimum_fields():
     assert result.content_hash is None
     assert result.status == DocumentStatus.UPLOADED
     session.add.assert_called_once_with(result)
+    session.flush.assert_called_once()
+
+
+def test_create_employee_document_defaults_scope_to_user():
+    session = MagicMock(spec=Session)
+    repository = DocumentRepository(session)
+
+    result = repository.create(
+        document_id="document-3",
+        user_id="user-1",
+        document_type=DocumentType.GOAL,
+        file_name="goals.pdf",
+        content_type="application/pdf",
+        storage_path="documents/user-1/goals.pdf",
+    )
+
+    assert result.scope_type == DocumentScopeType.EMPLOYEE
+    assert result.scope_id == "user-1"
+
+
+def test_create_role_document_keeps_scope():
+    session = MagicMock(spec=Session)
+    repository = DocumentRepository(session)
+
+    result = repository.create(
+        document_id="document-4",
+        user_id="admin-1",
+        document_type=DocumentType.ROLE,
+        scope_type=DocumentScopeType.ROLE,
+        scope_id="lead_engineer",
+        file_name="lead-engineer.pdf",
+        content_type="application/pdf",
+        storage_path="documents/lead-engineer.pdf",
+    )
+
+    assert result.scope_type == DocumentScopeType.ROLE
+    assert result.scope_id == "lead_engineer"
+
+
+def test_update_processing_persists_extracted_content_path():
+    session = MagicMock(spec=Session)
+    repository = DocumentRepository(session)
+
+    document = MagicMock(spec=DocumentDB)
+    document.status = DocumentStatus.UPLOADED
+    document.extracted_content_path = None
+    repository.session.get.return_value = document
+
+    result = repository.update_processing(
+        document_id="document-1",
+        extracted_content_path="storage/document-1/extracted.md",
+        status=DocumentStatus.PROCESSED,
+    )
+
+    assert result is document
+    assert document.extracted_content_path == (
+        "storage/document-1/extracted.md"
+    )
+    assert document.status == DocumentStatus.PROCESSED
+    session.flush.assert_called_once()
+
+
+def test_update_classification_persists_result():
+    session = MagicMock(spec=Session)
+    repository = DocumentRepository(session)
+
+    document = MagicMock(spec=DocumentDB)
+    repository.session.get.return_value = document
+
+    result = repository.update_classification(
+        document_id="document-1",
+        classification_type=DocumentType.GOAL,
+        classification_confidence=0.94,
+        classification_reason="Contains annual objectives.",
+        classification_error=None,
+    )
+
+    assert result is document
+    assert document.classification_type == DocumentType.GOAL
+    assert document.classification_confidence == 0.94
+    assert document.classification_reason == "Contains annual objectives."
+    assert document.classification_error is None
+    assert document.classified_at is not None
     session.flush.assert_called_once()
