@@ -5,6 +5,7 @@ from .document import (
     DocumentStatus,
     DocumentType,
 )
+from .document_chunk import DocumentChunk
 from .evidence import Evidence, EvidenceCreate, EvidenceSourceType, EvidenceStatus
 from .evidence_mapping import EvidenceMapping, EvidenceRelevance
 from .evidence_version import EvidenceVersion
@@ -15,6 +16,7 @@ from .user import User, UserCreate
 
 __all__ = [
     "Document",
+    "DocumentChunk",
     "DocumentClassification",
     "DocumentCreate",
     "DocumentStatus",
