@@ -410,3 +410,8 @@ M3 is complete when MyImpact can:
 10. Validate the complete ingestion-to-retrieval flow.
 
 At that point MyImpact has a usable **Personal Career Knowledge System** foundation, ready for M4 Impact Intelligence.
+
+
+## M3.6.5 checkpoint
+
+Embedding storage and semantic retrieval are implemented as a vertical slice using PostgreSQL + pgvector. `DocumentChunk` remains the canonical source and embeddings remain derived data.

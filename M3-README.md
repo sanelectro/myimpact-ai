@@ -28,11 +28,10 @@ M4 will build on this foundation to answer a different question:
 | M3.6.1 Knowledge / chunk model | ✅ Complete |
 | M3.6.2 Intelligent document chunking | ✅ Complete |
 | M3.6.3 Chunk ↔ expectation enrichment | ⏭️ Intentionally skipped |
-| M3.6.4 Embedding provider abstraction | 🚧 Current step |
-| M3.6.5 Vector persistence | ⏳ Pending |
-| M3.6.6 Semantic retrieval | ⏳ Pending |
-| M3.6.7 Knowledge retrieval API | ⏳ Pending |
-| M3.6.8 End-to-end retrieval validation | ⏳ Pending |
+| M3.6.4 Embedding provider abstraction | ✅ Complete |
+| M3.6.5 Embedding storage & semantic retrieval | 🚧 Current step |
+| M3.6.6 Knowledge retrieval API | ⏳ Pending |
+| M3.7 Final validation | ⏳ Pending |
 | M3.7 Final validation | ⏳ Pending |
 
 ---
@@ -280,32 +279,26 @@ Those belong to the next M3.6 steps.
 
 ---
 
-# Next: M3.6.5 — Vector Persistence
+# M3.6.5 — Embedding Storage & Semantic Retrieval
 
-The next step will decide and implement vector persistence, currently expected to use PostgreSQL with `pgvector`.
+M3.6.5 intentionally combines vector persistence and semantic retrieval into one vertical slice so the system can prove the complete path from a document chunk to a retrieved knowledge result.
 
-The important design principle is:
+## Storage model
+
+`DocumentChunk` remains the canonical source of knowledge. The embedding is derived data stored separately:
 
 ```text
-DocumentChunk.content
-        │
-        ▼
-Embedding Provider
-        │
-        ▼
-Derived Vector Representation
-        │
-        ▼
-Vector Store
+DocumentChunk
+      │
+      └── DocumentChunkEmbedding
+              ├── embedding
+              ├── embedding_model
+              └── embedding_dimensions
 ```
 
-The chunk content remains the canonical source. Embeddings are derived data and can be regenerated if the embedding model changes.
+PostgreSQL uses `pgvector`. The vector column is intentionally dimension-flexible at the database type level; the stored model and dimension are used during retrieval to avoid mixing incompatible vectors.
 
----
-
-# Future Semantic Retrieval
-
-Once vector persistence is available:
+## Retrieval flow
 
 ```text
 Natural-language query
@@ -314,21 +307,48 @@ Natural-language query
 Query embedding
         │
         ▼
-Vector similarity search
+pgvector cosine similarity
         │
         ▼
-Relevant document chunks
+Relevant DocumentChunks
+        │
+        ▼
+KnowledgeSearchResult
 ```
 
-The product-level API should represent knowledge retrieval rather than expose internal chunk mechanics. The expected future boundary is conceptually:
+The retrieval similarity is only a retrieval signal. It is **not an impact score**.
+
+## Included in M3.6.5
+
+- `DocumentChunkEmbedding` domain model
+- PostgreSQL/pgvector persistence model
+- Embedding upsert and lookup
+- Cascade-safe deletion
+- Exact cosine-similarity retrieval
+- Embedding model/dimension filtering
+- `SemanticRetrievalService`
+- Service/repository tests
+- PostgreSQL integration tests
+
+## Intentionally deferred
+
+- Public `/knowledge/retrieve` API
+- RAG orchestration
+- Impact scoring
+- Expectation-to-evidence evaluation
+- Approximate vector indexing/optimization
+
+Those belong to later steps.
+
+# M3.6.6 — Knowledge Retrieval API
+
+The next API boundary should expose knowledge retrieval as a product capability rather than exposing vector or chunk internals. The conceptual contract is:
 
 ```http
 POST /knowledge/retrieve
 ```
 
-The user should not need to provide internal fields such as `chunk_id`, `heading_path`, or embedding configuration just to ask a knowledge question.
-
----
+The caller asks a natural-language question; internal embedding generation, vector search, ranking and chunk representation remain implementation details.
 
 # M4 Relationship
 
@@ -372,16 +392,16 @@ The system should not equate vector similarity with impact score. Semantic simil
 
 # Validation
 
-The repository checkpoint before M3.6.4 had:
+The repository checkpoint before M3.6.5 had:
 
 ```text
-299 tests passing
+309 tests passing
 ```
 
-For M3.6.4, run the focused embedding tests first:
+For M3.6.5, run the focused embedding/retrieval tests first:
 
 ```bash
-pytest tests/unit/services/embedding -v
+pytest tests/unit/services/embedding tests/unit/services/knowledge -v
 ```
 
 Then run the complete suite:
@@ -390,7 +410,7 @@ Then run the complete suite:
 pytest -v
 ```
 
-M3.6.4 should preserve the existing M3 behavior while adding only the embedding abstraction and its provider implementations.
+M3.6.5 should preserve the existing M3 behavior while adding vector persistence and semantic retrieval without changing the canonical `DocumentChunk` model.
 
 ---
 
