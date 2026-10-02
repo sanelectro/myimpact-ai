@@ -4,7 +4,10 @@ from fastapi.testclient import TestClient
 
 from app.api.routes.document import get_document_service
 from app.db.models.document import DocumentDB
-from app.exceptions import DocumentExtractionError
+from app.exceptions import (
+    DocumentClassificationError,
+    DocumentExtractionError,
+)
 from app.main import app
 from app.models.document import (
     DocumentScopeType,
@@ -48,7 +51,11 @@ def _document(
 
 def test_upload_document():
     service = MagicMock(spec=DocumentService)
-    service.upload_document.return_value = _document()
+    uploaded = _document()
+    uploaded.status = DocumentStatus.PROCESSED
+    uploaded.extracted_content_path = "storage/document-1/extracted.md"
+    service.upload_document.return_value = uploaded
+    service.process_document.return_value = uploaded
 
     app.dependency_overrides[get_document_service] = lambda: service
 
@@ -75,6 +82,7 @@ def test_upload_document():
         assert response.json()["scope_id"] == "user-1"
 
         service.upload_document.assert_called_once()
+        service.process_document.assert_awaited_once_with("document-1")
         kwargs = service.upload_document.call_args.kwargs
         assert kwargs["user_id"] == "user-1"
         assert kwargs["document_type"] == DocumentType.GOAL
@@ -94,6 +102,7 @@ def test_upload_role_document_passes_scope():
     document.scope_type = DocumentScopeType.ROLE
     document.scope_id = "lead_engineer"
     service.upload_document.return_value = document
+    service.process_document.return_value = document
 
     app.dependency_overrides[get_document_service] = lambda: service
 
@@ -119,6 +128,7 @@ def test_upload_role_document_passes_scope():
         assert response.json()["scope_type"] == "role"
         assert response.json()["scope_id"] == "lead_engineer"
 
+        service.process_document.assert_awaited_once_with("document-1")
         kwargs = service.upload_document.call_args.kwargs
         assert kwargs["scope_type"] == DocumentScopeType.ROLE
         assert kwargs["scope_id"] == "lead_engineer"
@@ -244,7 +254,7 @@ def test_get_documents_by_user_and_type():
         app.dependency_overrides.clear()
 
 
-def test_process_document():
+async def test_process_document():
     service = MagicMock(spec=DocumentService)
     service.process_document.return_value = _document(
         status=DocumentStatus.PROCESSED,
@@ -268,14 +278,14 @@ def test_process_document():
             "storage/document-1/extracted.md"
         )
         assert "extracted_text" not in data
-        service.process_document.assert_called_once_with(
+        service.process_document.assert_awaited_once_with(
             "document-1",
         )
     finally:
         app.dependency_overrides.clear()
 
 
-def test_process_document_returns_404_for_missing_document():
+async def test_process_document_returns_404_for_missing_document():
     service = MagicMock(spec=DocumentService)
     service.process_document.side_effect = ValueError(
         "Document not found."
@@ -294,7 +304,7 @@ def test_process_document_returns_404_for_missing_document():
         app.dependency_overrides.clear()
 
 
-def test_process_document_returns_422_for_extraction_failure():
+async def test_process_document_returns_422_for_extraction_failure():
     service = MagicMock(spec=DocumentService)
     service.process_document.side_effect = DocumentExtractionError(
         "Failed to extract text from document: goals.pdf"
@@ -309,5 +319,24 @@ def test_process_document_returns_422_for_extraction_failure():
 
         assert response.status_code == 422
         assert "Failed to extract text" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def test_process_document_returns_422_for_classification_failure():
+    service = MagicMock(spec=DocumentService)
+    service.process_document.side_effect = DocumentClassificationError(
+        "Document classification provider failed."
+    )
+
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/documents/document-1/process",
+        )
+
+        assert response.status_code == 422
+        assert "classification provider failed" in response.json()["detail"]
     finally:
         app.dependency_overrides.clear()

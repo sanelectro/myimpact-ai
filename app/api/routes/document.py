@@ -13,9 +13,14 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.exceptions import DocumentExtractionError
+from app.exceptions import (
+    DocumentClassificationError,
+    DocumentExtractionError,
+)
 from app.models.document import Document, DocumentScopeType, DocumentType
 from app.services.document import DocumentService
+from app.services.document_classification import DocumentClassificationService
+from app.services.llm.factory import create_llm_service
 from app.storage.interface import FileStorage
 from app.storage.local import LocalFileStorage
 
@@ -39,13 +44,25 @@ def get_document_storage() -> FileStorage:
     return LocalFileStorage("storage/documents")
 
 
+def get_document_classification_service() -> DocumentClassificationService:
+    return DocumentClassificationService(
+        llm_service=create_llm_service(),
+        minimum_confidence=0.70,
+    )
+
+
 def get_document_service(
     db: Annotated[Session, Depends(get_db)],
     storage: Annotated[FileStorage, Depends(get_document_storage)],
+    classification_service: Annotated[
+        DocumentClassificationService,
+        Depends(get_document_classification_service),
+    ],
 ) -> DocumentService:
     return DocumentService(
         db,
         storage=storage,
+        classification_service=classification_service,
     )
 
 
@@ -95,7 +112,7 @@ def _validate_upload(
     response_model=Document,
     status_code=status.HTTP_201_CREATED,
 )
-def upload_document(
+async def upload_document(
     user_id: Annotated[str, Form()],
     document_type: Annotated[DocumentType, Form()],
     file: Annotated[UploadFile, File()],
@@ -121,6 +138,19 @@ def upload_document(
         content=content,
     )
 
+    try:
+        document = await service.process_document(document.id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except (DocumentExtractionError, DocumentClassificationError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     return Document.model_validate(
         document,
         from_attributes=True,
@@ -131,18 +161,18 @@ def upload_document(
     "/{document_id}/process",
     response_model=Document,
 )
-def process_document(
+async def process_document(
     document_id: str,
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> Document:
     try:
-        document = service.process_document(document_id)
+        document = await service.process_document(document_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-    except DocumentExtractionError as exc:
+    except (DocumentExtractionError, DocumentClassificationError) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),

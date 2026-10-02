@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
 from zipfile import ZipFile
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import delete
@@ -9,9 +10,10 @@ from sqlalchemy import delete
 from app.db.models.document import DocumentDB
 from app.db.models.user import UserDB
 from app.db.session import SessionLocal
-from app.models.document import DocumentType
+from app.models.document import DocumentClassification, DocumentType
 from app.models.user import UserCreate
 from app.services.document import DocumentService
+from app.services.document_classification import DocumentClassificationService
 from app.services.user import UserService
 from app.storage.local import LocalFileStorage
 
@@ -81,7 +83,7 @@ def _docx_bytes(*paragraphs: str) -> bytes:
 
 
 @pytest.mark.integration
-def test_document_service_extracts_docx_with_docling(tmp_path: Path):
+async def test_document_service_extracts_docx_with_docling(tmp_path: Path):
     session = SessionLocal()
     user_id = None
     document_id = None
@@ -97,9 +99,19 @@ def test_document_service_extracts_docx_with_docling(tmp_path: Path):
         )
         user_id = user.id
 
+        classification_service = AsyncMock(
+            spec=DocumentClassificationService
+        )
+        classification_service.classify.return_value = DocumentClassification(
+            document_type=DocumentType.ONE_TO_ONE,
+            confidence=0.90,
+            reason="Contains one-to-one development feedback.",
+        )
+
         service = DocumentService(
             session,
             storage=storage,
+            classification_service=classification_service,
         )
 
         document = service.upload_document(
@@ -117,7 +129,7 @@ def test_document_service_extracts_docx_with_docling(tmp_path: Path):
         )
         document_id = document.id
 
-        processed = service.process_document(document_id)
+        processed = await service.process_document(document_id)
 
         assert processed.status.value == "processed"
         assert processed.extracted_content_path

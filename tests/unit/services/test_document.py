@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, call
 
 import pytest
 from sqlalchemy.orm import Session
@@ -150,10 +150,11 @@ def test_upload_document_rolls_back_and_removes_file_when_persistence_fails():
     session.commit.assert_not_called()
 
 
-def test_process_document_extracts_and_persists_markdown_file():
+async def test_process_document_extracts_and_persists_markdown_file():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
+    classification_service = AsyncMock(spec=DocumentClassificationService)
 
     document = MagicMock(spec=DocumentDB)
     document.id = "document-1"
@@ -162,19 +163,31 @@ def test_process_document_extracts_and_persists_markdown_file():
     document.storage_path = "storage/goals.pdf"
 
     processed_document = MagicMock(spec=DocumentDB)
+    processed_document.id = "document-1"
+    processed_document.extracted_content_path = "storage/extracted.md"
     repository.get_by_id.return_value = document
     repository.update_processing.return_value = processed_document
-    storage.read.return_value = b"pdf-content"
+    repository.update_classification.return_value = processed_document
     storage.save.return_value = "storage/extracted.md"
 
     extractor = MagicMock()
     extractor.extract.return_value = (
         "# 2026 Goals\n\nImprove reliability."
     )
+    storage.read.side_effect = [
+        b"pdf-content",
+        b"# 2026 Goals\n\nImprove reliability.",
+    ]
+    classification_service.classify.return_value = DocumentClassification(
+        document_type=DocumentType.GOAL,
+        confidence=0.94,
+        reason="Contains annual objectives.",
+    )
 
     service = DocumentService(
         session,
         storage=storage,
+        classification_service=classification_service,
     )
     service.repository = repository
 
@@ -183,10 +196,13 @@ def test_process_document_extracts_and_persists_markdown_file():
         "create",
         return_value=extractor,
     ):
-        result = service.process_document("document-1")
+        result = await service.process_document("document-1")
 
     assert result is processed_document
-    storage.read.assert_called_once_with("storage/goals.pdf")
+    assert storage.read.call_args_list == [
+        call("storage/goals.pdf"),
+        call("storage/extracted.md"),
+    ]
     extractor.extract.assert_called_once_with(
         b"pdf-content",
         "goals.pdf",
@@ -202,10 +218,20 @@ def test_process_document_extracts_and_persists_markdown_file():
         extracted_content_path="storage/extracted.md",
         status=DocumentStatus.PROCESSED,
     )
-    session.commit.assert_called_once()
+    repository.update_classification.assert_called_once_with(
+        document_id="document-1",
+        classification_type=DocumentType.GOAL,
+        classification_confidence=0.94,
+        classification_reason="Contains annual objectives.",
+        classification_error=None,
+    )
+    classification_service.classify.assert_awaited_once_with(
+        "# 2026 Goals\n\nImprove reliability."
+    )
+    assert session.commit.call_count == 2
 
 
-def test_process_document_marks_failed_when_extraction_fails():
+async def test_process_document_marks_failed_when_extraction_fails():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
@@ -233,7 +259,7 @@ def test_process_document_marks_failed_when_extraction_fails():
         "create",
         return_value=extractor,
     ), pytest.raises(DocumentExtractionError):
-        service.process_document("document-1")
+        await service.process_document("document-1")
 
     repository.update_processing.assert_called_once_with(
         document_id="document-1",
@@ -244,7 +270,7 @@ def test_process_document_marks_failed_when_extraction_fails():
     session.commit.assert_called_once()
 
 
-def test_process_document_raises_for_missing_document():
+async def test_process_document_raises_for_missing_document():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
@@ -258,7 +284,7 @@ def test_process_document_raises_for_missing_document():
     service.repository = repository
 
     with pytest.raises(ValueError, match="Document not found"):
-        service.process_document("missing")
+        await service.process_document("missing")
 
     storage.read.assert_not_called()
     session.commit.assert_not_called()
@@ -277,7 +303,7 @@ def test_get_document_by_id():
     repository.get_by_id.assert_called_once_with("document-1")
 
 
-async def test_classify_document_persists_result():
+async def test_classify_processed_document_persists_result():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
@@ -286,6 +312,7 @@ async def test_classify_document_persists_result():
     )
 
     document = MagicMock(spec=DocumentDB)
+    document.id = "document-1"
     document.extracted_content_path = "storage/extracted.md"
     classified_document = MagicMock(spec=DocumentDB)
     repository.get_by_id.return_value = document
@@ -304,7 +331,7 @@ async def test_classify_document_persists_result():
     )
     service.repository = repository
 
-    result = await service.classify_document("document-1")
+    result = await service._classify_document(document)
 
     assert result is classified_document
     storage.read.assert_called_once_with("storage/extracted.md")
@@ -321,7 +348,7 @@ async def test_classify_document_persists_result():
     session.commit.assert_called_once()
 
 
-async def test_classify_document_persists_safe_failure():
+async def test_classify_processed_document_persists_safe_failure():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
@@ -330,6 +357,7 @@ async def test_classify_document_persists_safe_failure():
     )
 
     document = MagicMock(spec=DocumentDB)
+    document.id = "document-1"
     document.extracted_content_path = "storage/extracted.md"
     repository.get_by_id.return_value = document
     repository.update_classification.return_value = document
@@ -351,7 +379,7 @@ async def test_classify_document_persists_safe_failure():
         DocumentClassificationError,
         match="provider failed",
     ):
-        await service.classify_document("document-1")
+        await service._classify_document(document)
 
     repository.update_classification.assert_called_once_with(
         document_id="document-1",
@@ -363,7 +391,7 @@ async def test_classify_document_persists_safe_failure():
     session.commit.assert_called_once()
 
 
-async def test_classify_document_requires_processed_content():
+async def test_classify_processed_document_requires_processed_content():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
@@ -372,6 +400,7 @@ async def test_classify_document_requires_processed_content():
     )
 
     document = MagicMock(spec=DocumentDB)
+    document.id = "document-1"
     document.extracted_content_path = None
     repository.get_by_id.return_value = document
 
@@ -386,7 +415,7 @@ async def test_classify_document_requires_processed_content():
         DocumentClassificationError,
         match="processed before classification",
     ):
-        await service.classify_document("document-1")
+        await service._classify_document(document)
 
     classification_service.classify.assert_not_awaited()
     repository.update_classification.assert_not_called()

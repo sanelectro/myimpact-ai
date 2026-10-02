@@ -144,7 +144,7 @@ class DocumentService(BaseService):
 
             raise
 
-    def process_document(
+    async def process_document(
         self,
         document_id: str,
     ) -> DocumentDB:
@@ -190,7 +190,6 @@ class DocumentService(BaseService):
                 raise ValueError("Document not found.")
 
             self.commit()
-            return processed_document
 
         except Exception:
             self.session.rollback()
@@ -208,15 +207,11 @@ class DocumentService(BaseService):
 
             raise
 
-    def get_document_by_id(
-        self,
-        document_id: str,
-    ) -> DocumentDB | None:
-        return self.repository.get_by_id(document_id)
+        return await self._classify_document(processed_document)
 
-    async def classify_document(
+    async def _classify_document(
         self,
-        document_id: str,
+        document: DocumentDB,
     ) -> DocumentDB:
         if self.storage is None:
             raise RuntimeError("File storage is not configured.")
@@ -225,11 +220,6 @@ class DocumentService(BaseService):
             raise RuntimeError(
                 "Document classification service is not configured."
             )
-
-        document = self.repository.get_by_id(document_id)
-
-        if document is None:
-            raise ValueError("Document not found.")
 
         if not document.extracted_content_path:
             raise DocumentClassificationError(
@@ -244,17 +234,23 @@ class DocumentService(BaseService):
                 content
             )
         except DocumentClassificationError as exc:
-            self._persist_classification_failure(document_id, str(exc))
+            self._persist_classification_failure(
+                document.id,
+                str(exc),
+            )
             raise
         except (StorageFileNotFoundError, UnicodeDecodeError) as exc:
             error = DocumentClassificationError(
                 "Extracted document content could not be read."
             )
-            self._persist_classification_failure(document_id, str(error))
+            self._persist_classification_failure(
+                document.id,
+                str(error),
+            )
             raise error from exc
 
         classified_document = self.repository.update_classification(
-            document_id=document_id,
+            document_id=document.id,
             classification_type=classification.document_type,
             classification_confidence=classification.confidence,
             classification_reason=classification.reason,
@@ -266,6 +262,12 @@ class DocumentService(BaseService):
 
         self.commit()
         return classified_document
+
+    def get_document_by_id(
+        self,
+        document_id: str,
+    ) -> DocumentDB | None:
+        return self.repository.get_by_id(document_id)
 
     def _persist_classification_failure(
         self,
