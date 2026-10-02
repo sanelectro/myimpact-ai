@@ -18,5 +18,6 @@ class DocumentClassificationError(RuntimeError):
 class DocumentExpectationExtractionError(RuntimeError):
     """Raised when structured expectations cannot be extracted safely."""
 
-class DocumentChunkingError(Exception):
-    """Raised when document content cannot be chunked."""
+
+class DocumentChunkingError(RuntimeError):
+    """Raised when document content cannot be chunked safely."""

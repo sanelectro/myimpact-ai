@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.db.models.document import DocumentDB
 from app.document_processing.factory import TextExtractorFactory
 from app.exceptions import (
+    DocumentChunkingError,
     DocumentClassificationError,
     DocumentExpectationExtractionError,
     DocumentExtractionError,
@@ -19,12 +20,14 @@ from app.models.document import (
     DocumentType,
 )
 from app.repositories.document import DocumentRepository
+from app.repositories.document_chunk import DocumentChunkRepository
 from app.repositories.expectation import DocumentExpectationRepository
 from app.services.base import BaseService
 from app.services.document_classification import DocumentClassificationService
 from app.services.document_expectation import (
     DocumentExpectationExtractionService,
 )
+from app.services.document_chunking import DocumentChunkingService
 from app.storage.interface import FileStorage
 
 logger = logging.getLogger(__name__)
@@ -41,6 +44,7 @@ class DocumentService(BaseService):
         expectation_extraction_service: (
             DocumentExpectationExtractionService | None
         ) = None,
+        chunking_service: DocumentChunkingService | None = None,
     ):
         super().__init__(session)
         self.repository = DocumentRepository(session)
@@ -48,6 +52,8 @@ class DocumentService(BaseService):
         self.classification_service = classification_service
         self.expectation_extraction_service = expectation_extraction_service
         self.expectation_repository = DocumentExpectationRepository(session)
+        self.chunk_repository = DocumentChunkRepository(session)
+        self.chunking_service = chunking_service
 
     def create_document(
         self,
@@ -219,12 +225,17 @@ class DocumentService(BaseService):
 
         classified_document = await self._classify_document(processed_document)
 
-        if self.expectation_extraction_service is None:
-            return classified_document
+        if self.expectation_extraction_service is not None:
+            processed_document = await self._extract_and_persist_expectations(
+                classified_document
+            )
+        else:
+            processed_document = classified_document
 
-        return await self._extract_and_persist_expectations(
-            classified_document
-        )
+        if self.chunking_service is not None:
+            self._chunk_and_persist_document(processed_document)
+
+        return processed_document
 
     async def _classify_document(
         self,
@@ -345,6 +356,55 @@ class DocumentService(BaseService):
             raise
 
         return document
+
+
+    def _chunk_and_persist_document(
+        self,
+        document: DocumentDB,
+    ) -> None:
+        if self.storage is None:
+            raise RuntimeError("File storage is not configured.")
+
+        if self.chunking_service is None:
+            return
+
+        if not document.extracted_content_path:
+            raise DocumentChunkingError(
+                "Document must be processed before chunking."
+            )
+
+        try:
+            content = self.storage.read(
+                document.extracted_content_path
+            ).decode("utf-8")
+            chunk_contents = self.chunking_service.chunk(content)
+        except (StorageFileNotFoundError, UnicodeDecodeError, ValueError) as exc:
+            raise DocumentChunkingError(
+                "Extracted document content could not be chunked."
+            ) from exc
+
+        try:
+            self.chunk_repository.delete_by_document_id(document.id)
+
+            for chunk_index, chunk_content in enumerate(chunk_contents):
+                self.chunk_repository.create(
+                    chunk_id=str(uuid4()),
+                    document_id=document.id,
+                    chunk_index=chunk_index,
+                    content=chunk_content.content,
+                    heading_path=chunk_content.heading_path,
+                    document_type=(
+                        document.classification_type or document.document_type
+                    ),
+                    scope_type=document.scope_type,
+                    scope_id=document.scope_id,
+                    metadata={},
+                )
+
+            self.commit()
+        except Exception:
+            self.session.rollback()
+            raise
 
     def get_document_by_id(
         self,

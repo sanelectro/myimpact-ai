@@ -10,8 +10,8 @@ from app.db.models.report import ReportDB
 from app.db.models.user import UserDB
 
 __all__ = [
-    "DocumentChunkDB",
     "DocumentDB",
+    "DocumentChunkDB",
     "DocumentExpectationDB",
     "EvidenceDB",
     "EvidenceMappingDB",

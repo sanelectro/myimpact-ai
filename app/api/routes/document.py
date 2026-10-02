@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.exceptions import (
     DocumentClassificationError,
+    DocumentChunkingError,
     DocumentExpectationExtractionError,
     DocumentExtractionError,
 )
@@ -22,6 +23,7 @@ from app.models.document import Document, DocumentScopeType, DocumentType
 from app.models.document_expectation import DocumentExpectation
 from app.services.document import DocumentService
 from app.services.document_classification import DocumentClassificationService
+from app.services.document_chunking import DocumentChunkingService
 from app.services.document_expectation import (
     DocumentExpectationExtractionService,
 )
@@ -64,6 +66,10 @@ def get_document_expectation_extraction_service() -> (
     )
 
 
+def get_document_chunking_service() -> DocumentChunkingService:
+    return DocumentChunkingService()
+
+
 def get_document_service(
     db: Annotated[Session, Depends(get_db)],
     storage: Annotated[FileStorage, Depends(get_document_storage)],
@@ -75,12 +81,17 @@ def get_document_service(
         DocumentExpectationExtractionService,
         Depends(get_document_expectation_extraction_service),
     ],
+    chunking_service: Annotated[
+        DocumentChunkingService,
+        Depends(get_document_chunking_service),
+    ],
 ) -> DocumentService:
     return DocumentService(
         db,
         storage=storage,
         classification_service=classification_service,
         expectation_extraction_service=expectation_extraction_service,
+        chunking_service=chunking_service,
     )
 
 
@@ -167,6 +178,7 @@ async def upload_document(
         DocumentExtractionError,
         DocumentClassificationError,
         DocumentExpectationExtractionError,
+        DocumentChunkingError,
     ) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -198,6 +210,7 @@ async def process_document(
         DocumentExtractionError,
         DocumentClassificationError,
         DocumentExpectationExtractionError,
+        DocumentChunkingError,
     ) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

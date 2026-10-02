@@ -10,6 +10,7 @@ from app.exceptions import (
     DocumentClassificationError,
     DocumentExpectationExtractionError,
     DocumentExtractionError,
+    DocumentChunkingError
 )
 from app.models.document import (
     DocumentClassification,
