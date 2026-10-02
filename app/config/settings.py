@@ -9,6 +9,12 @@ class LLMProvider(str, Enum):
     AZURE = "azure"
 
 
+class EmbeddingProvider(str, Enum):
+    OPENAI = "openai"
+    AZURE = "azure"
+    MOCK = "mock"
+
+
 class Settings(BaseSettings):
 
     # Application
@@ -30,11 +36,18 @@ class Settings(BaseSettings):
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-20b"
 
+    # Embeddings
+    embedding_provider: EmbeddingProvider = EmbeddingProvider.MOCK
+    openai_api_key: str = ""
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_embedding_model: str = "text-embedding-3-small"
+
     # Azure OpenAI
     azure_openai_endpoint: str = ""
     azure_openai_api_key: str = ""
     azure_openai_api_version: str = ""
     azure_openai_deployment: str = ""
+    azure_openai_embedding_deployment: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
