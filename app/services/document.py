@@ -8,6 +8,7 @@ from app.db.models.document import DocumentDB
 from app.document_processing.factory import TextExtractorFactory
 from app.exceptions import (
     DocumentClassificationError,
+    DocumentExpectationExtractionError,
     DocumentExtractionError,
     StorageFileNotFoundError,
 )
@@ -18,8 +19,12 @@ from app.models.document import (
     DocumentType,
 )
 from app.repositories.document import DocumentRepository
+from app.repositories.expectation import DocumentExpectationRepository
 from app.services.base import BaseService
 from app.services.document_classification import DocumentClassificationService
+from app.services.document_expectation import (
+    DocumentExpectationExtractionService,
+)
 from app.storage.interface import FileStorage
 
 logger = logging.getLogger(__name__)
@@ -33,11 +38,16 @@ class DocumentService(BaseService):
         session: Session,
         storage: FileStorage | None = None,
         classification_service: DocumentClassificationService | None = None,
+        expectation_extraction_service: (
+            DocumentExpectationExtractionService | None
+        ) = None,
     ):
         super().__init__(session)
         self.repository = DocumentRepository(session)
         self.storage = storage
         self.classification_service = classification_service
+        self.expectation_extraction_service = expectation_extraction_service
+        self.expectation_repository = DocumentExpectationRepository(session)
 
     def create_document(
         self,
@@ -207,7 +217,14 @@ class DocumentService(BaseService):
 
             raise
 
-        return await self._classify_document(processed_document)
+        classified_document = await self._classify_document(processed_document)
+
+        if self.expectation_extraction_service is None:
+            return classified_document
+
+        return await self._extract_and_persist_expectations(
+            classified_document
+        )
 
     async def _classify_document(
         self,
@@ -263,11 +280,83 @@ class DocumentService(BaseService):
         self.commit()
         return classified_document
 
+    async def _extract_and_persist_expectations(
+        self,
+        document: DocumentDB,
+    ) -> DocumentDB:
+        if self.storage is None:
+            raise RuntimeError("File storage is not configured.")
+
+        if self.expectation_extraction_service is None:
+            return document
+
+        if not document.extracted_content_path:
+            raise DocumentExpectationExtractionError(
+                "Document must be processed before expectation extraction."
+            )
+
+        try:
+            content = self.storage.read(
+                document.extracted_content_path
+            ).decode("utf-8")
+            extraction_result = (
+                await self.expectation_extraction_service.extract(content)
+            )
+        except DocumentExpectationExtractionError:
+            raise
+        except (StorageFileNotFoundError, UnicodeDecodeError) as exc:
+            raise DocumentExpectationExtractionError(
+                "Extracted document content could not be read for "
+                "expectation extraction."
+            ) from exc
+
+        try:
+            self.expectation_repository.delete_by_document_id(document.id)
+
+            for expectation in extraction_result.expectations:
+                source_reference = expectation.source_reference
+                self.expectation_repository.create(
+                    expectation_id=str(uuid4()),
+                    document_id=document.id,
+                    category=expectation.category,
+                    description=expectation.description,
+                    evidence_hints=expectation.evidence_hints,
+                    source_page=(
+                        source_reference.page
+                        if source_reference is not None
+                        else None
+                    ),
+                    source_section=(
+                        source_reference.section
+                        if source_reference is not None
+                        else None
+                    ),
+                    source_text_span=(
+                        source_reference.text_span
+                        if source_reference is not None
+                        else None
+                    ),
+                    confidence=expectation.confidence,
+                )
+
+            self.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+        return document
+
     def get_document_by_id(
         self,
         document_id: str,
     ) -> DocumentDB | None:
         return self.repository.get_by_id(document_id)
+
+    def get_document_expectations(
+        self,
+        document_id: str,
+    ):
+        return self.expectation_repository.get_by_document_id(document_id)
 
     def _persist_classification_failure(
         self,

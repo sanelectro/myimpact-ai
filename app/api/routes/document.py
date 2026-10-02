@@ -15,11 +15,16 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.exceptions import (
     DocumentClassificationError,
+    DocumentExpectationExtractionError,
     DocumentExtractionError,
 )
 from app.models.document import Document, DocumentScopeType, DocumentType
+from app.models.document_expectation import DocumentExpectation
 from app.services.document import DocumentService
 from app.services.document_classification import DocumentClassificationService
+from app.services.document_expectation import (
+    DocumentExpectationExtractionService,
+)
 from app.services.llm.factory import create_llm_service
 from app.storage.interface import FileStorage
 from app.storage.local import LocalFileStorage
@@ -51,6 +56,14 @@ def get_document_classification_service() -> DocumentClassificationService:
     )
 
 
+def get_document_expectation_extraction_service() -> (
+    DocumentExpectationExtractionService
+):
+    return DocumentExpectationExtractionService(
+        llm_service=create_llm_service(),
+    )
+
+
 def get_document_service(
     db: Annotated[Session, Depends(get_db)],
     storage: Annotated[FileStorage, Depends(get_document_storage)],
@@ -58,11 +71,16 @@ def get_document_service(
         DocumentClassificationService,
         Depends(get_document_classification_service),
     ],
+    expectation_extraction_service: Annotated[
+        DocumentExpectationExtractionService,
+        Depends(get_document_expectation_extraction_service),
+    ],
 ) -> DocumentService:
     return DocumentService(
         db,
         storage=storage,
         classification_service=classification_service,
+        expectation_extraction_service=expectation_extraction_service,
     )
 
 
@@ -145,7 +163,11 @@ async def upload_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-    except (DocumentExtractionError, DocumentClassificationError) as exc:
+    except (
+        DocumentExtractionError,
+        DocumentClassificationError,
+        DocumentExpectationExtractionError,
+    ) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -172,7 +194,11 @@ async def process_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-    except (DocumentExtractionError, DocumentClassificationError) as exc:
+    except (
+        DocumentExtractionError,
+        DocumentClassificationError,
+        DocumentExpectationExtractionError,
+    ) as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -223,6 +249,33 @@ def get_documents_by_user_id(
             from_attributes=True,
         )
         for document in documents
+    ]
+
+
+@router.get(
+    "/{document_id}/expectations",
+    response_model=list[DocumentExpectation],
+)
+def get_document_expectations(
+    document_id: str,
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> list[DocumentExpectation]:
+    document = service.get_document_by_id(document_id)
+
+    if document is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+
+    expectations = service.get_document_expectations(document_id)
+
+    return [
+        DocumentExpectation.model_validate(
+            expectation,
+            from_attributes=True,
+        )
+        for expectation in expectations
     ]
 
 

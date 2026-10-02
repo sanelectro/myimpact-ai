@@ -8,6 +8,7 @@ from sqlalchemy import delete
 
 from app.api.routes.document import (
     get_document_classification_service,
+    get_document_expectation_extraction_service,
     get_document_storage,
 )
 from app.db.models.document import DocumentDB
@@ -15,7 +16,9 @@ from app.db.models.user import UserDB
 from app.db.session import SessionLocal
 from app.main import app
 from app.models.document import DocumentClassification, DocumentType
+from app.models.expectation import ExpectationExtractionResult
 from app.models.user import UserCreate
+from app.services.document_expectation import DocumentExpectationExtractionService
 from app.services.user import UserService
 from app.storage.local import LocalFileStorage
 
@@ -35,9 +38,20 @@ def test_upload_document_api_persists_processed_document(tmp_path: Path):
         reason="Contains annual objectives.",
     )
 
+    expectation_extraction_service = AsyncMock(
+        spec=DocumentExpectationExtractionService
+    )
+    expectation_extraction_service.extract.return_value = (
+        ExpectationExtractionResult(expectations=[])
+    )
+
     app.dependency_overrides[get_document_storage] = lambda: storage
     app.dependency_overrides[get_document_classification_service] = (
         lambda: classification_service
+    )
+
+    app.dependency_overrides[get_document_expectation_extraction_service] = (
+        lambda: expectation_extraction_service
     )
 
     try:
@@ -100,6 +114,8 @@ def test_upload_document_api_persists_processed_document(tmp_path: Path):
         assert storage.read(stored.extracted_content_path)
 
         classification_service.classify.assert_awaited_once()
+
+        expectation_extraction_service.extract.assert_awaited_once()
 
         get_response = client.get(
             f"/documents/{document_id}",

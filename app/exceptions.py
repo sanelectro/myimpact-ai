@@ -13,3 +13,7 @@ class DocumentExtractionError(RuntimeError):
 
 class DocumentClassificationError(RuntimeError):
     """Raised when a document cannot be classified safely."""
+
+
+class DocumentExpectationExtractionError(RuntimeError):
+    """Raised when structured expectations cannot be extracted safely."""

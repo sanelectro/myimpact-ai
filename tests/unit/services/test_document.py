@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.db.models.document import DocumentDB
 from app.document_processing.factory import TextExtractorFactory
-from app.exceptions import DocumentClassificationError, DocumentExtractionError
+from app.exceptions import (
+    DocumentClassificationError,
+    DocumentExpectationExtractionError,
+    DocumentExtractionError,
+)
 from app.models.document import (
     DocumentClassification,
     DocumentCreate,
@@ -14,12 +18,22 @@ from app.models.document import (
     DocumentStatus,
     DocumentType,
 )
+from app.models.expectation import (
+    Expectation,
+    ExpectationCategory,
+    ExpectationExtractionResult,
+    ExpectationSourceReference,
+)
 from app.repositories.document import DocumentRepository
+from app.repositories.expectation import DocumentExpectationRepository
 from app.services.document import (
     EXTRACTED_CONTENT_FILE_NAME,
     DocumentService,
 )
 from app.services.document_classification import DocumentClassificationService
+from app.services.document_expectation import (
+    DocumentExpectationExtractionService,
+)
 from app.storage.interface import FileStorage
 
 
@@ -155,6 +169,12 @@ async def test_process_document_extracts_and_persists_markdown_file():
     repository = MagicMock(spec=DocumentRepository)
     storage = MagicMock(spec=FileStorage)
     classification_service = AsyncMock(spec=DocumentClassificationService)
+    expectation_service = AsyncMock(
+        spec=DocumentExpectationExtractionService
+    )
+    expectation_repository = MagicMock(
+        spec=DocumentExpectationRepository
+    )
 
     document = MagicMock(spec=DocumentDB)
     document.id = "document-1"
@@ -177,30 +197,52 @@ async def test_process_document_extracts_and_persists_markdown_file():
     storage.read.side_effect = [
         b"pdf-content",
         b"# 2026 Goals\n\nImprove reliability.",
+        b"# 2026 Goals\n\nImprove reliability.",
     ]
     classification_service.classify.return_value = DocumentClassification(
         document_type=DocumentType.GOAL,
         confidence=0.94,
         reason="Contains annual objectives.",
     )
+    expectation_service.extract.return_value = ExpectationExtractionResult(
+        expectations=[
+            Expectation(
+                category=ExpectationCategory.TECHNICAL_LEADERSHIP,
+                description="Improve reliability ownership.",
+                evidence_hints=["Reliability initiatives"],
+                source_reference=ExpectationSourceReference(
+                    page=1,
+                    section="2026 Goals",
+                    text_span="Improve reliability ownership.",
+                ),
+                confidence=0.91,
+            )
+        ]
+    )
 
     service = DocumentService(
         session,
         storage=storage,
         classification_service=classification_service,
+        expectation_extraction_service=expectation_service,
     )
     service.repository = repository
+    service.expectation_repository = expectation_repository
 
     with patch.object(
         TextExtractorFactory,
         "create",
         return_value=extractor,
+    ), patch(
+        "app.services.document.uuid4",
+        return_value="expectation-1",
     ):
         result = await service.process_document("document-1")
 
     assert result is processed_document
     assert storage.read.call_args_list == [
         call("storage/goals.pdf"),
+        call("storage/extracted.md"),
         call("storage/extracted.md"),
     ]
     extractor.extract.assert_called_once_with(
@@ -228,7 +270,85 @@ async def test_process_document_extracts_and_persists_markdown_file():
     classification_service.classify.assert_awaited_once_with(
         "# 2026 Goals\n\nImprove reliability."
     )
-    assert session.commit.call_count == 2
+    expectation_service.extract.assert_awaited_once_with(
+        "# 2026 Goals\n\nImprove reliability."
+    )
+    expectation_repository.delete_by_document_id.assert_called_once_with(
+        "document-1"
+    )
+    expectation_repository.create.assert_called_once_with(
+        expectation_id="expectation-1",
+        document_id="document-1",
+        category=ExpectationCategory.TECHNICAL_LEADERSHIP,
+        description="Improve reliability ownership.",
+        evidence_hints=["Reliability initiatives"],
+        source_page=1,
+        source_section="2026 Goals",
+        source_text_span="Improve reliability ownership.",
+        confidence=0.91,
+    )
+    assert session.commit.call_count == 3
+
+
+async def test_process_document_does_not_replace_expectations_when_extraction_fails():
+    session = MagicMock(spec=Session)
+    repository = MagicMock(spec=DocumentRepository)
+    storage = MagicMock(spec=FileStorage)
+    classification_service = AsyncMock(spec=DocumentClassificationService)
+    expectation_service = AsyncMock(
+        spec=DocumentExpectationExtractionService
+    )
+    expectation_repository = MagicMock(
+        spec=DocumentExpectationRepository
+    )
+
+    document = MagicMock(spec=DocumentDB)
+    document.id = "document-1"
+    document.extracted_content_path = "storage/extracted.md"
+    repository.get_by_id.return_value = document
+    repository.update_processing.return_value = document
+    repository.update_classification.return_value = document
+    storage.read.side_effect = [
+        b"pdf-content",
+        b"# Goals",
+        b"# Goals",
+    ]
+    storage.save.return_value = "storage/extracted.md"
+    classification_service.classify.return_value = DocumentClassification(
+        document_type=DocumentType.GOAL,
+        confidence=0.94,
+        reason="Contains annual objectives.",
+    )
+    expectation_service.extract.side_effect = (
+        DocumentExpectationExtractionError(
+            "Document expectation extraction provider failed."
+        )
+    )
+
+    extractor = MagicMock()
+    extractor.extract.return_value = "# Goals"
+
+    service = DocumentService(
+        session,
+        storage=storage,
+        classification_service=classification_service,
+        expectation_extraction_service=expectation_service,
+    )
+    service.repository = repository
+    service.expectation_repository = expectation_repository
+
+    with patch.object(
+        TextExtractorFactory,
+        "create",
+        return_value=extractor,
+    ), pytest.raises(
+        DocumentExpectationExtractionError,
+        match="provider failed",
+    ):
+        await service.process_document("document-1")
+
+    expectation_repository.delete_by_document_id.assert_not_called()
+    expectation_repository.create.assert_not_called()
 
 
 async def test_process_document_marks_failed_when_extraction_fails():
