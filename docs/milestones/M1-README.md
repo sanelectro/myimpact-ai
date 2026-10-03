@@ -1,502 +1,297 @@
-# M1 --- AI Foundation
+# MyImpact AI — M1 README
 
-## Objective
+## Milestone 1 — AI Application Foundation
 
-Establish the MyImpact AI service with a provider-independent LLM
-architecture, FastAPI API, automated validation, unit testing, and real
-Groq integration.
+### Objective
 
-M1 focuses on building a reliable AI foundation before introducing RAG,
-MCP, agents, LangGraph, semantic routing, and the MyImpact domain
-intelligence.
+M1 establishes the initial application foundation for MyImpact AI: a structured FastAPI application, environment-based configuration, an LLM provider abstraction, Groq/Azure AI/Mock implementations, a provider factory, chat API, tests, and project validation.
 
-------------------------------------------------------------------------
+The key design goal is to keep the application independent of any single LLM provider.
 
-## M1 Completed
+### Architecture
 
--   [x] Python project foundation
--   [x] Pydantic Settings configuration
--   [x] `.env` / `.env.example` configuration
--   [x] `LLMProvider` enum
--   [x] `LLMRequest` / `LLMResponse`
--   [x] `ILLMService` interface
--   [x] `GroqLLMService`
--   [x] `AzureAIService`
--   [x] `MockLLMService`
--   [x] LLM Factory
--   [x] FastAPI `/health`
--   [x] FastAPI `/chat`
--   [x] Swagger/OpenAPI
--   [x] Ruff static analysis
--   [x] Automatic Ruff fixes
--   [x] Application import validation
--   [x] Unit tests
--   [x] Groq integration test
--   [x] Real Groq `/chat` execution
-
-------------------------------------------------------------------------
-
-## Architecture
-
-``` text
-                    HTTP Request
-                         |
-                         v
-                  +-------------+
-                  | ChatRequest |
-                  +-------------+
-                         |
-                         v
-                  +-------------+
-                  | LLMRequest  |
-                  +-------------+
-                         |
-                         v
-                  +--------------+
-                  | LLM Factory  |
-                  +--------------+
-                         |
-                         v
-                  +--------------+
-                  | ILLMService  |
-                  +--------------+
-                    /     |      \
-                   /      |       \
-                  v       v        v
-              Groq     Azure     Mock
-             Service   Service   Service
-                |        |         |
-                v        v         v
-              Groq     Azure      Unit
-               API     OpenAI     Tests
-                \        |         /
-                 \       |        /
-                  +------+-------+
-                         |
-                         v
-                  +--------------+
-                  | LLMResponse  |
-                  +--------------+
-                         |
-                         v
-                  +--------------+
-                  | ChatResponse |
-                  +--------------+
+```text
+Client
+  ↓
+FastAPI
+  ↓
+Chat Endpoint
+  ↓
+LLM Service Interface
+  ↓
+LLM Provider
+  ├── Groq
+  ├── Azure AI
+  └── Mock
 ```
 
-------------------------------------------------------------------------
+---
 
-## LLM Provider Abstraction
+## M1 Components
 
-Application code should communicate through:
+### 1. Application Foundation
 
-``` text
+Established the FastAPI project structure with separate areas for API, configuration, services, models, tests, and validation.
+
+### 2. Configuration Management
+
+Configuration is managed through Pydantic Settings and environment variables.
+
+Example:
+
+```env
+LLM_PROVIDER=mock
+```
+
+Provider credentials and environment-specific values belong in `.env`. Do not commit `.env` or real credentials. `.env.example` provides the configuration reference.
+
+### 3. LLM Provider Abstraction
+
+Introduced an `ILLMService` interface so the application can work with different providers through a common contract.
+
+```text
 ILLMService
+     ↓
+ ┌───────────────┬────────────────┬────────────────┐
+ ↓               ↓                ↓
+Groq          Azure AI          Mock
 ```
 
-and should not directly depend on a specific LLM provider.
+### 4. Groq LLM Service
 
-### Providers
+Implemented `GroqLLMService` for real LLM interaction through Groq.
 
-  Provider         Purpose
-  ---------------- ------------------------------
-  GroqLLMService   Current working LLM provider
-  AzureAIService   Azure OpenAI provider
-  MockLLMService   Deterministic unit testing
+### 5. Azure AI Service
 
-Provider selection is controlled through:
+Implemented `AzureAIService` to establish the Azure-based provider path.
 
-``` env
-LLM_PROVIDER=groq
+### 6. Mock LLM Service
+
+Implemented `MockLLMService` for deterministic local/unit testing without external LLM calls.
+
+### 7. LLM Factory
+
+Implemented the LLM factory to select the provider based on application configuration.
+
+```text
+LLM_PROVIDER
+     ↓
+LLM Factory
+     ↓
+Groq / Azure AI / Mock
 ```
 
-------------------------------------------------------------------------
+### 8. Chat API
 
-## Repository Structure
+Added the initial chat endpoint using the provider abstraction rather than directly coupling the API to a provider.
 
-``` text
-myimpact-ai/
-├── app/
-│   ├── main.py
-│   ├── api/
-│   ├── config/
-│   │   └── settings.py
-│   ├── models/
-│   │   ├── chat.py
-│   │   └── llm.py
-│   ├── services/
-│   │   └── llm/
-│   │       ├── interface.py
-│   │       ├── factory.py
-│   │       ├── groq_service.py
-│   │       ├── azure_service.py
-│   │       └── mock_service.py
-│   ├── agents/
-│   ├── graph/
-│   ├── rag/
-│   ├── routing/
-│   ├── context/
-│   ├── guardrails/
-│   └── mcp/
-│
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-│
-├── scripts/
-│   └── validate.py
-│
-├── .env.example
-├── .gitignore
-├── pytest.ini
-├── requirements.txt
-└── README.md
-```
+---
 
-------------------------------------------------------------------------
-
-# Running Locally
-
-## 1. Activate the virtual environment
-
-``` bash
-source .venv/bin/activate
-```
-
-Windows:
-
-``` powershell
-.venv\Scripts\activate
-```
-
-## 2. Configure environment
-
-Copy:
-
-``` bash
-cp .env.example .env
-```
-
-Configure the required values:
-
-``` env
-LLM_PROVIDER=groq
-
-GROQ_API_KEY=<your-key>
-GROQ_BASE_URL=https://api.groq.com/openai/v1
-GROQ_MODEL=<configured-model>
-```
-
-Never commit `.env`.
-
-------------------------------------------------------------------------
-
-# Run the Application
-
-``` bash
-uvicorn app.main:app --reload --port 8000
-```
-
-Swagger:
-
-``` text
-http://localhost:8000/docs
-```
-
-Health:
-
-``` text
-http://localhost:8000/health
-```
-
-------------------------------------------------------------------------
-
-# Test `/chat`
-
-Example request:
-
-``` json
-{
-  "message": "Explain MyImpact in one sentence."
-}
-```
-
-Expected response structure:
-
-``` json
-{
-  "response": "...",
-  "model": "openai/gpt-oss-20b"
-}
-```
-
-------------------------------------------------------------------------
-
-# Validation
-
-Run:
-
-``` bash
-python scripts/validate.py
-```
-
-The validation pipeline performs:
-
-``` text
-Python Syntax
-      |
-      v
-Ruff Static Analysis
-      |
-      +--> Auto-fix safe issues
-      |
-      v
-Ruff Re-check
-      |
-      v
-Application Import
-      |
-      v
-BUILD VALIDATION
-```
-
-Expected result:
-
-``` text
-Python syntax              PASS
-Static analysis            PASS
-Application import         PASS
-Build validation           PASS
-```
-
-------------------------------------------------------------------------
-
-# Testing
-
-## Unit Tests
-
-Unit tests must not call external services.
-
-``` bash
-python -m pytest tests/unit -v
-```
-
-Current M1 checkpoint:
-
-``` text
-8 passed
-```
-
-------------------------------------------------------------------------
-
-## API Integration Tests
-
-``` bash
-python -m pytest tests/integration/api -v
-```
-
-These validate the FastAPI boundary.
-
-------------------------------------------------------------------------
-
-## Groq Integration Tests
-
-Groq integration tests intentionally call the external Groq API.
-
-``` bash
-python -m pytest tests/integration -v -m integration
-```
-
-The test uses the application's configuration through `get_settings()`.
-
-------------------------------------------------------------------------
-
-## Run All Tests
-
-``` bash
-python -m pytest -v
-```
-
-This is the complete test command.
-
-------------------------------------------------------------------------
-
-# Test Strategy
-
-``` text
-                    Tests
-                      |
-          +-----------+-----------+
-          |                       |
-       Unit                   Integration
-          |                       |
-          v                       v
-   No external calls       External services
-          |                       |
-          v                       v
-   Fast / deterministic       Real Groq API
-```
+## Testing
 
 ### Unit Tests
 
-Test:
+Run:
 
--   Settings
--   LLM provider selection
--   LLM Factory
--   ILLMService contract
--   MockLLMService
-
-### Integration Tests
-
-Test:
-
--   FastAPI application
--   `/health`
--   GroqLLMService
--   Real Groq connectivity
-
-------------------------------------------------------------------------
-
-# M1 Verification Status
-
-  Area                    Status
-  ----------------------- --------
-  Repository foundation   ✅
-  Configuration           ✅
-  LLM abstraction         ✅
-  Groq provider           ✅
-  Azure provider          ✅
-  Mock provider           ✅
-  LLM Factory             ✅
-  FastAPI                 ✅
-  `/health`               ✅
-  `/chat`                 ✅
-  Ruff validation         ✅
-  Application import      ✅
-  Unit tests              ✅
-  Groq integration        ✅
-  Real LLM response       ✅
-
-------------------------------------------------------------------------
-
-# What M1 Does NOT Include
-
-The following are intentionally deferred to later milestones:
-
--   Jira MCP
--   GitHub MCP
--   Confluence MCP
--   Workday MCP
--   RAG
--   PostgreSQL domain schema
--   pgvector
--   Semantic Router
--   LangChain orchestration
--   LangGraph
--   Evidence Agent
--   Goal Agent
--   Impact Agent
--   Report Agent
--   Multi-Agent workflow
--   Guardrails
--   Human-in-the-loop approval
--   Redis caching
--   AI tracing
--   AI evaluation
--   Complete frontend workflow
-
-Workday-related information such as:
-
--   Goals
--   Role & Responsibilities
--   Annual Goals
--   1:1 Check-ins
-
-will initially be provided as PDF/DOCX documents for the MVP.
-
-Employees will also be able to upload their own personal evidence.
-
-------------------------------------------------------------------------
-
-# M1 Exit Criteria
-
-M1 is considered complete when:
-
--   [x] Application starts successfully
--   [x] `/health` works
--   [x] Swagger is available
--   [x] Configuration loads from `.env`
--   [x] LLM provider abstraction is established
--   [x] Groq connectivity works
--   [x] Azure provider boundary exists
--   [x] Mock provider supports unit tests
--   [x] Ruff validation passes
--   [x] Application import passes
--   [x] Unit tests pass
--   [x] Groq integration test passes
--   [x] `/chat` returns a real LLM response
-
-------------------------------------------------------------------------
-
-# Next Milestone
-
-M1 establishes the AI infrastructure.
-
-The next milestone moves into the actual MyImpact problem:
-
-``` text
-Employee Expectations
-        +
-Enterprise Evidence
-        +
-Personal Evidence
-        |
-        v
-   Evidence Model
-        |
-        v
-   Goal Mapping
-        |
-        v
- Impact Assessment
-        |
-        v
- Evidence-backed Report
+```bash
+python -m pytest tests/unit -v
 ```
 
-The initial domain models will be:
+Final baseline:
 
-``` text
+```text
+8 passed
+```
+
+### Groq Integration Test
+
+Run:
+
+```bash
+python -m pytest tests/integration -v -m integration
+```
+
+Verified result:
+
+```text
+1 passed, 1 deselected
+tests/integration/llm/test_groq_integration.py::test_groq_llm_service PASSED
+```
+
+The integration test requires the relevant provider credentials/configuration.
+
+---
+
+## Validation
+
+Project validation is available through:
+
+```bash
+python scripts/validate.py
+```
+
+The validation workflow includes:
+
+```text
+[1/4] Python Syntax
+      ✓ All Python files compiled successfully
+
+[2/4] Static Analysis
+      ✓ static analysis passed
+
+[3/4] Application Import
+      ✓ application import passed
+```
+
+Ruff static analysis and configured auto-fix behavior were also added to the validation workflow.
+
+---
+
+## Dependencies
+
+The project maintains dependencies in:
+
+```text
+requirements.txt
+```
+
+The M1 dependency baseline includes the FastAPI/Pydantic stack, LLM provider dependencies, pytest, Ruff, and required supporting packages.
+
+`email-validator` was added because Pydantic `EmailStr` requires it.
+
+---
+
+## Important M1 Fixes
+
+The following issues were identified and resolved during M1:
+
+- Added the missing `LLMProvider` enum and required import.
+- Added the missing `ChatRequest` model.
+- Corrected the `MockLLMService` interface import.
+- Added `email-validator` for Pydantic `EmailStr`.
+- Added Ruff/static analysis to the validation workflow.
+- Added validation/build checks for Python syntax and application imports.
+
+---
+
+## Important Files
+
+Key M1 areas include:
+
+```text
+app/
+├── config/
+│   └── settings.py
+├── api/
+├── services/
+├── models/
+└── ...
+
+tests/
+├── unit/
+└── integration/
+
+scripts/
+└── validate.py
+
+.env
+.env.example
+requirements.txt
+```
+
+Provider implementations include:
+
+```text
+GroqLLMService
+AzureAIService
+MockLLMService
+```
+
+The LLM interface and factory provide the common provider abstraction and selection mechanism.
+
+---
+
+## M1 Completion Checklist
+
+- [x] FastAPI application foundation
+- [x] Environment-based configuration
+- [x] `.env.example`
+- [x] LLM provider abstraction
+- [x] Groq LLM service
+- [x] Azure AI service
+- [x] Mock LLM service
+- [x] LLM factory
+- [x] Chat endpoint
+- [x] Unit tests
+- [x] Groq integration test
+- [x] Ruff/static analysis
+- [x] Application import validation
+- [x] Validation script
+- [x] Dependency baseline
+
+---
+
+## M1 Result
+
+M1 establishes:
+
+```text
+FastAPI
+   ↓
+Configuration
+   ↓
+LLM Abstraction
+   ↓
+Provider Factory
+   ↓
+Groq / Azure AI / Mock
+```
+
+The application is ready for persistence and data-layer development.
+
+### M1 Boundary
+
+M1 does not yet implement:
+
+- PostgreSQL persistence
+- SQLAlchemy persistence models
+- Alembic migrations
+- Repository layer
+- Evidence version persistence
+- Impact history persistence
+
+These are introduced in M2.
+
+---
+
+## Next Milestone
+
+### M2 — Persistence & Data Layer
+
+M2 adds:
+
+```text
+Application
+    ↓
+Services
+    ↓
+Repositories
+    ↓
+SQLAlchemy
+    ↓
+PostgreSQL
+```
+
+M2 introduces persistence concepts for:
+
+```text
+User
 Goal
 Evidence
+EvidenceVersion
 EvidenceMapping
 ImpactAssessment
 Report
 ```
 
-The next milestone should focus on the **domain and evidence
-foundation**, rather than adding generic chatbot functionality.
-
-------------------------------------------------------------------------
-
-# M1 Completion
-
-M1 provides the first reliable MyImpact AI vertical slice:
-
-``` text
-FastAPI
-   |
-   v
-LLM Abstraction
-   |
-   v
-Groq
-   |
-   v
-Real LLM Response
-```
-
-The foundation is now ready for the MyImpact-specific intelligence
-layer.
+**Milestone status: M1 Complete — application foundation established and ready for M2.**

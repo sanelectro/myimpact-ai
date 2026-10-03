@@ -1,6 +1,6 @@
 # MyImpact — M3 Document Intelligence & Knowledge
 
-## 1. M3 Objective
+# 1. M3 Objective
 
 M3 turns uploaded career information into **structured, searchable, and semantically retrievable knowledge**.
 
@@ -54,19 +54,19 @@ Those belong to M4/M5.
 
 # 3. M3 Status
 
-| Area | Status |
-|---|---|
-| M3.1 Document Domain & Persistence | ✅ Complete |
-| M3.2 PDF/DOCX Upload | ✅ Complete |
-| M3.3 Text Extraction | ✅ Complete |
-| M3.4 Document Classification | ✅ Complete |
-| M3.5 Structured Expectation Extraction | ✅ Complete |
-| M3.6.1 Knowledge / Chunk Model | ✅ Complete |
-| M3.6.2 Intelligent Document Chunking | ✅ Complete |
-| M3.6.3 Chunk ↔ Expectation Enrichment | ⏭️ Intentionally skipped |
-| M3.6.4 Embedding Provider Abstraction | ✅ Complete |
-| M3.6.5 Embedding Storage & Semantic Retrieval | ✅ Complete |
-| M3.7 Final Validation | ✅ Complete |
+| Area                                          | Status                     |
+| --------------------------------------------- | -------------------------- |
+| M3.1 Document Domain & Persistence            | ✅ Complete                |
+| M3.2 PDF/DOCX Upload                          | ✅ Complete                |
+| M3.3 Text Extraction                          | ✅ Complete                |
+| M3.4 Document Classification                  | ✅ Complete                |
+| M3.5 Structured Expectation Extraction        | ✅ Complete                |
+| M3.6.1 Knowledge / Chunk Model                | ✅ Complete                |
+| M3.6.2 Intelligent Document Chunking          | ✅ Complete                |
+| M3.6.3 Chunk ↔ Expectation Enrichment        | ⏭️ Intentionally skipped |
+| M3.6.4 Embedding Provider Abstraction         | ✅ Complete                |
+| M3.6.5 Embedding Storage & Semantic Retrieval | ✅ Complete                |
+| M3.7 Final Validation                         | ✅ Complete                |
 
 ### Final validation
 
@@ -1131,24 +1131,24 @@ This should be treated as future architecture work rather than part of the compl
 
 M3 is considered complete when the system can:
 
-- [x] Accept PDF documents
-- [x] Accept DOCX documents
-- [x] Persist document metadata
-- [x] Extract document text
-- [x] Classify documents
-- [x] Extract structured expectations where applicable
-- [x] Create intelligent hierarchical document chunks
-- [x] Persist document chunks
-- [x] Generate embeddings
-- [x] Support configurable embedding providers
-- [x] Persist embeddings
-- [x] Store vectors using PostgreSQL + pgvector
-- [x] Generate query embeddings
-- [x] Perform semantic retrieval
-- [x] Support user/document scoped retrieval
-- [x] Validate user isolation
-- [x] Validate the complete knowledge pipeline
-- [x] Pass the complete test suite
+- [X] Accept PDF documents
+- [X] Accept DOCX documents
+- [X] Persist document metadata
+- [X] Extract document text
+- [X] Classify documents
+- [X] Extract structured expectations where applicable
+- [X] Create intelligent hierarchical document chunks
+- [X] Persist document chunks
+- [X] Generate embeddings
+- [X] Support configurable embedding providers
+- [X] Persist embeddings
+- [X] Store vectors using PostgreSQL + pgvector
+- [X] Generate query embeddings
+- [X] Perform semantic retrieval
+- [X] Support user/document scoped retrieval
+- [X] Validate user isolation
+- [X] Validate the complete knowledge pipeline
+- [X] Pass the complete test suite
 
 Final validation:
 

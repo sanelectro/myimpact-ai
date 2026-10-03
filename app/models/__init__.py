@@ -11,6 +11,13 @@ from .evidence_mapping import EvidenceMapping, EvidenceRelevance
 from .evidence_version import EvidenceVersion
 from .goal import Goal, GoalCreate, GoalStatus
 from .impact_assessment import ImpactAssessment, ImpactType
+from .impact_intelligence import (
+    EvidenceCandidate,
+    EvidenceEvaluation,
+    EvidenceSupportLevel,
+    ExpectationEvidenceResult,
+    CareerInsight,
+)
 from .report import Report, ReportStatus, ReportType
 from .user import User, UserCreate
 
@@ -32,6 +39,11 @@ __all__ = [
     "GoalCreate",
     "GoalStatus",
     "ImpactAssessment",
+    "EvidenceCandidate",
+    "EvidenceEvaluation",
+    "EvidenceSupportLevel",
+    "ExpectationEvidenceResult",
+    "CareerInsight",
     "ImpactType",
     "Report",
     "ReportStatus",

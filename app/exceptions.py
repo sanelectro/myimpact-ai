@@ -20,3 +20,14 @@ class DocumentExpectationExtractionError(RuntimeError):
 
 class DocumentChunkingError(Exception):
     """Raised when document content cannot be chunked."""
+
+class EvidenceEvaluationError(RuntimeError):
+    """Raised when retrieved evidence cannot be evaluated safely."""
+
+
+class EvidencePersistenceError(RuntimeError):
+    """Raised when evaluated evidence cannot be persisted safely."""
+
+
+class ImpactAssessmentEvaluationError(RuntimeError):
+    """Raised when impact assessment evaluation cannot be completed safely."""
