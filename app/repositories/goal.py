@@ -52,3 +52,21 @@ class GoalRepository(BaseRepository):
         self.session.flush()
 
         return goal
+    def update(self, goal_id: str, values: dict) -> GoalDB | None:
+        goal = self.get_by_id(goal_id)
+        if goal is None:
+            return None
+        for field, value in values.items():
+            setattr(goal, field, value)
+        goal.updated_at = datetime.now(UTC)
+        self.session.flush()
+        return goal
+
+    def delete(self, goal_id: str) -> bool:
+        goal = self.get_by_id(goal_id)
+        if goal is None:
+            return False
+        self.session.delete(goal)
+        self.session.flush()
+        return True
+
