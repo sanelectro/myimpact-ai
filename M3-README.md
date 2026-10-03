@@ -1,115 +1,317 @@
-# MyImpact AI — M3 Document Intelligence & Knowledge
+# MyImpact — M3 Document Intelligence & Knowledge
 
-> **M3 turns uploaded career information into structured, retrievable knowledge.**
+## 1. M3 Objective
 
-## Milestone Goal
-
-M3 establishes the document intelligence foundation required for MyImpact to understand role expectations, represent source knowledge, and retrieve relevant knowledge semantically.
+M3 turns uploaded career information into **structured, searchable, and semantically retrievable knowledge**.
 
 M3 answers:
 
-> **Can MyImpact understand and retrieve the user's career knowledge?**
+> **Can MyImpact understand, structure, store, and retrieve the user's career knowledge?**
 
-M4 will build on this foundation to answer a different question:
+M4 will build on this foundation to answer:
 
-> **What evidence demonstrates that the expectations are being met, and what impact did it create?**
+> **What evidence demonstrates that expectations are being met, and what impact did that evidence create?**
+
+The core principle remains:
+
+> **Measure impact, not activity.**
+
+M3 therefore focuses on building the reliable **knowledge foundation** required for future evidence and impact intelligence.
 
 ---
 
-# M3 Status
+# 2. M3 Scope
+
+M3 covers:
+
+- Document upload
+- PDF/DOCX processing
+- Text extraction
+- Document classification
+- Structured expectation extraction
+- Intelligent document chunking
+- Embedding provider abstraction
+- Embedding generation
+- Embedding persistence
+- PostgreSQL + pgvector semantic retrieval
+- User/document isolation
+- End-to-end knowledge pipeline validation
+
+M3 does **not** attempt to determine:
+
+- Whether an expectation was achieved
+- Whether work created measurable impact
+- Impact magnitude
+- Performance ratings
+- Career readiness
+- Promotion readiness
+- Evidence quality scoring
+- Final career recommendations
+
+Those belong to M4/M5.
+
+---
+
+# 3. M3 Status
 
 | Area | Status |
 |---|---|
-| M3.1 Document domain & persistence | ✅ Complete |
-| M3.2 PDF/DOCX upload | ✅ Complete |
-| M3.3 Text extraction | ✅ Complete |
-| M3.4 Document classification | ✅ Complete |
-| M3.5 Structured expectation extraction | ✅ Complete |
-| M3.6.1 Knowledge / chunk model | ✅ Complete |
-| M3.6.2 Intelligent document chunking | ✅ Complete |
-| M3.6.3 Chunk ↔ expectation enrichment | ⏭️ Intentionally skipped |
-| M3.6.4 Embedding provider abstraction | ✅ Complete |
-| M3.6.5 Embedding storage & semantic retrieval | 🚧 Current step |
-| M3.6.6 Knowledge retrieval API | ⏳ Pending |
-| M3.7 Final validation | ⏳ Pending |
-| M3.7 Final validation | ⏳ Pending |
+| M3.1 Document Domain & Persistence | ✅ Complete |
+| M3.2 PDF/DOCX Upload | ✅ Complete |
+| M3.3 Text Extraction | ✅ Complete |
+| M3.4 Document Classification | ✅ Complete |
+| M3.5 Structured Expectation Extraction | ✅ Complete |
+| M3.6.1 Knowledge / Chunk Model | ✅ Complete |
+| M3.6.2 Intelligent Document Chunking | ✅ Complete |
+| M3.6.3 Chunk ↔ Expectation Enrichment | ⏭️ Intentionally skipped |
+| M3.6.4 Embedding Provider Abstraction | ✅ Complete |
+| M3.6.5 Embedding Storage & Semantic Retrieval | ✅ Complete |
+| M3.7 Final Validation | ✅ Complete |
+
+### Final validation
+
+```text
+323 tests passed
+9 warnings
+```
+
+The warnings are dependency/deprecation-related and are not test failures.
 
 ---
 
-# Current Document Processing Flow
+# 4. High-Level Architecture
+
+```text
+                    ┌──────────────────────┐
+                    │     User Documents   │
+                    │   PDF / DOCX / etc.  │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Document Domain    │
+                    │   & Persistence      │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Text Extraction    │
+                    │   PDF / DOCX         │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │   Classification     │
+                    └──────────┬───────────┘
+                               │
+                               ├──────────────────────┐
+                               │                      │
+                               ▼                      ▼
+                    ┌──────────────────┐   ┌────────────────────┐
+                    │ Expectations     │   │ Document Knowledge │
+                    │ Extraction       │   │ Chunking           │
+                    └────────┬─────────┘   └──────────┬─────────┘
+                             │                        │
+                             ▼                        ▼
+                    ┌──────────────────┐   ┌────────────────────┐
+                    │ Structured       │   │ DocumentChunk      │
+                    │ Expectations     │   │                    │
+                    └────────┬─────────┘   └──────────┬─────────┘
+                             │                        │
+                             │                        ▼
+                             │              ┌────────────────────┐
+                             │              │ Embedding Provider │
+                             │              └──────────┬─────────┘
+                             │                         │
+                             │                         ▼
+                             │              ┌────────────────────┐
+                             │              │ DocumentChunk      │
+                             │              │ Embeddings         │
+                             │              └──────────┬─────────┘
+                             │                         │
+                             │                         ▼
+                             │              ┌────────────────────┐
+                             │              │ PostgreSQL         │
+                             │              │ + pgvector         │
+                             │              └──────────┬─────────┘
+                             │                         │
+                             └──────────────┬──────────┘
+                                            │
+                                            ▼
+                              ┌──────────────────────────┐
+                              │ M4 Impact Intelligence   │
+                              │                          │
+                              │ Expectations             │
+                              │        ↓                 │
+                              │ Semantic Retrieval       │
+                              │        ↓                 │
+                              │ Evidence Chunks          │
+                              │        ↓                 │
+                              │ Impact Evaluation        │
+                              └──────────────────────────┘
+```
+
+---
+
+# 5. Document Processing Flow
+
+The completed M3 document pipeline is:
 
 ```text
 PDF / DOCX
-    │
-    ▼
+    ↓
 Document
-    │
-    ▼
+    ↓
 Text Extraction
-    │
-    ├───────────────────┐
-    ▼                   ▼
-Classification      Expectation Extraction
-    │                   │
-    │                   ▼
-    │             Structured Expectations
-    │
-    ▼
+    ↓
+Document Classification
+    ↓
+Expectation Extraction
+    ↓
+Structured Expectations
+    ↓
 Intelligent Chunking
-    │
-    ▼
+    ↓
 Document Chunks
+    ↓
+Embedding Generation
+    ↓
+Embedding Persistence
+    ↓
+PostgreSQL + pgvector
+    ↓
+Semantic Retrieval
 ```
 
-A document does **not** have to produce expectations. Expectations are derived structured knowledge for documents where they are applicable.
+A document does **not** need to produce expectations.
 
-For example:
-
-```text
-JL5 Roles & Responsibilities
-    ├── Expectations
-    └── Chunks
-
-Development Journey
-    └── Chunks
-```
-
-The Development Journey can later act as an evidence source without being forced into an expectation model.
+A document can still be valuable as source knowledge and evidence.
 
 ---
 
-# M3.5 — Structured Expectations
+# 6. M3.1 — Document Domain & Persistence
 
-Expectation extraction is already implemented.
+M3 introduced the document domain required to represent uploaded career information.
 
-The processing pipeline uses the extracted document content and an LLM to identify structured expectations such as:
+Documents provide the canonical source from which subsequent processing is derived.
 
-- expectation category
-- expectation statement
-- confidence
+The document lifecycle is conceptually:
 
-Expectations are persisted independently from document chunks.
+```text
+Uploaded
+   ↓
+Processing
+   ↓
+Extracted
+   ↓
+Classified
+   ↓
+Structured
+   ↓
+Completed
+```
 
-This separation is intentional:
+The exact lifecycle implementation remains owned by the document-processing domain.
+
+The important architectural principle is:
+
+> Document content is the source of truth. All derived knowledge can be regenerated.
+
+---
+
+# 7. M3.2 — PDF/DOCX Upload
+
+M3 supports ingestion of career-related PDF and DOCX documents.
+
+Typical examples include:
+
+- Performance reviews
+- Role descriptions
+- Job expectations
+- Goal documents
+- Feedback
+- Career documents
+- Project documents
+- Other professional documentation
+
+The uploaded document becomes the source artifact from which structured knowledge is derived.
+
+---
+
+# 8. M3.3 — Text Extraction
+
+Documents are processed to extract usable textual content.
+
+The extraction pipeline supports:
+
+```text
+PDF
+ └── extracted text
+
+DOCX
+ └── extracted text
+```
+
+The extracted content becomes the input for:
+
+- Classification
+- Expectation extraction
+- Intelligent chunking
+- Embedding generation
+
+The extraction layer should remain independent of downstream intelligence.
+
+---
+
+# 9. M3.4 — Document Classification
+
+Documents are classified so that MyImpact can understand the nature of the source material.
+
+Classification provides contextual information for subsequent processing.
+
+Classification is metadata about the source.
+
+It is not an assessment of the user's performance.
+
+---
+
+# 10. M3.5 — Structured Expectation Extraction
+
+M3 extracts structured expectations from relevant documents.
+
+Examples of expectations may include:
+
+- Technical leadership
+- Delivery ownership
+- Architecture responsibility
+- Team leadership
+- Stakeholder management
+- Quality improvement
+- Operational excellence
+
+The important distinction is:
 
 ```text
 Document
- ├── Structured Knowledge
- │      └── Expectations
- │
- └── Source Knowledge
-        └── Chunks
+   ↓
+Potential expectations
+   ↓
+Structured expectations
 ```
 
-We do **not** currently persist a chunk-to-expectation mapping.
+An expectation is **not evidence**.
 
-That relationship can be discovered later during M4 evidence evaluation when an expectation is matched against relevant evidence.
+An expectation describes what is expected.
+
+Evidence will later describe what actually happened.
 
 ---
 
-# M3.6.1 — Knowledge / Chunk Model
+# 11. M3.6.1 — Knowledge / DocumentChunk Model
 
-`DocumentChunk` is the canonical source-knowledge representation.
+`DocumentChunk` is the canonical source-knowledge representation used for semantic retrieval.
+
+Conceptually:
 
 ```text
 DocumentChunk
@@ -126,118 +328,165 @@ DocumentChunk
 └── updated_at
 ```
 
-## Heading hierarchy
+### Important principles
 
-`heading_path` is the canonical hierarchy.
+### `content`
 
-Example:
+The actual source text.
 
-```json
-[
-  "Engineering Expectations",
-  "Technical Leadership",
-  "Architecture"
-]
+This remains the canonical knowledge content.
+
+### `chunk_index`
+
+Represents source order within the document.
+
+### `heading_path`
+
+Represents the hierarchical context of the chunk.
+
+For example:
+
+```text
+["Performance", "Technical Leadership", "Architecture"]
 ```
 
-Derived values such as the final heading, level, and display path are calculated when needed rather than persisted redundantly.
+The heading hierarchy is retained without persisting redundant heading/level/display-path fields.
 
-`chunk_index` preserves source-document order and is separate from heading hierarchy.
+### `metadata`
+
+Stores additional contextual information without polluting the core model.
 
 ---
 
-# M3.6.2 — Intelligent Document Chunking
+# 12. M3.6.2 — Intelligent Document Chunking
 
-The chunking service converts extracted Markdown into meaningful chunks while preserving document structure.
+The chunking system converts extracted document text into meaningful knowledge units.
 
-Capabilities include:
+The chunking strategy supports:
 
-- Markdown heading hierarchy
-- Canonical `heading_path`
+- Heading hierarchy
 - Multiple chunks under the same heading
 - Large-section splitting
 - Documents without headings
-- Heading excluded from chunk content
-- Safe replacement during document reprocessing
-- Persistence through the document processing flow
+- Source-order preservation
+- Heading context
+- Safe replacement during reprocessing
 
-Chunks remain an internal knowledge representation. M3 does not expose public CRUD APIs for chunks.
-
----
-
-# M3.6.3 — Why Chunk ↔ Expectation Mapping Is Skipped
-
-We intentionally do **not** create a `document_chunk_expectations` relationship at this stage.
-
-The current model already provides:
+Example:
 
 ```text
 Document
- ├── Expectations
- └── Chunks
+│
+├── Performance
+│   │
+│   ├── Technical Leadership
+│   │   ├── Chunk 1
+│   │   └── Chunk 2
+│   │
+│   └── Delivery
+│       ├── Chunk 3
+│       └── Chunk 4
+│
+└── Goals
+    └── Chunk 5
 ```
 
-Creating a permanent relationship between every chunk and expectation would duplicate information without a demonstrated product need.
-
-Later, M4 can perform:
-
-```text
-Expectation
-     │
-     ▼
-Semantic retrieval
-     │
-     ▼
-Relevant evidence chunks
-     │
-     ▼
-Impact / evidence evaluation
-```
-
-This keeps M3 simple and leaves the relationship as an intelligence result rather than a prematurely persisted structural relationship.
+The heading itself is represented through `heading_path` rather than being unnecessarily duplicated inside chunk content.
 
 ---
 
-# M3.6.4 — Embedding Provider Abstraction
+# 13. M3.6.3 — Chunk ↔ Expectation Mapping
 
-The current step introduces a provider-neutral embedding contract.
-
-```text
-                    IEmbeddingService
-                           │
-             ┌─────────────┼─────────────┐
-             ▼             ▼             ▼
-          OpenAI         Azure          Mock
-             │             │             │
-             └─────────────┼─────────────┘
-                           ▼
-                    EmbeddingResponse
-```
-
-The abstraction supports batched inputs because document processing will normally embed multiple chunks together.
-
-Current implementation:
+A persistent direct relationship between:
 
 ```text
-app/models/embedding.py
-app/services/embedding/interface.py
-app/services/embedding/openai_service.py
-app/services/embedding/azure_service.py
-app/services/embedding/mock_service.py
-app/services/embedding/factory.py
+DocumentChunk ↔ Expectation
 ```
 
-The existing `openai` Python dependency is reused; no additional embedding SDK is required.
+was intentionally **not introduced** in M3.
 
-## Configuration
+The reasoning is that semantic retrieval can dynamically connect expectations with relevant knowledge when needed.
 
-Embedding provider selection:
+The intended M4 flow is:
 
-```env
+```text
+Expectation
+    ↓
+Semantic Retrieval
+    ↓
+Relevant Document Chunks
+    ↓
+Evidence Evaluation
+    ↓
+Impact Analysis
+```
+
+This avoids creating a potentially stale or overly rigid mapping layer.
+
+If future requirements demonstrate a persistent relationship is necessary, it can be introduced later.
+
+---
+
+# 14. M3.6.4 — Embedding Provider Abstraction
+
+Embeddings are generated through a provider abstraction.
+
+The application uses:
+
+```text
+IEmbeddingService
+```
+
+This keeps the core application independent of a specific embedding vendor.
+
+Supported providers include:
+
+```text
+Mock
+OpenAI
+Azure OpenAI
+```
+
+Provider selection is configuration-driven.
+
+---
+
+# 15. Embedding Model
+
+The embedding request/response model supports batched inputs.
+
+Conceptually:
+
+```text
+EmbeddingRequest
+├── inputs[]
+└── optional provider configuration
+
+EmbeddingResponse
+├── embeddings[]
+├── model
+└── dimensions
+```
+
+The abstraction allows the application to:
+
+- Generate multiple embeddings
+- Change providers
+- Change models
+- Test without external API calls
+- Keep vendor-specific details outside domain logic
+
+---
+
+# 16. Embedding Configuration
+
+Default development configuration:
+
+```text
 EMBEDDING_PROVIDER=mock
 ```
 
-Supported providers:
+Supported values:
 
 ```text
 mock
@@ -245,188 +494,901 @@ openai
 azure
 ```
 
-OpenAI configuration:
+### OpenAI
 
-```env
-OPENAI_API_KEY=
+```text
+OPENAI_API_KEY
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-Azure configuration:
+### Azure OpenAI
 
-```env
-AZURE_OPENAI_ENDPOINT=
-AZURE_OPENAI_API_KEY=
-AZURE_OPENAI_API_VERSION=
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT=
+```text
+AZURE_OPENAI_ENDPOINT
+AZURE_OPENAI_API_KEY
+AZURE_OPENAI_API_VERSION
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT
 ```
 
-The mock provider is the default so unit tests and local development do not require an external embedding service.
-
-## What M3.6.4 does not do yet
-
-It intentionally does **not**:
-
-- store vectors in PostgreSQL
-- add pgvector
-- perform similarity search
-- modify `DocumentChunk` to contain a vector
-- create a retrieval endpoint
-- perform RAG
-
-Those belong to the next M3.6 steps.
+Secrets must not be committed to source control.
 
 ---
 
-# M3.6.5 — Embedding Storage & Semantic Retrieval
+# 17. M3.6.5 — Embedding Storage
 
-M3.6.5 intentionally combines vector persistence and semantic retrieval into one vertical slice so the system can prove the complete path from a document chunk to a retrieved knowledge result.
+Embeddings are treated as **derived data**.
 
-## Storage model
-
-`DocumentChunk` remains the canonical source of knowledge. The embedding is derived data stored separately:
+The conceptual model is:
 
 ```text
 DocumentChunk
-      │
-      └── DocumentChunkEmbedding
-              ├── embedding
-              ├── embedding_model
-              └── embedding_dimensions
+       │
+       │ 1 : 1
+       ▼
+DocumentChunkEmbedding
 ```
 
-PostgreSQL uses `pgvector`. The vector column is intentionally dimension-flexible at the database type level; the stored model and dimension are used during retrieval to avoid mixing incompatible vectors.
+Conceptually:
 
-## Retrieval flow
+```text
+DocumentChunkEmbedding
+├── id
+├── chunk_id
+├── embedding
+├── embedding_model
+├── embedding_dimensions
+├── created_at
+└── updated_at
+```
+
+The embedding is derived from the canonical:
+
+```text
+DocumentChunk.content
+```
+
+Therefore embeddings can be regenerated if required.
+
+---
+
+# 18. PostgreSQL + pgvector
+
+M3 uses:
+
+```text
+PostgreSQL 16
++
+pgvector
+```
+
+Development environment:
+
+```text
+PostgreSQL container:
+myimpact-postgres
+
+Database:
+myimpact
+
+Host port:
+5556
+
+Container port:
+5432
+```
+
+The pgvector-enabled image is:
+
+```text
+pgvector/pgvector:pg16
+```
+
+The development environment currently uses pgvector 0.8.7.
+
+---
+
+# 19. Semantic Retrieval
+
+Semantic retrieval converts a natural-language query into an embedding and uses vector similarity to locate relevant document chunks.
+
+Flow:
 
 ```text
 Natural-language query
-        │
-        ▼
+        ↓
+Embedding Provider
+        ↓
 Query embedding
-        │
-        ▼
-pgvector cosine similarity
-        │
-        ▼
-Relevant DocumentChunks
-        │
-        ▼
-KnowledgeSearchResult
+        ↓
+pgvector similarity search
+        ↓
+Relevant DocumentChunk records
 ```
 
-The retrieval similarity is only a retrieval signal. It is **not an impact score**.
+The `SemanticRetrievalService` is responsible for this orchestration.
 
-## Included in M3.6.5
+Conceptually:
 
-- `DocumentChunkEmbedding` domain model
-- PostgreSQL/pgvector persistence model
-- Embedding upsert and lookup
-- Cascade-safe deletion
-- Exact cosine-similarity retrieval
-- Embedding model/dimension filtering
-- `SemanticRetrievalService`
-- Service/repository tests
-- PostgreSQL integration tests
+```python
+results = await semantic_retrieval_service.retrieve(
+    query="What did I do related to technical leadership?",
+    limit=5,
+    document_id=None,
+    user_id=user_id,
+)
+```
 
-## Intentionally deferred
+The retrieval service:
 
-- Public `/knowledge/retrieve` API
-- RAG orchestration
-- Impact scoring
-- Expectation-to-evidence evaluation
-- Approximate vector indexing/optimization
+1. Validates the query.
+2. Generates a query embedding.
+3. Validates the embedding response.
+4. Uses the returned embedding model.
+5. Searches the vector store.
+6. Applies optional document/user scope.
+7. Returns relevant knowledge chunks.
 
-Those belong to later steps.
+---
 
-# M3.6.6 — Knowledge Retrieval API
+# 20. Semantic Retrieval Result
 
-The next API boundary should expose knowledge retrieval as a product capability rather than exposing vector or chunk internals. The conceptual contract is:
+The service returns knowledge-oriented search results containing information such as:
+
+```text
+chunk_id
+document_id
+content
+heading_path
+document_type
+scope_type
+scope_id
+metadata
+similarity
+```
+
+The similarity value describes semantic relevance between the query and the stored chunk.
+
+It is **not** an impact score.
+
+---
+
+# 21. Important Architectural Rule
+
+## Vector Similarity ≠ Impact
+
+This distinction is critical.
+
+A high vector similarity means:
+
+> "This content is semantically related to the query."
+
+It does **not** mean:
+
+> "This person had high impact."
+
+Therefore M4 must not use raw vector similarity as an impact measurement.
+
+Correct flow:
+
+```text
+Expectation
+     ↓
+Semantic Retrieval
+     ↓
+Relevant Evidence
+     ↓
+Evidence Evaluation
+     ↓
+Impact Analysis
+```
+
+---
+
+# 22. User Isolation
+
+Knowledge retrieval must respect user ownership.
+
+A semantic query may optionally be scoped using:
+
+```text
+user_id
+document_id
+```
+
+The repository layer is responsible for applying the appropriate filtering.
+
+The system must never allow a user's retrieval query to return another user's private career knowledge.
+
+User isolation has been explicitly validated through integration testing.
+
+---
+
+# 23. Product API Boundary
+
+The intended product-facing retrieval boundary is:
 
 ```http
 POST /knowledge/retrieve
 ```
 
-The caller asks a natural-language question; internal embedding generation, vector search, ranking and chunk representation remain implementation details.
+The product API should accept a natural-language query and return useful knowledge.
 
-# M4 Relationship
+Example conceptual request:
 
-M3 provides the knowledge foundation.
+```json
+{
+  "query": "What evidence do I have for technical leadership?"
+}
+```
 
-M4 will combine:
+The internal implementation details should remain hidden from product consumers.
+
+The product API should **not** expose internal concepts such as:
+
+```text
+/chunks/search
+/documents/search
+/vector/search
+embedding_model
+embedding_dimensions
+vector similarity implementation
+```
+
+Internally, the service may use:
+
+```text
+limit
+similarity thresholds
+embedding model
+embedding dimensions
+document scope
+user scope
+```
+
+These are implementation details.
+
+> Note: `/knowledge/retrieve` is the intended product-facing boundary. M3's completed validation is centered on the semantic retrieval service and pipeline; the API boundary should be treated as the product integration contract unless an implementation is explicitly present in the API layer.
+
+---
+
+# 24. Knowledge Retrieval as a Platform Capability
+
+Semantic retrieval is not itself the final user experience.
+
+It is a reusable platform capability for future MyImpact intelligence.
+
+Potential consumers include:
+
+```text
+M4 Impact Intelligence
+M5 Career Assistant
+1:1 Assistant
+Career Review Assistant
+Goal / Expectation Analysis
+Evidence Discovery
+```
+
+The consumers should not need to know how embeddings or pgvector work.
+
+---
+
+# 25. Reprocessing Behaviour
+
+Document processing must support safe regeneration.
+
+The intended model is:
+
+```text
+Original Document
+       │
+       ├── Extracted Text
+       ├── Classification
+       ├── Expectations
+       └── Document Chunks
+                │
+                └── Embeddings
+```
+
+Derived knowledge can be regenerated from the source document.
+
+This avoids treating derived representations as the ultimate source of truth.
+
+---
+
+# 26. M3 Testing
+
+M3 was validated at multiple levels.
+
+### Unit tests
+
+Provider abstractions, services, validation and edge cases.
+
+### Integration tests
+
+Repository and PostgreSQL/pgvector behaviour.
+
+### Isolation tests
+
+Verification that user-scoped retrieval does not leak knowledge across users.
+
+### End-to-end pipeline test
+
+Validated the complete knowledge flow:
+
+```text
+Document
+   ↓
+Text / Chunks
+   ↓
+Embedding
+   ↓
+Persistence
+   ↓
+Semantic Retrieval
+```
+
+### Final result
+
+```text
+323 passed
+9 warnings
+```
+
+---
+
+# 27. Semantic Retrieval Edge Cases
+
+The semantic retrieval tests cover:
+
+### Empty query
+
+An empty or whitespace-only query is rejected.
+
+### Invalid embedding response
+
+The service validates that exactly one query embedding is returned.
+
+### Missing embedding model
+
+The service rejects responses without an embedding model.
+
+### Zero embeddings
+
+The system handles the absence of stored embeddings.
+
+### Multiple embeddings
+
+The repository can return multiple relevant chunks.
+
+### Empty repository result
+
+Semantic retrieval correctly returns an empty result when no matching knowledge exists.
+
+### User isolation
+
+Retrieval respects user boundaries.
+
+---
+
+# 28. End-to-End Knowledge Scenario
+
+A representative M3 scenario is:
+
+```text
+1. User uploads performance review
+             ↓
+2. Document is persisted
+             ↓
+3. Text is extracted
+             ↓
+4. Document is classified
+             ↓
+5. Expectations are extracted where applicable
+             ↓
+6. Document is intelligently chunked
+             ↓
+7. Chunks are persisted
+             ↓
+8. Chunk embeddings are generated
+             ↓
+9. Embeddings are persisted in pgvector
+             ↓
+10. User asks:
+    "What did I do related to technical leadership?"
+             ↓
+11. Query embedding is generated
+             ↓
+12. pgvector finds relevant chunks
+             ↓
+13. Relevant source knowledge is returned
+```
+
+At this point M3 is complete.
+
+M4 starts from the retrieved knowledge.
+
+---
+
+# 29. M3 → M4 Boundary
+
+The most important architectural boundary is:
+
+```text
+                    M3
+────────────────────────────────────
+Documents
+   ↓
+Extracted Knowledge
+   ↓
+Document Chunks
+   ↓
+Embeddings
+   ↓
+Semantic Retrieval
+────────────────────────────────────
+                    ↓
+                    ↓
+                    ↓
+                    M4
+────────────────────────────────────
+Expectations
+   ↓
+Relevant Evidence
+   ↓
+Evidence Evaluation
+   ↓
+Impact Analysis
+   ↓
+Coverage / Gaps
+   ↓
+Career Intelligence
+────────────────────────────────────
+```
+
+M3 answers:
+
+> **What knowledge do we have?**
+
+M4 answers:
+
+> **What does that knowledge demonstrate?**
+
+---
+
+# 30. M4 Starting Point
+
+M4 should consume existing M3 capabilities rather than rebuilding retrieval.
+
+Expected conceptual flow:
 
 ```text
 Role / Goals / Expectations
-             +
-       Evidence sources
-             +
-     Retrieved knowledge
              ↓
-      Evidence evaluation
+       Expectation
              ↓
-        Impact analysis
+   Semantic Retrieval
+             ↓
+   Relevant Evidence Chunks
+             ↓
+    Evidence Evaluation
+             ↓
+      Impact Analysis
+             ↓
+      Coverage / Gaps
+             ↓
+       Career Insight
 ```
+
+This preserves the separation between:
+
+```text
+Knowledge
+Evidence
+Impact
+```
+
+---
+
+# 31. What M3 Does Not Do
+
+M3 intentionally does not implement:
+
+- Impact scoring
+- Evidence scoring
+- Expectation coverage scoring
+- Career-readiness scoring
+- Promotion recommendations
+- Performance ratings
+- Manager recommendations
+- Career-path recommendations
+- AI career coaching
+- Automated 1:1 conversations
+- Final impact narratives
+
+Those belong to later product capabilities.
+
+---
+
+# 32. Architectural Decisions
+
+## Decision 1 — Document content is canonical
+
+`DocumentChunk.content` represents source knowledge.
+
+Embeddings are derived.
+
+## Decision 2 — Embeddings are separate from DocumentChunk
+
+Embedding-specific information belongs in the embedding model rather than the core knowledge entity.
+
+This keeps semantic infrastructure concerns separate from source knowledge.
+
+## Decision 3 — Provider abstraction
+
+Embedding vendors are hidden behind:
+
+```text
+IEmbeddingService
+```
+
+This allows provider/model changes without changing domain logic.
+
+## Decision 4 — No persistent Chunk ↔ Expectation mapping
+
+M3 does not create a permanent direct relationship between expectations and chunks.
+
+Semantic retrieval can dynamically establish relevance when required.
+
+## Decision 5 — Semantic similarity is not impact
+
+Vector similarity is a retrieval mechanism.
+
+It is not a business metric.
+
+## Decision 6 — Product APIs hide infrastructure
+
+Consumers should interact with knowledge capabilities rather than vector database implementation details.
+
+## Decision 7 — Derived knowledge must be regenerable
+
+Documents remain the source of truth.
+
+Chunks and embeddings can be recreated.
+
+---
+
+# 33. Database Considerations
+
+The project uses PostgreSQL with pgvector.
+
+Database migrations belong in the separate:
+
+```text
+myimpact-db
+```
+
+repository.
+
+Application code should not become the owner of database migration history.
+
+The database repository remains responsible for:
+
+- Flyway migrations
+- Schema evolution
+- pgvector-related schema changes
+- Database versioning
+
+---
+
+# 34. Development Database
+
+Current development database configuration:
+
+```text
+Container:
+myimpact-postgres
+
+Database:
+myimpact
+
+Host:
+localhost
+
+Port:
+5556
+```
+
+Do not destroy the database volume merely to resolve PostgreSQL collation warnings.
+
+Avoid:
+
+```bash
+docker compose down -v
+```
+
+unless database data destruction is explicitly intended.
+
+---
+
+# 35. Future Backlog
+
+The following future item remains intentionally outside M3:
+
+```text
+Future: Async Document Processing
+
+Move Docling and subsequent document processing to a background
+worker/queue with processing status, retries, and detailed
+execution tracking.
+```
+
+This should be treated as future architecture work rather than part of the completed M3 milestone.
+
+---
+
+# 36. M3 Definition of Done
+
+M3 is considered complete when the system can:
+
+- [x] Accept PDF documents
+- [x] Accept DOCX documents
+- [x] Persist document metadata
+- [x] Extract document text
+- [x] Classify documents
+- [x] Extract structured expectations where applicable
+- [x] Create intelligent hierarchical document chunks
+- [x] Persist document chunks
+- [x] Generate embeddings
+- [x] Support configurable embedding providers
+- [x] Persist embeddings
+- [x] Store vectors using PostgreSQL + pgvector
+- [x] Generate query embeddings
+- [x] Perform semantic retrieval
+- [x] Support user/document scoped retrieval
+- [x] Validate user isolation
+- [x] Validate the complete knowledge pipeline
+- [x] Pass the complete test suite
+
+Final validation:
+
+```text
+323 passed
+9 warnings
+```
+
+---
+
+# 37. Repository Checkpoint
+
+M3 development was completed on:
+
+```text
+Branch:
+m3-development
+```
+
+Final M3 completion commit:
+
+```text
+368c256 M3.7: complete knowledge pipeline validation
+```
+
+Previous semantic retrieval checkpoint:
+
+```text
+1a44c3a m3.6.5: feat: add embedding storage and semantic retrieval
+```
+
+At the M3 completion checkpoint, the only untracked item was:
+
+```text
+backlog.txt
+```
+
+containing the future asynchronous document-processing item.
+
+---
+
+# 38. Important Source Files
+
+The M3 implementation includes the following major areas.
+
+### Embedding models
+
+```text
+app/models/embedding.py
+```
+
+### Embedding interface
+
+```text
+app/services/embedding/interface.py
+```
+
+### Embedding providers
+
+```text
+app/services/embedding/openai_service.py
+app/services/embedding/azure_service.py
+app/services/embedding/mock_service.py
+```
+
+### Embedding factory
+
+```text
+app/services/embedding/factory.py
+```
+
+### Document chunk embeddings
+
+```text
+app/models/document_chunk_embedding.py
+app/repositories/document_chunk_embedding.py
+app/services/document_chunk_embedding.py
+```
+
+### Semantic retrieval
+
+```text
+app/services/semantic_retrieval.py
+```
+
+### Knowledge tests
+
+```text
+tests/unit/services/knowledge/test_semantic_retrieval.py
+tests/integration/services/test_semantic_retrieval.py
+tests/integration/services/test_semantic_retrieval_isolation.py
+tests/e2e/test_knowledge_pipeline.py
+```
+
+---
+
+# 39. Working Rules for Future Development
+
+The following rules should continue into M4 and beyond.
+
+### 1. Inspect before changing
+
+Always inspect the current implementation before introducing a new model, service, repository, or abstraction.
+
+### 2. Avoid redundant models
+
+Prefer extending an existing canonical model when it already represents the required concept.
+
+### 3. Keep one source of truth
+
+Do not duplicate data merely to make a feature easier to implement.
+
+### 4. Keep infrastructure behind services
+
+Business logic should not depend directly on:
+
+- pgvector implementation
+- embedding vendors
+- database-specific details
+- provider-specific APIs
+
+### 5. Test after every meaningful milestone
+
+Run focused tests first, followed by the complete suite at a clean checkpoint.
+
+### 6. Commit clean checkpoints
+
+Use meaningful commits for completed milestones.
+
+### 7. Do not over-engineer
+
+Introduce additional relationships, abstractions, or persistence only when a real product requirement justifies them.
+
+### 8. Keep product concepts separate from infrastructure
 
 For example:
 
 ```text
-JL5 Roles & Responsibilities
-        │
-        └── Expectation:
-            "Drive architecture decisions"
+User asks:
+"What evidence supports my technical leadership?"
 
-Development Journey
-        │
-        └── Evidence chunks:
-            "Led Vessel Simulator architecture..."
+Product concept:
+Knowledge / Evidence retrieval
 
-                 ↓
-
-        M4 Evidence Evaluation
+Internal implementation:
+Embedding → pgvector → DocumentChunk
 ```
 
-The system should not equate vector similarity with impact score. Semantic similarity is used to find potentially relevant evidence; impact evaluation is a separate intelligence step.
+The latter should remain hidden from the product contract.
 
 ---
 
-# Validation
+# 40. M3 Summary
 
-The repository checkpoint before M3.6.5 had:
+M3 establishes the **knowledge foundation of MyImpact**.
+
+The completed pipeline is:
 
 ```text
-309 tests passing
+                    DOCUMENTS
+                        │
+                        ▼
+                TEXT EXTRACTION
+                        │
+                        ▼
+                CLASSIFICATION
+                        │
+             ┌──────────┴──────────┐
+             │                     │
+             ▼                     ▼
+       EXPECTATIONS          DOCUMENT CHUNKS
+                                   │
+                                   ▼
+                              EMBEDDINGS
+                                   │
+                                   ▼
+                           POSTGRES + PGVECTOR
+                                   │
+                                   ▼
+                         SEMANTIC RETRIEVAL
+                                   │
+                                   ▼
+                            RELEVANT KNOWLEDGE
+                                   │
+                                   ▼
+                              M4 EVIDENCE
+                                   │
+                                   ▼
+                             IMPACT INTELLIGENCE
 ```
 
-For M3.6.5, run the focused embedding/retrieval tests first:
+The architectural progression is therefore:
 
-```bash
-pytest tests/unit/services/embedding tests/unit/services/knowledge -v
+```text
+M3
+Knowledge
+  ↓
+M4
+Evidence
+  ↓
+Impact
+  ↓
+M5
+Assistant
 ```
 
-Then run the complete suite:
+The key principle remains:
 
-```bash
-pytest -v
-```
-
-M3.6.5 should preserve the existing M3 behavior while adding vector persistence and semantic retrieval without changing the canonical `DocumentChunk` model.
+> **MyImpact should not measure how much activity happened. It should use reliable source knowledge to understand what was expected, what evidence exists, and ultimately what impact was created.**
 
 ---
 
-# M3 Definition of Done
+## Final M3 Checkpoint
 
-M3 is complete when MyImpact can:
+```text
+Milestone: M3 — Document Intelligence & Knowledge
 
-1. Accept PDF/DOCX career documents.
-2. Extract their content.
-3. Classify the document.
-4. Derive structured expectations where applicable.
-5. Represent source knowledge as ordered hierarchical chunks.
-6. Generate embeddings through a provider-neutral abstraction.
-7. Persist those embeddings in a vector-capable store.
-8. Retrieve relevant knowledge semantically.
-9. Expose knowledge retrieval through a product-level API.
-10. Validate the complete ingestion-to-retrieval flow.
+Status: COMPLETE
 
-At that point MyImpact has a usable **Personal Career Knowledge System** foundation, ready for M4 Impact Intelligence.
+Tests:
+323 passed
+
+Warnings:
+9 dependency/deprecation warnings
+
+Semantic Retrieval:
+Implemented
+
+Vector Storage:
+PostgreSQL + pgvector
+
+Embedding Providers:
+Mock / OpenAI / Azure OpenAI
+
+User Isolation:
+Validated
+
+End-to-End Knowledge Pipeline:
+Validated
+
+Next Major Milestone:
+M4 — Impact Intelligence
+```
