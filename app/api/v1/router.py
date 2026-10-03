@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+
+from app.api.v1.knowledge import router as knowledge_router
 from pydantic import BaseModel
 
 
@@ -18,3 +20,5 @@ def get_api_v1_info() -> ApiV1Info:
         version="v1",
         status="available",
     )
+
+router.include_router(knowledge_router)

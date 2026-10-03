@@ -1,4 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.api.v1.errors import (
+    handle_v1_http_exception,
+    handle_v1_unhandled_exception,
+    handle_v1_validation_error,
+)
+from app.api.v1.router import router as api_v1_router
 
 from app.api.routes.document import router as documents_router
 from app.api.routes.evidence import router as evidence_router
@@ -20,6 +29,11 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(api_v1_router)
+
+app.add_exception_handler(StarletteHTTPException, handle_v1_http_exception)
+app.add_exception_handler(RequestValidationError, handle_v1_validation_error)
+app.add_exception_handler(Exception, handle_v1_unhandled_exception)
 app.include_router(users_router)
 app.include_router(goals_router)
 app.include_router(evidence_router)
