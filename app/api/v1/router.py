@@ -8,6 +8,7 @@ from app.api.v1.evidence import router as evidence_router
 from app.api.v1.impact import router as impact_router
 from app.api.v1.insight import router as insight_router
 from app.api.v1.report import router as report_router
+from app.api.v1.chat import router as chat_router
 
 
 class ApiV1Info(BaseModel):
@@ -31,3 +32,4 @@ router.include_router(evidence_router)
 router.include_router(impact_router)
 router.include_router(insight_router)
 router.include_router(report_router)
+router.include_router(chat_router)
