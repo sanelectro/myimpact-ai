@@ -34,6 +34,22 @@ class EvidenceRepository(BaseRepository):
             )
             .first()
         )
+
+    def get_by_source_for_user(
+        self,
+        source_type: EvidenceSourceType,
+        source_id: str | None,
+        user_id: str,
+    ) -> EvidenceDB | None:
+        return (
+            self.session.query(EvidenceDB)
+            .filter(
+                EvidenceDB.source_type == source_type,
+                EvidenceDB.source_id == source_id,
+                EvidenceDB.user_id == user_id,
+            )
+            .first()
+        )
         
     def create(
     self,
