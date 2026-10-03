@@ -83,3 +83,70 @@ async def test_semantic_retrieval_requires_model_from_provider():
 
     with pytest.raises(ValueError, match="embedding model"):
         await service.retrieve("architecture")
+
+@pytest.mark.asyncio
+async def test_semantic_retrieval_requires_exactly_one_query_embedding():
+    embedding_service = MagicMock()
+    embedding_service.embed = AsyncMock(
+        return_value=EmbeddingResponse(
+            embeddings=[],
+            model="test-model",
+        )
+    )
+
+    service = SemanticRetrievalService(MagicMock(), embedding_service)
+
+    with pytest.raises(
+        ValueError,
+        match="Embedding provider must return one query vector",
+    ):
+        await service.retrieve("architecture")
+
+
+@pytest.mark.asyncio
+async def test_semantic_retrieval_rejects_multiple_query_embeddings():
+    embedding_service = MagicMock()
+    embedding_service.embed = AsyncMock(
+        return_value=EmbeddingResponse(
+            embeddings=[
+                [1.0, 0.0],
+                [0.0, 1.0],
+            ],
+            model="test-model",
+        )
+    )
+
+    service = SemanticRetrievalService(MagicMock(), embedding_service)
+
+    with pytest.raises(
+        ValueError,
+        match="Embedding provider must return one query vector",
+    ):
+        await service.retrieve("architecture")
+
+
+@pytest.mark.asyncio
+async def test_semantic_retrieval_returns_empty_list_when_no_matches():
+    embedding_service = MagicMock()
+    embedding_service.embed = AsyncMock(
+        return_value=EmbeddingResponse(
+            embeddings=[[1.0, 0.0]],
+            model="test-model",
+        )
+    )
+
+    repository = MagicMock()
+    repository.search_similar.return_value = []
+
+    service = SemanticRetrievalService(repository, embedding_service)
+
+    results = await service.retrieve("architecture")
+
+    assert results == []
+    repository.search_similar.assert_called_once_with(
+        query_embedding=[1.0, 0.0],
+        embedding_model="test-model",
+        limit=5,
+        document_id=None,
+        user_id=None,
+    )
