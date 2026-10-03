@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
-
+from sqlalchemy import select
 from app.db.models.user import UserDB
 from app.repositories.base import BaseRepository
 from app.utils.email import normalize_email

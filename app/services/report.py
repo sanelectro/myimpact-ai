@@ -8,6 +8,7 @@ from app.models.report import ReportStatus, ReportType
 from app.repositories.report import ReportRepository
 from app.services.base import BaseService
 
+
 class ReportService(BaseService):
     def __init__(self, session: Session):
         super().__init__(session)

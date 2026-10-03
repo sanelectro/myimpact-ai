@@ -1,6 +1,7 @@
 from openai import AsyncAzureOpenAI
 
 from app.config.settings import get_settings
+from app.models.llm import LLMRequest, LLMResponse
 from app.services.llm.interface import ILLMService
 
 
@@ -17,16 +18,22 @@ class AzureAIService(ILLMService):
 
         self.model = settings.azure_openai_deployment
 
-    async def generate(self, prompt: str) -> str:
+    async def generate(
+        self,
+        request: LLMRequest,
+    ) -> LLMResponse:
 
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {
                     "role": "user",
-                    "content": prompt,
+                    "content": request.prompt,
                 }
             ],
         )
 
-        return response.choices[0].message.content or ""
+        return LLMResponse(
+            content=response.choices[0].message.content or "",
+            model=self.model,
+        )
