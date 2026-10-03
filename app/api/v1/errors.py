@@ -24,8 +24,7 @@ def _error_response(
         "code": code,
         "message": message,
     }
-    if details is not None:
-        error["details"] = details
+    error["details"] = details if details is not None else []
 
     return JSONResponse(
         status_code=status_code,
@@ -62,11 +61,21 @@ async def handle_v1_validation_error(
             content={"detail": exc.errors()},
         )
 
+    details = []
+    for error in exc.errors():
+        normalized = dict(error)
+        ctx = normalized.get("ctx")
+        if isinstance(ctx, dict):
+            normalized["ctx"] = {
+                key: str(value) for key, value in ctx.items()
+            }
+        details.append(normalized)
+
     return _error_response(
         status_code=422,
         code="VALIDATION_ERROR",
         message="Request validation failed",
-        details=exc.errors(),
+        details=details,
     )
 
 

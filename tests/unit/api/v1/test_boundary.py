@@ -59,5 +59,6 @@ def test_v1_http_exception_uses_common_contract() -> None:
         "error": {
             "code": "HTTP_404",
             "message": "Thing not found",
+            "details": [],
         }
     }
