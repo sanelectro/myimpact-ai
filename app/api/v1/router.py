@@ -6,6 +6,8 @@ from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.expectations import router as expectations_router
 from app.api.v1.evidence import router as evidence_router
 from app.api.v1.impact import router as impact_router
+from app.api.v1.insight import router as insight_router
+from app.api.v1.report import router as report_router
 
 
 class ApiV1Info(BaseModel):
@@ -27,3 +29,5 @@ router.include_router(expectations_router)
 router.include_router(goals_router)
 router.include_router(evidence_router)
 router.include_router(impact_router)
+router.include_router(insight_router)
+router.include_router(report_router)
