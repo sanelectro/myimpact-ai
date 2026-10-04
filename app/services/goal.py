@@ -32,3 +32,15 @@ class GoalService(BaseService):
 
     def get_goals_by_user_id(self, user_id: str) -> list[GoalDB]:
         return self.repository.get_by_user_id(user_id)
+    def update_goal(self, goal_id: str, values: dict) -> GoalDB:
+        goal = self.repository.update(goal_id, values)
+        if goal is None:
+            raise ValueError("Goal not found")
+        self.commit()
+        return goal
+
+    def delete_goal(self, goal_id: str) -> None:
+        if not self.repository.delete(goal_id):
+            raise ValueError("Goal not found")
+        self.commit()
+
