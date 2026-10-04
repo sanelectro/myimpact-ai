@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
@@ -34,6 +35,15 @@ class GoalService(BaseService):
     def get_goals_by_user_id(self, user_id: str) -> list[GoalDB]:
         return self.repository.get_by_user_id(user_id)
     def update_goal(self, goal_id: str, values: dict) -> GoalDB:
+        existing = self.repository.get_by_id(goal_id)
+        if existing is None:
+            raise ValueError("Goal not found")
+
+        start_date = values.get("start_date", existing.start_date)
+        end_date = values.get("end_date", existing.end_date)
+        if start_date and end_date and end_date < start_date:
+            raise ValueError("Target date cannot be before start date")
+
         goal = self.repository.update(goal_id, values)
         if goal is None:
             raise ValueError("Goal not found")

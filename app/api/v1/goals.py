@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.api_v1_goals import GoalCreateRequest, GoalResponse, GoalUpdateRequest
-from app.models.goal import GoalCreate
+from app.models.goal import GoalCreate, GoalStatus
 from app.services.goal import GoalService
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -39,7 +39,7 @@ def create_goal(
             scope=request.scope,
             start_date=request.start_date,
             end_date=request.end_date,
-            status=request.status,
+            status=GoalStatus.ACTIVE,
             source=request.source,
         )
     )
@@ -71,7 +71,13 @@ def update_goal(
     service: Annotated[GoalService, Depends(get_goal_service)],
 ) -> GoalResponse:
     _require_goal(service.get_goal_by_id(goal_id), user_id)
-    goal = service.update_goal(goal_id, request.model_dump(exclude_unset=True))
+    try:
+        goal = service.update_goal(goal_id, request.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
     return _to_response(goal)
 
 

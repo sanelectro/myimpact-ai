@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.api.v1.goals import router as goals_router
+from app.api.v1.goal_assessment import router as goal_assessment_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.expectations import router as expectations_router
 from app.api.v1.evidence import router as evidence_router
@@ -28,6 +29,7 @@ def get_api_v1_info() -> ApiV1Info:
 router.include_router(knowledge_router)
 router.include_router(expectations_router)
 router.include_router(goals_router)
+router.include_router(goal_assessment_router)
 router.include_router(evidence_router)
 router.include_router(impact_router)
 router.include_router(insight_router)

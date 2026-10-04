@@ -16,7 +16,7 @@ def _goal():
     now = datetime.now(UTC)
     return GoalDB(
         id="goal-1", user_id="user-1", title="Improve reliability",
-        status=GoalStatus.ACTIVE, created_at=now, updated_at=now,
+        scope=GoalScope.TEAM, status=GoalStatus.ACTIVE, created_at=now, updated_at=now,
     )
 
 
