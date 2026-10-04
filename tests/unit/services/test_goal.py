@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
-from app.models.goal import GoalCreate, GoalStatus
+from app.models.goal import GoalCreate, GoalScope, GoalStatus
 from app.repositories.goal import GoalRepository
 from app.services.goal import GoalService
 
@@ -21,6 +21,7 @@ def test_create_goal():
         title="Improve reliability",
         description="Improve deployment reliability.",
         status=GoalStatus.ACTIVE,
+        scope=GoalScope.TEAM,
     )
 
     with patch("app.services.goal.uuid4", return_value="goal-123"):
@@ -35,6 +36,7 @@ def test_create_goal():
         start_date=None,
         end_date=None,
         status=GoalStatus.ACTIVE,
+        scope=GoalScope.TEAM,
         source=None,
     )
     session.commit.assert_called_once()

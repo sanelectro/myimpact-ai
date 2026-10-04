@@ -2,12 +2,13 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.goal import GoalStatus
+from app.models.goal import GoalScope, GoalStatus
 
 
 class GoalCreateRequest(BaseModel):
     title: str = Field(min_length=1)
     description: str | None = None
+    scope: GoalScope = GoalScope.PERSONAL
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus = GoalStatus.ACTIVE
@@ -17,6 +18,7 @@ class GoalCreateRequest(BaseModel):
 class GoalUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1)
     description: str | None = None
+    scope: GoalScope = GoalScope.PERSONAL
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus | None = None
@@ -33,6 +35,7 @@ class GoalResponse(BaseModel):
     id: str
     title: str
     description: str | None = None
+    scope: GoalScope = GoalScope.PERSONAL
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus

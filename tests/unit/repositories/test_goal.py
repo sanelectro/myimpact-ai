@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
-from app.models.goal import GoalStatus
+from app.models.goal import GoalScope, GoalStatus
 from app.repositories.goal import GoalRepository
 
 
@@ -88,6 +88,7 @@ def test_create_goal():
         start_date=date(2026, 9, 1),
         end_date=date(2026, 12, 31),
         source="1:1",
+        scope=GoalScope.TEAM,
     )
 
     assert isinstance(result, GoalDB)
@@ -98,6 +99,7 @@ def test_create_goal():
     assert result.start_date == date(2026, 9, 1)
     assert result.end_date == date(2026, 12, 31)
     assert result.status == GoalStatus.ACTIVE
+    assert result.scope == GoalScope.TEAM
     assert result.source == "1:1"
 
     assert isinstance(result.created_at, datetime)

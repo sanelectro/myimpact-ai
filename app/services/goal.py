@@ -19,6 +19,7 @@ class GoalService(BaseService):
             user_id=goal_data.user_id,
             title=goal_data.title,
             description=goal_data.description,
+            scope=goal_data.scope,
             start_date=goal_data.start_date,
             end_date=goal_data.end_date,
             status=goal_data.status,

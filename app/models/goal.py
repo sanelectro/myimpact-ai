@@ -4,6 +4,12 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
+class GoalScope(str, Enum):
+    PERSONAL = "personal"
+    TEAM = "team"
+    ORGANIZATION = "organization"
+
+
 class GoalStatus(str, Enum):
     DRAFT = "draft"
     ACTIVE = "active"
@@ -16,6 +22,7 @@ class Goal(BaseModel):
     user_id: str
     title: str = Field(min_length=1)
     description: str | None = None
+    scope: GoalScope = GoalScope.PERSONAL
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus = GoalStatus.ACTIVE
@@ -28,6 +35,7 @@ class GoalCreate(BaseModel):
     user_id: str
     title: str = Field(min_length=1)
     description: str | None = None
+    scope: GoalScope = GoalScope.PERSONAL
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus = GoalStatus.ACTIVE

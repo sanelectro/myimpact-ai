@@ -36,6 +36,7 @@ def create_goal(
             user_id=user_id,
             title=request.title,
             description=request.description,
+            scope=request.scope,
             start_date=request.start_date,
             end_date=request.end_date,
             status=request.status,

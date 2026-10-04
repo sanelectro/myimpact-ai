@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.api.routes.goals import get_goal_service
 from app.db.models.goal import GoalDB
 from app.main import app
-from app.models.goal import GoalStatus
+from app.models.goal import GoalScope, GoalStatus
 from app.services.goal import GoalService
 
 client = TestClient(app)
@@ -25,9 +25,10 @@ def test_create_goal():
     service.create_goal.return_value = _goal()
     app.dependency_overrides[get_goal_service] = lambda: service
     try:
-        response = client.post("/goals", json={"user_id": "user-1", "title": "Improve reliability"})
+        response = client.post("/goals", json={"user_id": "user-1", "title": "Improve reliability", "scope": "team"})
         assert response.status_code == 201
         assert response.json()["id"] == "goal-1"
+        assert response.json()["scope"] == "team"
         service.create_goal.assert_called_once()
     finally:
         app.dependency_overrides.clear()

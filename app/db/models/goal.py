@@ -4,7 +4,7 @@ from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.goal import GoalStatus
+from app.models.goal import GoalScope, GoalStatus
 
 
 class GoalDB(Base):
@@ -14,6 +14,7 @@ class GoalDB(Base):
     user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    scope: Mapped[GoalScope] = mapped_column(Enum(GoalScope, name="goal_scope"), nullable=False, default=GoalScope.PERSONAL)
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[GoalStatus] = mapped_column(Enum(GoalStatus, name="goal_status"), nullable=False, default=GoalStatus.ACTIVE)

@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
-from app.models.goal import GoalStatus
+from app.models.goal import GoalScope, GoalStatus
 from app.repositories.base import BaseRepository
 
 
@@ -28,6 +28,7 @@ class GoalRepository(BaseRepository):
     user_id: str,
     title: str,
     description: str | None = None,
+    scope: GoalScope = GoalScope.PERSONAL,
     start_date: date | None = None,
     end_date: date | None = None,
     status: GoalStatus = GoalStatus.ACTIVE,
@@ -40,6 +41,7 @@ class GoalRepository(BaseRepository):
             user_id=user_id,
             title=title,
             description=description,
+            scope=scope,
             start_date=start_date,
             end_date=end_date,
             status=status,
