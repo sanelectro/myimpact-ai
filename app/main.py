@@ -1,4 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+
+from app.api.v1.errors import (
+    handle_v1_http_exception,
+    handle_v1_unhandled_exception,
+    handle_v1_validation_error,
+)
+from app.api.v1.router import router as api_v1_router
 
 from app.api.routes.document import router as documents_router
 from app.api.routes.evidence import router as evidence_router
@@ -17,6 +28,14 @@ app = FastAPI(
     title="MyImpact AI",
     description="AI intelligence and orchestration service for MyImpact",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(health_router)
