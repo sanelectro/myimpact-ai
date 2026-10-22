@@ -1,9 +1,9 @@
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.goal import GoalScope, GoalStatus
+from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 
 
 class GoalCreateRequest(BaseModel):
@@ -15,6 +15,7 @@ class GoalCreateRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
+    source_document_id: str | None = None
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -32,6 +33,7 @@ class GoalUpdateRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
+    source_document_id: str | None = None
 
     @model_validator(mode="after")
     def require_update_field_and_validate_dates(self):
@@ -42,6 +44,34 @@ class GoalUpdateRequest(BaseModel):
         return self
 
 
+class GoalDeactivateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        reason = value.strip()
+        if not reason:
+            raise ValueError("A reason is required to deactivate a goal")
+        return reason
+
+
+class GoalReopenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        reason = value.strip()
+        if not reason:
+            raise ValueError("A reason is required to reopen a completed goal")
+        return reason
+
+
 class GoalResponse(BaseModel):
     id: str
     title: str
@@ -50,9 +80,22 @@ class GoalResponse(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus
+    sub_status: GoalSubStatus = GoalSubStatus.NEEDS_REVIEW
+    deactivation_reason: str | None = None
     source: str | None = None
     created_at: datetime
     updated_at: datetime
+    source_document_id: str | None = None
+
+
+class GoalStatusHistoryResponse(BaseModel):
+    id: str
+    goal_id: str
+    from_status: GoalStatus
+    to_status: GoalStatus
+    reason: str | None = None
+    changed_by_user_id: str | None = None
+    created_at: datetime
 
 
 class GoalExpectationStatus(str, Enum):
@@ -72,3 +115,13 @@ class GoalAssessmentResponse(BaseModel):
     progress_percentage: int = Field(ge=0)
     status: GoalExpectationStatus
     description: str
+
+
+class GoalImportDuplicateResponse(BaseModel):
+    title: str
+    existing_goal_id: str
+
+
+class GoalImportResponse(BaseModel):
+    imported_goals: list[GoalResponse] = Field(default_factory=list)
+    skipped_duplicates: list[GoalImportDuplicateResponse] = Field(default_factory=list)

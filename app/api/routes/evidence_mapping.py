@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.exceptions import EvidenceMappingAlreadyExistsError
 from app.models.evidence_mapping import EvidenceMapping, EvidenceRelevance
+from app.models.goal import GoalStatus
 from app.services.evidence_mapping import EvidenceMappingService
+from app.services.goal import GoalService
 
 
 class EvidenceMappingCreateRequest(BaseModel):
@@ -30,6 +32,12 @@ def get_evidence_mapping_service(
     return EvidenceMappingService(db)
 
 
+def get_goal_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> GoalService:
+    return GoalService(db)
+
+
 @router.post(
     "",
     response_model=EvidenceMapping,
@@ -41,7 +49,20 @@ def create_evidence_mapping(
         EvidenceMappingService,
         Depends(get_evidence_mapping_service),
     ],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
 ) -> EvidenceMapping:
+    goal = goal_service.get_goal_by_id(request.goal_id)
+    if goal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Goal not found",
+        )
+    if goal.status != GoalStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Goal must be active before evidence can be added. Activate it first.",
+        )
+
     try:
         mapping = service.create_mapping(
             evidence_id=request.evidence_id,

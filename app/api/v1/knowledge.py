@@ -1,10 +1,14 @@
+import hashlib
+from pathlib import Path
 from typing import Annotated
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from urllib.parse import quote
 
 from app.api.routes.document import (
-    _validate_upload,
     get_document_classification_service,
     get_document_chunking_service,
     get_document_expectation_extraction_service,
@@ -23,6 +27,7 @@ from app.models.api_v1_knowledge import (
     KnowledgeRetrievalRequest,
     KnowledgeRetrievalResponse,
 )
+from app.exceptions import StorageFileNotFoundError
 from app.models.document import DocumentScopeType, DocumentType
 from app.models.document_chunk_embedding import KnowledgeSearchResult
 from app.repositories.document_chunk_embedding import DocumentChunkEmbeddingRepository
@@ -31,6 +36,16 @@ from app.services.embedding.factory import create_embedding_service
 from app.services.knowledge.semantic_retrieval import SemanticRetrievalService
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+
+MAX_EVIDENCE_FILE_SIZE_BYTES = 10 * 1024 * 1024
+EVIDENCE_FILE_TYPES = {
+    ".pdf": {"application/pdf", "application/octet-stream"},
+    ".png": {"image/png", "application/octet-stream"},
+    ".jpg": {"image/jpeg", "application/octet-stream"},
+    ".jpeg": {"image/jpeg", "application/octet-stream"},
+    ".gif": {"image/gif", "application/octet-stream"},
+    ".webp": {"image/webp", "application/octet-stream"},
+}
 
 
 def get_retrieval_service(
@@ -63,6 +78,85 @@ def _require_document_owner(document, user_id: str) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     if document.user_id != user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+
+
+@router.post(
+    "/documents/evidence-files",
+    response_model=KnowledgeDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_evidence_file(
+    user_id: Annotated[str, Form()],
+    file: Annotated[UploadFile, File()],
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> KnowledgeDocumentResponse:
+    file_name = file.filename
+    if not file_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A file name is required.")
+
+    extension = Path(file_name).suffix.lower()
+    allowed_content_types = EVIDENCE_FILE_TYPES.get(extension)
+    if allowed_content_types is None or file.content_type not in allowed_content_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF, PNG, JPG, JPEG, GIF, and WEBP files are supported.",
+        )
+
+    content = await file.read(MAX_EVIDENCE_FILE_SIZE_BYTES + 1)
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The uploaded file is empty.")
+    if len(content) > MAX_EVIDENCE_FILE_SIZE_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Files must be 10 MB or smaller.")
+
+    content_hash = hashlib.sha256(content).hexdigest()
+    existing_document = next(
+        (
+            document
+            for document in service.get_documents_by_user_id(user_id)
+            if document.document_type == DocumentType.PERSONAL_EVIDENCE
+            and document.content_hash == content_hash
+        ),
+        None,
+    )
+    if existing_document is not None:
+        return _to_document_response(existing_document)
+
+    document = service.upload_document(
+        user_id=user_id,
+        document_type=DocumentType.PERSONAL_EVIDENCE,
+        scope_type=DocumentScopeType.EMPLOYEE,
+        file_name=file_name,
+        content_type=file.content_type or "application/octet-stream",
+        content=content,
+        source="goal_evidence",
+    )
+    return _to_document_response(document)
+
+
+@router.get("/documents/{document_id}/file")
+def get_evidence_file(
+    document_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[DocumentService, Depends(get_document_service)],
+) -> Response:
+    document = service.get_document_by_id(document_id)
+    _require_document_owner(document, user_id)
+    if document.document_type != DocumentType.PERSONAL_EVIDENCE:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence file not found")
+
+    try:
+        content = service.storage.read(document.storage_path)
+    except StorageFileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence file not found") from exc
+
+    return Response(
+        content=content,
+        media_type=document.content_type,
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(document.file_name, safe='')}",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/documents", response_model=KnowledgeDocumentResponse, status_code=status.HTTP_201_CREATED)

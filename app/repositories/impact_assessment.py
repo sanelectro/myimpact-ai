@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.db.models.impact_assessment import ImpactAssessmentDB
+from app.db.models.evidence import EvidenceDB
+from app.models.evidence import EvidenceStatus
 from app.models.impact_assessment import ImpactType
 from app.repositories.base import BaseRepository
 
@@ -35,7 +37,12 @@ class ImpactAssessmentRepository(BaseRepository):
     ) -> list[ImpactAssessmentDB]:
         return (
             self.session.query(ImpactAssessmentDB)
-            .filter(ImpactAssessmentDB.goal_id == goal_id)
+            .filter(
+                ImpactAssessmentDB.goal_id == goal_id,
+                ImpactAssessmentDB.evidence.has(
+                    EvidenceDB.status == EvidenceStatus.ACTIVE
+                ),
+            )
             .all()
         )
         

@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.models.api_v1_goals import GoalAssessmentResponse, GoalExpectationStatus
 from app.repositories.evidence_mapping import EvidenceMappingRepository
+from app.repositories.evidence import EvidenceRepository
+from app.models.evidence import EvidenceStatus
 from app.repositories.impact_assessment import ImpactAssessmentRepository
 from app.services.base import BaseService
 
@@ -15,11 +17,20 @@ class GoalAssessmentService(BaseService):
     def __init__(self, session: Session):
         super().__init__(session)
         self.mapping_repository = EvidenceMappingRepository(session)
+        self.evidence_repository = EvidenceRepository(session)
         self.impact_repository = ImpactAssessmentRepository(session)
 
     def assess(self, goal_id: str) -> GoalAssessmentResponse:
         mappings = self.mapping_repository.get_by_goal_id(goal_id)
-        evidence_ids = {mapping.evidence_id for mapping in mappings}
+        evidence_ids = {
+            mapping.evidence_id
+            for mapping in mappings
+            if (
+                (evidence := self.evidence_repository.get_by_id(mapping.evidence_id))
+                is not None
+                and evidence.status == EvidenceStatus.ACTIVE
+            )
+        }
         impact_evidence_ids = {
             assessment.evidence_id
             for assessment in self.impact_repository.get_by_goal_id(goal_id)

@@ -18,6 +18,11 @@ class DocumentClassificationError(RuntimeError):
 class DocumentExpectationExtractionError(RuntimeError):
     """Raised when structured expectations cannot be extracted safely."""
 
+
+class LLMQuotaExceededError(RuntimeError):
+    """Raised when the configured LLM provider has exhausted its quota."""
+
+
 class DocumentChunkingError(Exception):
     """Raised when document content cannot be chunked."""
 

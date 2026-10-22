@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ExpectationCategory(str, Enum):
@@ -26,6 +26,23 @@ class Expectation(BaseModel):
     evidence_hints: list[str] = Field(default_factory=list)
     source_reference: ExpectationSourceReference | None = None
     confidence: float = Field(ge=0, le=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_source_reference(cls, value):
+        if isinstance(value, dict):
+            value = value.copy()
+            source_reference = value.get("source_reference")
+            if isinstance(source_reference, str):
+                value["source_reference"] = {"text_span": source_reference}
+
+            evidence_hints = value.get("evidence_hints")
+            if isinstance(evidence_hints, str):
+                value["evidence_hints"] = [evidence_hints]
+            elif evidence_hints is None:
+                value["evidence_hints"] = []
+
+        return value
 
 
 class ExpectationExtractionResult(BaseModel):

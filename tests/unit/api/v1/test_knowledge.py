@@ -51,6 +51,94 @@ def test_list_documents_returns_product_safe_contract():
     assert "user_id" not in body[0]
 
 
+def test_upload_evidence_image_stores_file_without_processing():
+    service = MagicMock()
+    document = _document()
+    document.document_type = DocumentType.PERSONAL_EVIDENCE
+    service.upload_document.return_value = document
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={"file": ("proof.png", b"image-bytes", "image/png")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert response.json()["id"] == "doc-1"
+    service.upload_document.assert_called_once()
+    assert service.upload_document.call_args.kwargs["document_type"] == DocumentType.PERSONAL_EVIDENCE
+    assert service.upload_document.call_args.kwargs["content"] == b"image-bytes"
+
+
+def test_upload_evidence_file_reuses_identical_file_for_same_user():
+    service = MagicMock()
+    existing = _document()
+    existing.document_type = DocumentType.PERSONAL_EVIDENCE
+    existing.content_hash = "2c8648d103e3dd7ad87660da0f126a1443b6d21ac1bd3ec000c5e24e2373a90c"
+    service.get_documents_by_user_id.return_value = [existing]
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={"file": ("proof.png", b"image-bytes", "image/png")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert response.json()["id"] == existing.id
+    service.upload_document.assert_not_called()
+
+
+def test_upload_evidence_file_rejects_unsupported_type():
+    service = MagicMock()
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={"file": ("proof.exe", b"not-an-image", "application/octet-stream")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    service.upload_document.assert_not_called()
+
+
+def test_get_evidence_file_enforces_ownership_and_returns_content():
+    service = MagicMock()
+    document = _document(user_id="owner")
+    document.document_type = DocumentType.PERSONAL_EVIDENCE
+    service.get_document_by_id.return_value = document
+    service.storage.read.return_value = b"proof"
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.get(
+            "/api/v1/knowledge/documents/doc-1/file",
+            params={"user_id": "owner"},
+        )
+        denied = client.get(
+            "/api/v1/knowledge/documents/doc-1/file",
+            params={"user_id": "other-user"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.content == b"proof"
+    assert response.headers["content-type"] == "application/pdf"
+    assert denied.status_code == 404
+
+
 def test_get_document_enforces_user_isolation():
     service = MagicMock()
     service.get_document_by_id.return_value = _document(user_id="owner")

@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.api_v1_goals import GoalCreateRequest, GoalResponse, GoalUpdateRequest
+from app.models.api_v1_goals import (
+    GoalCreateRequest,
+    GoalDeactivateRequest,
+    GoalReopenRequest,
+    GoalResponse,
+    GoalStatusHistoryResponse,
+    GoalUpdateRequest,
+)
 from app.models.goal import GoalCreate, GoalStatus
 from app.services.goal import GoalService
 
@@ -39,8 +46,9 @@ def create_goal(
             scope=request.scope,
             start_date=request.start_date,
             end_date=request.end_date,
-            status=GoalStatus.ACTIVE,
+            status=GoalStatus.DRAFT,
             source=request.source,
+            source_document_id=request.source_document_id,
         )
     )
     return _to_response(goal)
@@ -81,11 +89,113 @@ def update_goal(
     return _to_response(goal)
 
 
+@router.post("/{goal_id}/approve", response_model=GoalResponse)
+def approve_goal(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalResponse:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    try:
+        return _to_response(service.transition_status(goal_id, GoalStatus.APPROVED, changed_by_user_id=user_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post("/{goal_id}/activate", response_model=GoalResponse)
+def activate_goal(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalResponse:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    try:
+        return _to_response(service.transition_status(goal_id, GoalStatus.ACTIVE, changed_by_user_id=user_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post("/{goal_id}/complete", response_model=GoalResponse)
+def complete_goal(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalResponse:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    try:
+        return _to_response(service.transition_status(goal_id, GoalStatus.COMPLETED, changed_by_user_id=user_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post("/{goal_id}/reopen", response_model=GoalResponse)
+def reopen_goal(
+    goal_id: str,
+    request: GoalReopenRequest,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalResponse:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    try:
+        return _to_response(
+            service.transition_status(
+                goal_id,
+                GoalStatus.ACTIVE,
+                reason=request.reason,
+                changed_by_user_id=user_id,
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.get("/{goal_id}/history", response_model=list[GoalStatusHistoryResponse])
+def get_goal_status_history(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> list[GoalStatusHistoryResponse]:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    return [
+        GoalStatusHistoryResponse.model_validate(item, from_attributes=True)
+        for item in service.get_status_history(goal_id)
+    ]
+
+
+@router.post("/{goal_id}/deactivate", response_model=GoalResponse)
+def deactivate_goal(
+    goal_id: str,
+    request: GoalDeactivateRequest,
+    user_id: Annotated[str, Query(min_length=1)],
+    service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalResponse:
+    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    try:
+        return _to_response(
+            service.transition_status(
+                goal_id,
+                GoalStatus.ARCHIVED,
+                reason=request.reason,
+                changed_by_user_id=user_id,
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_goal(
     goal_id: str,
     user_id: Annotated[str, Query(min_length=1)],
     service: Annotated[GoalService, Depends(get_goal_service)],
 ) -> None:
-    _require_goal(service.get_goal_by_id(goal_id), user_id)
+    goal = _require_goal(service.get_goal_by_id(goal_id), user_id)
+    if goal.status != GoalStatus.ARCHIVED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only archived goals can be deleted",
+        )
     service.delete_goal(goal_id)
