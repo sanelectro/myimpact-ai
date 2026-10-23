@@ -98,9 +98,10 @@ def test_create_goal():
     assert result.description == "Reduce deployment-related incidents"
     assert result.start_date == date(2026, 9, 1)
     assert result.end_date == date(2026, 12, 31)
-    assert result.status == GoalStatus.ACTIVE
+    assert result.status == GoalStatus.DRAFT
     assert result.scope == GoalScope.TEAM
     assert result.source == "1:1"
+    assert result.sub_status.value == "needs_review"
 
     assert isinstance(result.created_at, datetime)
     assert result.created_at.tzinfo == UTC

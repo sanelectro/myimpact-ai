@@ -1,3 +1,5 @@
+from json import JSONDecodeError, JSONDecoder
+
 from pydantic import ValidationError
 
 from app.exceptions import DocumentExpectationExtractionError
@@ -20,6 +22,7 @@ class DocumentExpectationExtractionService:
             )
 
         request = LLMRequest(
+            response_format={"type": "json_object"},
             prompt=(
                 "Extract the expectations expressed in the document. "
                 "Return only a JSON object with an expectations array. "
@@ -52,6 +55,30 @@ class DocumentExpectationExtractionService:
                 response.content
             )
         except ValidationError as exc:
+            if any(error["type"] == "json_invalid" for error in exc.errors()):
+                try:
+                    return self._validate_embedded_json(response.content)
+                except (JSONDecodeError, ValidationError) as embedded_error:
+                    if isinstance(embedded_error, ValidationError):
+                        exc = embedded_error
+
+            issues = "; ".join(
+                f"{'.'.join(str(part) for part in error['loc']) or 'response'} "
+                f"({error['type']})"
+                for error in exc.errors(include_input=False)
+            )
             raise DocumentExpectationExtractionError(
-                "Document expectation extraction returned an invalid response."
+                "Document expectation extraction returned an invalid response"
+                f" ({issues})."
             ) from exc
+
+    @staticmethod
+    def _validate_embedded_json(content: str) -> ExpectationExtractionResult:
+        decoder = JSONDecoder()
+        for index, character in enumerate(content):
+            if character != "{":
+                continue
+            value, _ = decoder.raw_decode(content[index:])
+            return ExpectationExtractionResult.model_validate(value)
+
+        raise JSONDecodeError("No JSON object found", content, 0)

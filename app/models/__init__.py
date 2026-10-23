@@ -9,7 +9,7 @@ from .document_chunk import DocumentChunk
 from .evidence import Evidence, EvidenceCreate, EvidenceSourceType, EvidenceStatus
 from .evidence_mapping import EvidenceMapping, EvidenceRelevance
 from .evidence_version import EvidenceVersion
-from .goal import Goal, GoalCreate, GoalStatus
+from .goal import Goal, GoalCreate, GoalStatus, GoalSubStatus
 from .impact_assessment import ImpactAssessment, ImpactType
 from .impact_intelligence import (
     EvidenceCandidate,
@@ -38,6 +38,7 @@ __all__ = [
     "Goal",
     "GoalCreate",
     "GoalStatus",
+    "GoalSubStatus",
     "ImpactAssessment",
     "EvidenceCandidate",
     "EvidenceEvaluation",

@@ -20,6 +20,16 @@ class EvidenceRepository(BaseRepository):
             .filter(EvidenceDB.user_id == user_id)
             .all()
         )
+
+    def update(self, evidence: EvidenceDB, values: dict) -> EvidenceDB:
+        for field, value in values.items():
+            setattr(evidence, field, value)
+        self.session.flush()
+        return evidence
+
+    def delete(self, evidence: EvidenceDB) -> None:
+        self.session.delete(evidence)
+        self.session.flush()
         
     def get_by_source(
     self,

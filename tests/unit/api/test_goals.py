@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.api.routes.goals import get_goal_service
 from app.db.models.goal import GoalDB
 from app.main import app
-from app.models.goal import GoalScope, GoalStatus
+from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.services.goal import GoalService
 
 client = TestClient(app)
@@ -16,7 +16,7 @@ def _goal():
     now = datetime.now(UTC)
     return GoalDB(
         id="goal-1", user_id="user-1", title="Improve reliability",
-        status=GoalStatus.ACTIVE, created_at=now, updated_at=now,
+        scope=GoalScope.TEAM, status=GoalStatus.ACTIVE, sub_status=GoalSubStatus.ON_TRACK, created_at=now, updated_at=now,
     )
 
 

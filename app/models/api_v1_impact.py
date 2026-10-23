@@ -11,6 +11,7 @@ class GoalEvidenceResponse(BaseModel):
     title: str
     description: str | None = None
     source_type: str
+    source_url: str | None = None
     captured_at: datetime
     relevance: str
     confidence: float = Field(ge=0.0, le=1.0)

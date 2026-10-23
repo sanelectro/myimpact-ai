@@ -11,6 +11,7 @@ EXPECTED_API = {
         "/api/v1",
         "/api/v1/goals",
         "/api/v1/goals/{goal_id}",
+        "/api/v1/goals/{goal_id}/assessment",
         "/api/v1/knowledge/documents",
         "/api/v1/knowledge/documents/{document_id}",
         "/api/v1/knowledge/documents/{document_id}/expectations",

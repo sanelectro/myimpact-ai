@@ -28,6 +28,16 @@ def test_evidence_mapping_api_create_and_get():
         user = UserService(session).create_user(UserCreate(name="Mapping API User", email=f"{uuid4()}@example.com"))
         user_id = user.id
         goal_id = client.post("/goals", json={"user_id": user_id, "title": "Improve reliability"}).json()["id"]
+        approved = client.post(
+            f"/api/v1/goals/{goal_id}/approve",
+            params={"user_id": user_id},
+        )
+        assert approved.status_code == 200
+        activated = client.post(
+            f"/api/v1/goals/{goal_id}/activate",
+            params={"user_id": user_id},
+        )
+        assert activated.status_code == 200
         evidence_id = client.post("/evidence", json={"user_id": user_id, "source_type": "github", "title": "Reliability evidence", "captured_at": datetime.now(UTC).isoformat()}).json()["id"]
         response = client.post("/evidence-mappings", json={"evidence_id": evidence_id, "goal_id": goal_id, "relevance": "high", "confidence": 0.95, "reason": "Direct support"})
         assert response.status_code == 201

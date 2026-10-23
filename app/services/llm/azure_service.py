@@ -23,6 +23,11 @@ class AzureAIService(ILLMService):
         request: LLMRequest,
     ) -> LLMResponse:
 
+        options = (
+            {"response_format": request.response_format}
+            if request.response_format is not None
+            else {}
+        )
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -31,6 +36,7 @@ class AzureAIService(ILLMService):
                     "content": request.prompt,
                 }
             ],
+            **options,
         )
 
         return LLMResponse(

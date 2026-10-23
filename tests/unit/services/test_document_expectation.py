@@ -58,6 +58,7 @@ async def test_extracts_structured_expectations(
     request = llm_service.generate.await_args.args[0]
     assert "Do not claim that an expectation was achieved" in request.prompt
     assert "business_domain_impact" in request.prompt
+    assert request.response_format == {"type": "json_object"}
 
 
 async def test_returns_empty_result_when_no_expectations(
@@ -71,6 +72,48 @@ async def test_returns_empty_result_when_no_expectations(
     result = await service.extract("General company announcement")
 
     assert result.expectations == []
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '```json\n{"expectations": []}\n```',
+        'Here is the requested result:\n{"expectations": []}',
+    ],
+)
+async def test_extracts_json_wrapped_in_model_prose(
+    service: DocumentExpectationExtractionService,
+    llm_service: AsyncMock,
+    content: str,
+):
+    llm_service.generate.return_value = LLMResponse(content=content)
+
+    result = await service.extract("Lead architecture initiatives")
+
+    assert result.expectations == []
+
+
+async def test_normalizes_string_source_reference(
+    service: DocumentExpectationExtractionService,
+    llm_service: AsyncMock,
+):
+    llm_service.generate.return_value = LLMResponse(
+        content=(
+            '{"expectations":[{"category":"architecture",'
+            '"description":"Guide system design",'
+            '"source_reference":"Architecture section",'
+            '"evidence_hints":"Design reviews",'
+            '"confidence":0.9}]}'
+        )
+    )
+
+    result = await service.extract("Guide system design")
+
+    assert result.expectations[0].source_reference is not None
+    assert result.expectations[0].source_reference.text_span == (
+        "Architecture section"
+    )
+    assert result.expectations[0].evidence_hints == ["Design reviews"]
 
 
 @pytest.mark.parametrize(
