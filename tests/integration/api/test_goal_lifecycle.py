@@ -6,6 +6,7 @@ from sqlalchemy import delete
 
 from app.db.models.goal import GoalDB
 from app.db.models.goal_status_history import GoalStatusHistoryDB
+from app.db.models.organization import OrganizationDB
 from app.db.models.user import UserDB
 from app.db.session import SessionLocal
 from app.main import app
@@ -20,6 +21,7 @@ def test_goal_api_crud_assessment_isolation_and_full_lifecycle():
     session = SessionLocal()
     user_id = None
     goal_id = None
+    organization_id = None
 
     try:
         user = UserService(session).create_user(
@@ -30,6 +32,17 @@ def test_goal_api_crud_assessment_isolation_and_full_lifecycle():
             )
         )
         user_id = user.id
+        organization_id = str(uuid4())
+        session.add(
+            OrganizationDB(
+                id=organization_id,
+                name=f"M6.3 Test Organization {organization_id}",
+                normalized_name=organization_id,
+                created_at=user.created_at,
+            )
+        )
+        user.organization_id = organization_id
+        session.commit()
 
         created = client.post(
             "/api/v1/goals",
@@ -135,5 +148,9 @@ def test_goal_api_crud_assessment_isolation_and_full_lifecycle():
             session.execute(delete(GoalDB).where(GoalDB.id == goal_id))
         if user_id is not None:
             session.execute(delete(UserDB).where(UserDB.id == user_id))
+        if organization_id is not None:
+            session.execute(
+                delete(OrganizationDB).where(OrganizationDB.id == organization_id)
+            )
         session.commit()
         session.close()

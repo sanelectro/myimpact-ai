@@ -4,6 +4,8 @@ import pytest
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_mapping import EvidenceMappingDB
+from app.db.models.evidence_approval import EvidenceApprovalDB
+from app.models.evidence_approval import EvidenceApprovalStatus
 from app.exceptions import EvidenceMappingAlreadyExistsError
 from app.models.evidence_mapping import EvidenceRelevance
 from app.repositories.evidence_mapping import EvidenceMappingRepository
@@ -32,10 +34,15 @@ def test_create_mapping():
         )
 
     assert isinstance(result, EvidenceMappingDB)
+    created_approval = session.add.call_args.args[0]
+    assert isinstance(created_approval, EvidenceApprovalDB)
+    assert created_approval.mapping_id == result.id
+    assert created_approval.status == EvidenceApprovalStatus.PENDING
     repository.create.assert_called_once_with(
         mapping_id="mapping-123",
         evidence_id="evidence-123",
         goal_id="goal-123",
+        milestone_id=None,
         relevance=EvidenceRelevance.HIGH,
         confidence=0.95,
         reason="Directly supports the goal.",

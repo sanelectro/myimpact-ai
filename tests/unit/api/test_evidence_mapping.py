@@ -3,7 +3,11 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from app.api.routes.evidence_mapping import get_evidence_mapping_service, get_goal_service
+from app.api.routes.evidence_mapping import (
+    get_evidence_mapping_service,
+    get_goal_service,
+    get_milestone_service,
+)
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.exceptions import EvidenceMappingAlreadyExistsError
 from app.main import app
@@ -25,8 +29,10 @@ def test_create_mapping():
     service.create_mapping.return_value = _mapping()
     goal_service = MagicMock(spec=GoalService)
     goal_service.get_goal_by_id.return_value.status = GoalStatus.ACTIVE
+    milestone_service = MagicMock()
     app.dependency_overrides[get_evidence_mapping_service] = lambda: service
     app.dependency_overrides[get_goal_service] = lambda: goal_service
+    app.dependency_overrides[get_milestone_service] = lambda: milestone_service
     try:
         response = client.post("/evidence-mappings", json={"evidence_id": "evidence-1", "goal_id": "goal-1", "relevance": "high", "confidence": 0.95, "reason": "Direct support"})
         assert response.status_code == 201
@@ -38,8 +44,10 @@ def test_create_mapping_rejects_inactive_goal():
     service = MagicMock(spec=EvidenceMappingService)
     goal_service = MagicMock(spec=GoalService)
     goal_service.get_goal_by_id.return_value.status = GoalStatus.APPROVED
+    milestone_service = MagicMock()
     app.dependency_overrides[get_evidence_mapping_service] = lambda: service
     app.dependency_overrides[get_goal_service] = lambda: goal_service
+    app.dependency_overrides[get_milestone_service] = lambda: milestone_service
     try:
         response = client.post("/evidence-mappings", json={"evidence_id": "evidence-1", "goal_id": "goal-1", "relevance": "high", "confidence": 0.95})
         assert response.status_code == 409
@@ -54,8 +62,10 @@ def test_create_mapping_returns_409_when_mapping_exists():
     service.create_mapping.side_effect = EvidenceMappingAlreadyExistsError("Evidence is already mapped to this goal.")
     goal_service = MagicMock(spec=GoalService)
     goal_service.get_goal_by_id.return_value.status = GoalStatus.ACTIVE
+    milestone_service = MagicMock()
     app.dependency_overrides[get_evidence_mapping_service] = lambda: service
     app.dependency_overrides[get_goal_service] = lambda: goal_service
+    app.dependency_overrides[get_milestone_service] = lambda: milestone_service
     try:
         response = client.post("/evidence-mappings", json={"evidence_id": "evidence-1", "goal_id": "goal-1", "relevance": "high", "confidence": 0.95})
         assert response.status_code == 409

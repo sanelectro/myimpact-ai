@@ -4,17 +4,21 @@ from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.session import get_db
 from app.models.api_v1_impact import GoalEvidenceResponse
 from app.models.evidence import EvidenceCreate, EvidenceSourceType
 from app.models.evidence_mapping import EvidenceRelevance
 from app.models.evidence import EvidenceStatus
+from app.models.evidence_approval import EvidenceApprovalStatus
 from app.exceptions import EvidenceMappingAlreadyExistsError
 from app.services.evidence import EvidenceService
 from app.services.evidence_mapping import EvidenceMappingService
 from app.services.goal import GoalService
+from app.services.milestone import MilestoneService
 
 router = APIRouter(prefix="/goals", tags=["goal-evidence"])
 
@@ -27,7 +31,9 @@ class GoalEvidenceCreateRequest(BaseModel):
     source_url: str | None = None
     content_hash: str | None = None
     captured_at: datetime
+    source_updated_at: datetime | None = None
     relevance: EvidenceRelevance
+    milestone_id: str | None = None
 
 
 def get_goal_service(db: Annotated[Session, Depends(get_db)]) -> GoalService:
@@ -42,6 +48,9 @@ def get_evidence_mapping_service(
     db: Annotated[Session, Depends(get_db)],
 ) -> EvidenceMappingService:
     return EvidenceMappingService(db)
+
+def get_milestone_service(db: Annotated[Session, Depends(get_db)]) -> MilestoneService:
+    return MilestoneService(db)
 
 
 def _require_goal(goal, user_id: str):
@@ -84,8 +93,19 @@ def create_goal_evidence(
     goal_service: Annotated[GoalService, Depends(get_goal_service)],
     evidence_service: Annotated[EvidenceService, Depends(get_evidence_service)],
     mapping_service: Annotated[EvidenceMappingService, Depends(get_evidence_mapping_service)],
+    milestone_service: Annotated[MilestoneService, Depends(get_milestone_service)],
 ) -> GoalEvidenceResponse:
     _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    if request.milestone_id is not None:
+        milestone = milestone_service.get_milestone_by_id_and_goal(
+            request.milestone_id,
+            goal_id,
+        )
+        if milestone is None or milestone.archived_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Milestone not found for this goal",
+            )
 
     mappings = mapping_service.get_mappings_by_goal_id(goal_id)
     mapped_evidence = [
@@ -149,12 +169,14 @@ def create_goal_evidence(
             source_url=request.source_url,
             content_hash=request.content_hash,
             captured_at=request.captured_at,
+            source_updated_at=request.source_updated_at,
         )
     )
     try:
         mapping = mapping_service.create_mapping(
             evidence_id=evidence.id,
             goal_id=goal_id,
+            milestone_id=request.milestone_id,
             relevance=request.relevance,
             confidence=1.0,
             reason="Added by the user from this goal's detail page.",
@@ -164,11 +186,15 @@ def create_goal_evidence(
 
     return GoalEvidenceResponse(
         evidence_id=evidence.id,
+        approval_id=mapping.id,
+        approval_status=EvidenceApprovalStatus.PENDING.value,
+        milestone_id=mapping.milestone_id,
         title=evidence.title,
         description=evidence.description,
         source_type=evidence.source_type.value,
         source_url=evidence.source_url,
         captured_at=evidence.captured_at,
+        source_updated_at=evidence.source_updated_at,
         relevance=mapping.relevance.value,
         confidence=mapping.confidence,
         reason=mapping.reason,
@@ -185,6 +211,7 @@ def get_goal_evidence(
         EvidenceMappingService,
         Depends(get_evidence_mapping_service),
     ],
+    db: Annotated[Session, Depends(get_db)],
 ) -> list[GoalEvidenceResponse]:
     _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
 
@@ -197,14 +224,24 @@ def get_goal_evidence(
             or evidence.status != EvidenceStatus.ACTIVE
         ):
             continue
+        approval = db.scalar(
+            select(EvidenceApprovalDB).where(
+                EvidenceApprovalDB.mapping_id == mapping.id
+            )
+        )
         responses.append(
             GoalEvidenceResponse(
                 evidence_id=evidence.id,
+                approval_id=approval.id if approval else None,
+                approval_status=approval.status.value if approval else None,
+                approval_comment=approval.manager_comment if approval else None,
+                milestone_id=mapping.milestone_id,
                 title=evidence.title,
                 description=evidence.description,
                 source_type=evidence.source_type.value,
                 source_url=getattr(evidence, "source_url", None),
                 captured_at=evidence.captured_at,
+                source_updated_at=evidence.source_updated_at,
                 relevance=mapping.relevance.value,
                 confidence=mapping.confidence,
                 reason=mapping.reason,

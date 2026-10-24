@@ -53,6 +53,7 @@ class GoalRepository(BaseRepository):
     sub_status: GoalSubStatus | None = None,
     source: str | None = None,
     source_document_id: str | None = None,
+    organization_id: str | None = None,
 ) -> GoalDB:
         now = datetime.now(UTC)
 
@@ -68,6 +69,7 @@ class GoalRepository(BaseRepository):
             sub_status=sub_status or _default_sub_status(status),
             source=source,
             source_document_id=source_document_id,
+            organization_id=organization_id,
             created_at=now,
             updated_at=now,
         )

@@ -1,16 +1,20 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.api.v1.admin import router as admin_router
 from app.api.v1.archives import router as archives_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.evidence import router as evidence_router
+from app.api.v1.evidence_approvals import router as evidence_approvals_router
 from app.api.v1.expectations import router as expectations_router
 from app.api.v1.goal_assessment import router as goal_assessment_router
 from app.api.v1.goal_import import router as goal_import_router
 from app.api.v1.goals import router as goals_router
 from app.api.v1.impact import router as impact_router
+from app.api.v1.profile import router as profile_router
 from app.api.v1.insight import router as insight_router
+from app.api.v1.integrations import router as integrations_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.milestones import router as milestones_router
 from app.api.v1.report import router as report_router
@@ -35,11 +39,15 @@ router.include_router(expectations_router)
 router.include_router(goals_router)
 router.include_router(goal_assessment_router)
 router.include_router(evidence_router)
+router.include_router(evidence_approvals_router)
 router.include_router(impact_router)
 router.include_router(insight_router)
+router.include_router(integrations_router)
 router.include_router(report_router)
 router.include_router(chat_router)
 router.include_router(documents_router)
 router.include_router(goal_import_router)
 router.include_router(milestones_router)
 router.include_router(archives_router)
+router.include_router(profile_router)
+router.include_router(admin_router)

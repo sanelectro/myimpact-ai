@@ -6,8 +6,14 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.evidence import EvidenceStatus
-from app.api.v1.evidence import get_evidence_service, get_evidence_mapping_service, get_goal_service
+from app.api.v1.evidence import (
+    get_evidence_mapping_service,
+    get_evidence_service,
+    get_goal_service,
+    get_milestone_service,
+)
 from app.api.v1.impact import get_expectation_service, get_pipeline, get_document_service, get_impact_assessment_service
+from app.db.session import get_db
 from app.models.impact_intelligence import CareerInsight
 from app.services.knowledge.impact_intelligence_pipeline import ImpactIntelligencePipelineResult
 
@@ -21,7 +27,7 @@ def _goal(user_id="user-1"):
 
 def _evidence():
     now = datetime.now(UTC)
-    return SimpleNamespace(id="e-1", user_id="user-1", title="Architecture improvement", description="Improved architecture", source_type=SimpleNamespace(value="document"), source_url="https://teams.microsoft.com/l/meetup", captured_at=now, status=EvidenceStatus.ACTIVE)
+    return SimpleNamespace(id="e-1", user_id="user-1", title="Architecture improvement", description="Improved architecture", source_type=SimpleNamespace(value="document"), source_url="https://teams.microsoft.com/l/meetup", captured_at=now, source_updated_at=None, status=EvidenceStatus.ACTIVE)
 
 
 def test_goal_evidence_enforces_goal_ownership():
@@ -37,8 +43,9 @@ def test_goal_evidence_enforces_goal_ownership():
 def test_goal_evidence_returns_product_contract():
     goal_service = MagicMock(); goal_service.get_goal_by_id.return_value = _goal()
     evidence_service = MagicMock(); evidence_service.get_evidence_by_id.return_value = _evidence()
-    mapping_service = MagicMock(); mapping_service.get_mappings_by_goal_id.return_value = [SimpleNamespace(evidence_id="e-1", relevance=SimpleNamespace(value="high"), confidence=0.9, reason="Direct support")]
-    app.dependency_overrides.update({get_goal_service: lambda: goal_service, get_evidence_service: lambda: evidence_service, get_evidence_mapping_service: lambda: mapping_service})
+    mapping_service = MagicMock(); mapping_service.get_mappings_by_goal_id.return_value = [SimpleNamespace(id="mapping-1", evidence_id="e-1", milestone_id="milestone-1", relevance=SimpleNamespace(value="high"), confidence=0.9, reason="Direct support")]
+    db = MagicMock(); db.scalar.return_value = None
+    app.dependency_overrides.update({get_goal_service: lambda: goal_service, get_evidence_service: lambda: evidence_service, get_evidence_mapping_service: lambda: mapping_service, get_db: lambda: db})
     try:
         response = client.get("/api/v1/goals/goal-1/evidence", params={"user_id": "user-1"})
     finally:
@@ -46,6 +53,7 @@ def test_goal_evidence_returns_product_contract():
     assert response.status_code == 200
     body = response.json()[0]
     assert body["evidence_id"] == "e-1"
+    assert body["milestone_id"] == "milestone-1"
     assert body["source_url"] == "https://teams.microsoft.com/l/meetup"
     assert "user_id" not in body
 
@@ -60,10 +68,12 @@ def test_create_goal_evidence_rejects_duplicate_title():
     ]
     evidence_service = MagicMock()
     evidence_service.get_evidence_by_id.return_value = existing
+    milestone_service = MagicMock()
     app.dependency_overrides.update({
         get_goal_service: lambda: goal_service,
         get_evidence_service: lambda: evidence_service,
         get_evidence_mapping_service: lambda: mapping_service,
+        get_milestone_service: lambda: milestone_service,
     })
     try:
         response = client.post(
@@ -94,6 +104,8 @@ def test_create_goal_evidence_reuses_existing_source_for_another_goal():
     mapping_service = MagicMock()
     mapping_service.get_mappings_by_goal_id.return_value = []
     mapping_service.create_mapping.return_value = SimpleNamespace(
+        id="mapping-1",
+        milestone_id=None,
         relevance=SimpleNamespace(value="high"),
         confidence=1.0,
         reason="Added by the user",
@@ -101,10 +113,12 @@ def test_create_goal_evidence_reuses_existing_source_for_another_goal():
     existing = _evidence()
     evidence_service = MagicMock()
     evidence_service.get_evidence_by_source.return_value = existing
+    milestone_service = MagicMock()
     app.dependency_overrides.update({
         get_goal_service: lambda: goal_service,
         get_evidence_service: lambda: evidence_service,
         get_evidence_mapping_service: lambda: mapping_service,
+        get_milestone_service: lambda: milestone_service,
     })
     try:
         response = client.post(
@@ -128,6 +142,134 @@ def test_create_goal_evidence_reuses_existing_source_for_another_goal():
     assert response.json()["evidence_id"] == existing.id
     evidence_service.create_evidence.assert_not_called()
     mapping_service.create_mapping.assert_called_once()
+
+
+def test_create_goal_evidence_attaches_to_owned_milestone():
+    goal_service = MagicMock()
+    goal_service.get_goal_by_id.return_value = _goal()
+    mapping_service = MagicMock()
+    mapping_service.get_mappings_by_goal_id.return_value = []
+    mapping_service.create_mapping.return_value = SimpleNamespace(
+        id="mapping-2",
+        milestone_id="milestone-1",
+        relevance=SimpleNamespace(value="high"),
+        confidence=1.0,
+        reason="Added by the user",
+    )
+    evidence_service = MagicMock()
+    evidence_service.create_evidence.return_value = _evidence()
+    milestone_service = MagicMock()
+    milestone_service.get_milestone_by_id_and_goal.return_value = SimpleNamespace(
+        id="milestone-1",
+        goal_id="goal-1",
+        archived_at=None,
+    )
+    app.dependency_overrides.update({
+        get_goal_service: lambda: goal_service,
+        get_evidence_service: lambda: evidence_service,
+        get_evidence_mapping_service: lambda: mapping_service,
+        get_milestone_service: lambda: milestone_service,
+    })
+    try:
+        response = client.post(
+            "/api/v1/goals/goal-1/evidence",
+            params={"user_id": "user-1"},
+            json={
+                "title": "Milestone evidence",
+                "description": "Completed verification automation",
+                "source_type": "personal",
+                "source_id": None,
+                "source_url": None,
+                "content_hash": None,
+                "captured_at": datetime.now(UTC).isoformat(),
+                "relevance": "high",
+                "milestone_id": "milestone-1",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert response.json()["milestone_id"] == "milestone-1"
+    assert mapping_service.create_mapping.call_args.kwargs["milestone_id"] == "milestone-1"
+
+
+def test_create_goal_evidence_rejects_milestone_not_owned_by_goal():
+    goal_service = MagicMock()
+    goal_service.get_goal_by_id.return_value = _goal()
+    evidence_service = MagicMock()
+    mapping_service = MagicMock()
+    milestone_service = MagicMock()
+    milestone_service.get_milestone_by_id_and_goal.return_value = None
+    app.dependency_overrides.update({
+        get_goal_service: lambda: goal_service,
+        get_evidence_service: lambda: evidence_service,
+        get_evidence_mapping_service: lambda: mapping_service,
+        get_milestone_service: lambda: milestone_service,
+    })
+    try:
+        response = client.post(
+            "/api/v1/goals/goal-1/evidence",
+            params={"user_id": "user-1"},
+            json={
+                "title": "Cross-goal milestone evidence",
+                "description": None,
+                "source_type": "personal",
+                "source_id": None,
+                "source_url": None,
+                "content_hash": None,
+                "captured_at": datetime.now(UTC).isoformat(),
+                "relevance": "medium",
+                "milestone_id": "other-goal-milestone",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    evidence_service.create_evidence.assert_not_called()
+    mapping_service.create_mapping.assert_not_called()
+
+
+def test_create_goal_evidence_rejects_archived_milestone():
+    goal_service = MagicMock()
+    goal_service.get_goal_by_id.return_value = _goal()
+    evidence_service = MagicMock()
+    mapping_service = MagicMock()
+    milestone_service = MagicMock()
+    milestone_service.get_milestone_by_id_and_goal.return_value = SimpleNamespace(
+        id="milestone-1",
+        goal_id="goal-1",
+        archived_at=datetime.now(UTC),
+    )
+    app.dependency_overrides.update({
+        get_goal_service: lambda: goal_service,
+        get_evidence_service: lambda: evidence_service,
+        get_evidence_mapping_service: lambda: mapping_service,
+        get_milestone_service: lambda: milestone_service,
+    })
+    try:
+        response = client.post(
+            "/api/v1/goals/goal-1/evidence",
+            params={"user_id": "user-1"},
+            json={
+                "title": "Archived milestone evidence",
+                "description": None,
+                "source_type": "personal",
+                "source_id": None,
+                "source_url": None,
+                "content_hash": None,
+                "captured_at": datetime.now(UTC).isoformat(),
+                "relevance": "medium",
+                "milestone_id": "milestone-1",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    evidence_service.create_evidence.assert_not_called()
+    mapping_service.create_mapping.assert_not_called()
 
 
 def test_get_goal_impact_enforces_goal_ownership():

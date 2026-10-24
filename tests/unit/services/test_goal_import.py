@@ -167,6 +167,72 @@ def test_duplicate_detection(candidate, existing, expected):
     assert (result is not None) is expected
 
 
+@pytest.mark.parametrize(
+    ("candidate_title", "candidate_description", "existing_title", "existing_description", "expected"),
+    [
+        (
+            "Improve customer experience",
+            "Reduce mobile checkout time for customers.",
+            "Improve customer experience",
+            "Increase employee survey satisfaction.",
+            False,
+        ),
+        (
+            "Improve deployment reliability",
+            "Reduce deployment incidents by 20%.",
+            "Improve deployment reliability",
+            "Reduce deployment incidents by 40%.",
+            False,
+        ),
+        (
+            "Reduce API latency by 30%",
+            "Reduce p95 API latency by 30%.",
+            "Reduce API latency by 300%",
+            "Reduce p95 API latency by 300%.",
+            False,
+        ),
+        (
+            "Cut continuous integration build duration",
+            "Reduce the CI pipeline runtime by half.",
+            "Reduce CI pipeline runtime",
+            "Reduce the CI pipeline runtime by half.",
+            True,
+        ),
+        (
+            "Improve customer experience",
+            "Deliver high impact work.",
+            "Develop mentoring skills",
+            "Deliver high impact work.",
+            False,
+        ),
+        (
+            "Improve deployment reliability across services",
+            "Reduce failed deployments across services.",
+            "Improve deployment reliability",
+            "Reduce failed deployments across services.",
+            True,
+        ),
+    ],
+)
+def test_duplicate_detection_quality_cases(
+    candidate_title,
+    candidate_description,
+    existing_title,
+    existing_description,
+    expected,
+):
+    result = GoalImportService._find_duplicate_goal(
+        title=candidate_title,
+        description=candidate_description,
+        scope=GoalScope.TEAM,
+        existing_goals=[
+            _goal("goal-1", existing_title, existing_description)
+        ],
+    )
+
+    assert (result is not None) is expected
+
+
 def test_duplicate_detection_ignores_different_scope():
     result = GoalImportService._find_duplicate_goal(
         title="Improve deployment reliability",
@@ -174,6 +240,23 @@ def test_duplicate_detection_ignores_different_scope():
         scope=GoalScope.PERSONAL,
         existing_goals=[_goal("goal-1", "Improve deployment reliability", scope=GoalScope.TEAM)],
     )
+    assert result is None
+
+
+def test_duplicate_detection_documents_synonym_paraphrase_limit():
+    result = GoalImportService._find_duplicate_goal(
+        title="Reduce customer churn",
+        description="Lower the number of customers who cancel.",
+        scope=GoalScope.TEAM,
+        existing_goals=[
+            _goal(
+                "goal-1",
+                "Increase customer retention",
+                "Keep more customers subscribed for longer.",
+            )
+        ],
+    )
+
     assert result is None
 
 

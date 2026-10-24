@@ -77,6 +77,8 @@ class GoalResponse(BaseModel):
     title: str
     description: str | None = None
     scope: GoalScope = GoalScope.PERSONAL
+    organization_id: str | None = None
+    organization_name: str | None = None
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus

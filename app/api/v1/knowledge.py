@@ -6,9 +6,10 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from urllib.parse import quote
 
 from app.api.routes.document import (
+    MAX_DOCUMENT_SIZE_BYTES,
+    _validate_upload,
     get_document_classification_service,
     get_document_chunking_service,
     get_document_expectation_extraction_service,
@@ -106,7 +107,7 @@ async def upload_evidence_file(
     if not content:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The uploaded file is empty.")
     if len(content) > MAX_EVIDENCE_FILE_SIZE_BYTES:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Files must be 10 MB or smaller.")
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Files must be 10 MB or smaller.")
 
     content_hash = hashlib.sha256(content).hexdigest()
     existing_document = next(
@@ -168,7 +169,7 @@ async def upload_knowledge_document(
     scope_type: Annotated[DocumentScopeType, Form()] = DocumentScopeType.EMPLOYEE,
     scope_id: Annotated[str | None, Form()] = None,
 ) -> KnowledgeDocumentResponse:
-    content = await file.read()
+    content = await file.read(MAX_DOCUMENT_SIZE_BYTES + 1)
     _validate_upload(file.filename, file.content_type, content)
 
     document = service.upload_document(

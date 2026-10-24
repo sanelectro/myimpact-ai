@@ -25,6 +25,13 @@ class MilestoneService(BaseService):
             include_archived=include_archived,
         )
 
+    def get_milestone_by_id_and_goal(
+        self,
+        milestone_id: str,
+        goal_id: str,
+    ) -> MilestoneDB | None:
+        return self.repository.get_by_id_and_goal(milestone_id, goal_id)
+
     def create_milestone(self, goal_id: str, values: MilestoneCreate) -> MilestoneDB:
         milestone = self.repository.create(
             milestone_id=str(uuid4()),

@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.milestone import MilestoneDB
 from app.models.milestone import MilestoneCreate
 from app.repositories.base import BaseRepository
@@ -64,5 +65,11 @@ class MilestoneRepository(BaseRepository):
         return milestone
 
     def delete(self, milestone: MilestoneDB) -> None:
+        self.session.query(EvidenceMappingDB).filter(
+            EvidenceMappingDB.milestone_id == milestone.id
+        ).update(
+            {EvidenceMappingDB.milestone_id: None},
+            synchronize_session=False,
+        )
         self.session.delete(milestone)
         self.session.flush()
