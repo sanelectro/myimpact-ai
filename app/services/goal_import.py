@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app.exceptions import DocumentExtractionError, LLMQuotaExceededError
 from app.db.models.goal import GoalDB
+from app.db.models.user import UserDB
 from app.models.goal import GoalCreate, GoalScope, GoalStatus
 from app.models.goal_import import GoalImportExtractionResult
 from app.models.llm import LLMRequest
@@ -52,6 +53,18 @@ class GoalImportService:
             raise DocumentExtractionError("Extracted document content could not be read") from exc
 
         extraction = await self._extract(content)
+        has_organization_goal = any(
+            candidate.scope == GoalScope.ORGANIZATION for candidate in extraction.goals
+        )
+        organization_id = None
+        if has_organization_goal:
+            user = self.session.get(UserDB, user_id)
+            if user is None or not user.organization_id:
+                raise ValueError(
+                    "Set your company in your profile before importing organization goals."
+                )
+            organization_id = user.organization_id
+
         existing_goals = self.goal_service.get_goals_by_user_id(user_id)
         goals = []
         skipped_duplicates = []
@@ -63,6 +76,7 @@ class GoalImportService:
                 title=title,
                 description=candidate.description,
                 scope=candidate.scope,
+                organization_id=organization_id,
                 existing_goals=comparison_goals,
             )
             if duplicate is not None:
@@ -99,6 +113,7 @@ class GoalImportService:
         description: str | None,
         scope: GoalScope,
         existing_goals: list[GoalDB],
+        organization_id: str | None = None,
     ) -> GoalDB | None:
         """Return the existing goal when a candidate is materially duplicated.
 
@@ -116,26 +131,54 @@ class GoalImportService:
             # team goal with similar wording can legitimately coexist.
             if existing.scope != scope:
                 continue
+            if scope == GoalScope.ORGANIZATION and existing.organization_id != organization_id:
+                continue
 
             existing_title = cls._normalise_text(existing.title)
             if not existing_title:
                 continue
+            existing_description = cls._normalise_text(existing.description or "")
+
+            if cls._has_conflicting_numbers(title, existing.title) or cls._has_conflicting_numbers(
+                description or "", existing.description or ""
+            ):
+                continue
+
+            if (
+                candidate_description
+                and candidate_description == existing_description
+                and len(candidate_description.split()) >= 5
+            ):
+                return existing
+
+            candidate_title_tokens = set(candidate_title.split())
+            existing_title_tokens = set(existing_title.split())
+            titles_contain_each_other = (
+                candidate_title_tokens <= existing_title_tokens
+                or existing_title_tokens <= candidate_title_tokens
+            )
 
             # Strong exact/containment match handles format differences such as
             # "JL5 Roles.pdf" vs "JL5 Roles.docx" where extracted wording is
             # identical or one title has a small qualifier appended.
-            if candidate_title == existing_title:
-                return existing
-            if (candidate_title in existing_title or existing_title in candidate_title) and min(
+            if (
+                candidate_title == existing_title
+                or titles_contain_each_other
+            ) and min(
                 len(candidate_title), len(existing_title)
             ) >= 18:
+                if candidate_description and existing_description:
+                    description_similarity = cls._text_similarity(
+                        candidate_description, existing_description
+                    )
+                    if description_similarity < 0.70:
+                        continue
                 return existing
 
             title_similarity = cls._text_similarity(candidate_title, existing_title)
             if title_similarity < 0.90:
                 continue
 
-            existing_description = cls._normalise_text(existing.description or "")
             if not candidate_description or not existing_description:
                 if title_similarity >= 0.94:
                     return existing
@@ -145,10 +188,16 @@ class GoalImportService:
                 candidate_description, existing_description
             )
             combined = (title_similarity * 0.70) + (description_similarity * 0.30)
-            if combined >= 0.88 or title_similarity >= 0.96:
+            if description_similarity >= 0.70 and combined >= 0.88:
                 return existing
 
         return None
+
+    @staticmethod
+    def _has_conflicting_numbers(left: str, right: str) -> bool:
+        left_numbers = set(re.findall(r"\d+(?:\.\d+)?", left))
+        right_numbers = set(re.findall(r"\d+(?:\.\d+)?", right))
+        return bool(left_numbers and right_numbers and left_numbers != right_numbers)
 
     @staticmethod
     def _normalise_text(value: str) -> str:

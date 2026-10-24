@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -31,3 +31,5 @@ class MilestoneDB(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     goal = relationship("GoalDB", back_populates="milestones")
+
+    __table_args__ = (UniqueConstraint("id", "goal_id", name="uq_milestones_id_goal_id"),)

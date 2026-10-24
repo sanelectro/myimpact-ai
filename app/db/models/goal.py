@@ -15,6 +15,9 @@ class GoalDB(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     scope: Mapped[GoalScope] = mapped_column(Enum(GoalScope, name="goal_scope"), nullable=False, default=GoalScope.PERSONAL)
+    organization_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("organizations.id")
+    )
     start_date: Mapped[date | None] = mapped_column(Date)
     end_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[GoalStatus] = mapped_column(Enum(GoalStatus, name="goal_status"), nullable=False, default=GoalStatus.DRAFT)
@@ -26,6 +29,7 @@ class GoalDB(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     user = relationship("UserDB", back_populates="goals")
+    organization = relationship("OrganizationDB")
     source_document = relationship("DocumentDB")
     evidence_mappings = relationship(
         "EvidenceMappingDB",
@@ -38,3 +42,9 @@ class GoalDB(Base):
         cascade="all, delete-orphan",
     )
     milestones = relationship("MilestoneDB", back_populates="goal", cascade="all, delete-orphan")
+
+    @property
+    def organization_name(self) -> str | None:
+        if self.organization_id is None:
+            return None
+        return self.organization.name if self.organization is not None else None

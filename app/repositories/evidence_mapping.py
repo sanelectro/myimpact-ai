@@ -58,6 +58,7 @@ class EvidenceMappingRepository(BaseRepository):
         relevance: EvidenceRelevance,
         confidence: float,
         reason: str | None = None,
+        milestone_id: str | None = None,
     ) -> EvidenceMappingDB:
         now = datetime.now(UTC)
 
@@ -65,6 +66,7 @@ class EvidenceMappingRepository(BaseRepository):
             id=mapping_id,
             evidence_id=evidence_id,
             goal_id=goal_id,
+            milestone_id=milestone_id,
             relevance=relevance,
             reason=reason,
             confidence=confidence,

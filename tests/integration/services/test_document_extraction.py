@@ -7,13 +7,18 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import delete
 
+from app.config.settings import get_settings
 from app.db.models.document import DocumentDB
+from app.db.models.goal import GoalDB
 from app.db.models.user import UserDB
 from app.db.session import SessionLocal
 from app.models.document import DocumentClassification, DocumentType
+from app.models.goal import GoalScope, GoalStatus
 from app.models.user import UserCreate
 from app.services.document import DocumentService
 from app.services.document_classification import DocumentClassificationService
+from app.services.goal_import import GoalImportService
+from app.services.llm.factory import create_llm_service
 from app.services.user import UserService
 from app.storage.local import LocalFileStorage
 
@@ -170,4 +175,97 @@ async def test_document_service_extracts_docx_with_docling(tmp_path: Path):
             )
 
         session.commit()
+        session.close()
+
+
+@pytest.mark.integration
+async def test_goal_import_extracts_live_goals_from_uploaded_docx(tmp_path: Path):
+    settings = get_settings()
+    if settings.llm_provider == "groq":
+        has_provider_credentials = bool(settings.groq_api_key)
+    elif settings.llm_provider == "azure":
+        has_provider_credentials = all(
+            (
+                settings.azure_openai_endpoint,
+                settings.azure_openai_api_key,
+                settings.azure_openai_api_version,
+                settings.azure_openai_deployment,
+            )
+        )
+    else:
+        create_llm_service()
+
+    if not has_provider_credentials:
+        pytest.skip("Live LLM provider credentials are not configured")
+
+    session = SessionLocal()
+    user_id = None
+    document_id = None
+    storage = LocalFileStorage(tmp_path)
+    classification_service = AsyncMock(spec=DocumentClassificationService)
+    classification_service.classify.return_value = DocumentClassification(
+        document_type=DocumentType.GOAL,
+        confidence=1.0,
+        reason="The test document contains a clear team goal.",
+    )
+
+    try:
+        user = UserService(session).create_user(
+            UserCreate(
+                name="Live Goal Import User",
+                email=f"{uuid4()}@example.com",
+                role="Engineer",
+            )
+        )
+        user_id = user.id
+
+        document_service = DocumentService(
+            session,
+            storage=storage,
+            classification_service=classification_service,
+        )
+        document = document_service.upload_document(
+            user_id=user_id,
+            document_type=DocumentType.UNKNOWN,
+            file_name="platform-team-goal.docx",
+            content_type=(
+                "application/vnd.openxmlformats-officedocument"
+                ".wordprocessingml.document"
+            ),
+            content=_docx_bytes(
+                "2026 Platform Engineering team goal",
+                "Reduce the CI pipeline runtime from 20 minutes to 10 minutes "
+                "by December 31, 2026.",
+            ),
+            source="file_import",
+        )
+        document_id = document.id
+
+        processed = await document_service.process_document(document_id)
+        assert processed.status.value == "processed"
+        assert processed.extracted_content_path
+        assert "Reduce the CI pipeline runtime" in storage.read(
+            processed.extracted_content_path
+        ).decode("utf-8")
+
+        import_service = GoalImportService(
+            session,
+            storage,
+            create_llm_service(),
+        )
+        result = await import_service.import_from_document(document_id, user_id)
+
+        assert len(result["imported_goals"]) == 1
+        assert result["skipped_duplicates"] == []
+        goal = result["imported_goals"][0]
+        assert goal.status == GoalStatus.DRAFT
+        assert goal.scope == GoalScope.TEAM
+        assert goal.source_document_id == document_id
+        assert "pipeline" in f"{goal.title} {goal.description}".lower()
+    finally:
+        if user_id:
+            session.execute(delete(GoalDB).where(GoalDB.user_id == user_id))
+            session.execute(delete(DocumentDB).where(DocumentDB.user_id == user_id))
+            session.execute(delete(UserDB).where(UserDB.id == user_id))
+            session.commit()
         session.close()

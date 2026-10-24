@@ -1,8 +1,14 @@
+import pytest
+from fastapi import HTTPException
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from app.api.routes.document import get_document_service
+from app.api.routes.document import (
+    MAX_DOCUMENT_SIZE_BYTES,
+    _validate_upload,
+    get_document_service,
+)
 from app.db.models.document import DocumentDB
 from app.exceptions import (
     DocumentClassificationError,
@@ -189,6 +195,74 @@ def test_upload_document_rejects_empty_file():
         assert response.json()["detail"] == (
             "The uploaded file is empty."
         )
+        service.upload_document.assert_not_called()
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    ("file_name", "content_type"),
+    [
+        ("goals.pdf", "application/pdf"),
+        ("goals.pdf", "application/octet-stream"),
+        (
+            "goals.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ),
+        ("goals.docx", "application/octet-stream"),
+    ],
+)
+def test_upload_validation_accepts_supported_file_types(file_name, content_type):
+    _validate_upload(file_name, content_type, b"document")
+
+
+def test_upload_validation_accepts_exact_maximum_size():
+    _validate_upload(
+        "goals.pdf",
+        "application/pdf",
+        b"x" * MAX_DOCUMENT_SIZE_BYTES,
+    )
+
+
+def test_upload_validation_rejects_mismatched_content_type():
+    with pytest.raises(HTTPException) as error:
+        _validate_upload("goals.pdf", "text/plain", b"document")
+
+    assert error.value.status_code == 400
+    assert "content type does not match" in error.value.detail
+
+
+@pytest.mark.parametrize(
+    ("url", "form_data"),
+    [
+        (
+            "/documents",
+            {"user_id": "user-1", "document_type": "goal"},
+        ),
+        (
+            "/api/v1/documents/import",
+            {"user_id": "user-1"},
+        ),
+    ],
+)
+def test_upload_routes_reject_files_over_maximum_size(url, form_data):
+    service = MagicMock(spec=DocumentService)
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            url,
+            data=form_data,
+            files={
+                "file": (
+                    "goals.pdf",
+                    b"x" * (MAX_DOCUMENT_SIZE_BYTES + 1),
+                    "application/pdf",
+                )
+            },
+        )
+
+        assert response.status_code == 413
         service.upload_document.assert_not_called()
     finally:
         app.dependency_overrides.clear()

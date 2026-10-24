@@ -14,6 +14,7 @@ class EvidenceMapping(BaseModel):
     id: str
     evidence_id: str
     goal_id: str
+    milestone_id: str | None = None
     relevance: EvidenceRelevance
     reason: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)

@@ -10,11 +10,13 @@ from app.models.evidence_mapping import EvidenceMapping, EvidenceRelevance
 from app.models.goal import GoalStatus
 from app.services.evidence_mapping import EvidenceMappingService
 from app.services.goal import GoalService
+from app.services.milestone import MilestoneService
 
 
 class EvidenceMappingCreateRequest(BaseModel):
     evidence_id: str
     goal_id: str
+    milestone_id: str | None = None
     relevance: EvidenceRelevance
     confidence: float = Field(ge=0.0, le=1.0)
     reason: str | None = None
@@ -37,6 +39,11 @@ def get_goal_service(
 ) -> GoalService:
     return GoalService(db)
 
+def get_milestone_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> MilestoneService:
+    return MilestoneService(db)
+
 
 @router.post(
     "",
@@ -50,6 +57,7 @@ def create_evidence_mapping(
         Depends(get_evidence_mapping_service),
     ],
     goal_service: Annotated[GoalService, Depends(get_goal_service)],
+    milestone_service: Annotated[MilestoneService, Depends(get_milestone_service)],
 ) -> EvidenceMapping:
     goal = goal_service.get_goal_by_id(request.goal_id)
     if goal is None:
@@ -62,11 +70,22 @@ def create_evidence_mapping(
             status_code=status.HTTP_409_CONFLICT,
             detail="Goal must be active before evidence can be added. Activate it first.",
         )
+    if request.milestone_id is not None:
+        milestone = milestone_service.get_milestone_by_id_and_goal(
+            request.milestone_id,
+            request.goal_id,
+        )
+        if milestone is None or milestone.archived_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Milestone not found for this goal",
+            )
 
     try:
         mapping = service.create_mapping(
             evidence_id=request.evidence_id,
             goal_id=request.goal_id,
+            milestone_id=request.milestone_id,
             relevance=request.relevance,
             confidence=request.confidence,
             reason=request.reason,

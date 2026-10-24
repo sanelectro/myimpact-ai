@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
 from app.db.models.goal_status_history import GoalStatusHistoryDB
+from app.db.models.user import UserDB
 from app.models.goal import (
     DEFAULT_SUB_STATUS_BY_GOAL_STATUS,
     VALID_SUB_STATUSES_BY_GOAL_STATUS,
     GoalCreate,
+    GoalScope,
     GoalStatus,
     GoalSubStatus,
 )
@@ -32,6 +34,15 @@ class GoalService(BaseService):
         self.repository = GoalRepository(session)
 
     def create_goal(self, goal_data: GoalCreate) -> GoalDB:
+        organization_id = None
+        if goal_data.scope == GoalScope.ORGANIZATION:
+            user = self.session.get(UserDB, goal_data.user_id)
+            if user is None or not isinstance(user.organization_id, str):
+                raise ValueError(
+                    "Set your company in your profile before creating an organization goal."
+                )
+            organization_id = user.organization_id
+
         goal = self.repository.create(
             goal_id=str(uuid4()),
             user_id=goal_data.user_id,
@@ -44,6 +55,7 @@ class GoalService(BaseService):
             sub_status=goal_data.sub_status,
             source=goal_data.source,
             source_document_id=goal_data.source_document_id,
+            **({"organization_id": organization_id} if organization_id else {}),
         )
         self.commit()
         return goal
@@ -125,6 +137,19 @@ class GoalService(BaseService):
             raise ValueError("Goal not found")
 
         updates = dict(values)
+        target_scope = updates.get("scope", existing.scope)
+        if target_scope != existing.scope or (
+            target_scope == GoalScope.ORGANIZATION and not existing.organization_id
+        ):
+            if target_scope == GoalScope.ORGANIZATION:
+                user = self.session.get(UserDB, existing.user_id)
+                if user is None or not isinstance(user.organization_id, str):
+                    raise ValueError(
+                        "Set your company in your profile before selecting organization scope."
+                    )
+                updates["organization_id"] = user.organization_id
+            else:
+                updates["organization_id"] = None
         target_status = updates.get("status", existing.status)
         previous_status = existing.status
         if target_status != existing.status:

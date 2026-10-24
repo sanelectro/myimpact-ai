@@ -1,9 +1,13 @@
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
-from app.api.routes.document import get_document_service
-from app.api.v1.knowledge import get_retrieval_service
+from app.api.routes.document import MAX_DOCUMENT_SIZE_BYTES, get_document_service
+from app.api.v1.knowledge import (
+    MAX_EVIDENCE_FILE_SIZE_BYTES,
+    get_retrieval_service,
+)
 from app.main import app
 from app.models.document import DocumentScopeType, DocumentStatus, DocumentType
 from app.models.document_chunk_embedding import KnowledgeSearchResult
@@ -105,6 +109,170 @@ def test_upload_evidence_file_rejects_unsupported_type():
             "/api/v1/knowledge/documents/evidence-files",
             data={"user_id": "user-1"},
             files={"file": ("proof.exe", b"not-an-image", "application/octet-stream")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    service.upload_document.assert_not_called()
+
+
+def test_upload_evidence_file_rejects_file_over_maximum_size():
+    service = MagicMock()
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={
+                "file": (
+                    "proof.png",
+                    b"x" * (MAX_EVIDENCE_FILE_SIZE_BYTES + 1),
+                    "image/png",
+                )
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 413
+    service.upload_document.assert_not_called()
+
+
+def test_upload_evidence_file_accepts_exact_maximum_size():
+    service = MagicMock()
+    document = _document()
+    document.document_type = DocumentType.PERSONAL_EVIDENCE
+    document.file_name = "proof.png"
+    document.content_type = "image/png"
+    service.get_documents_by_user_id.return_value = []
+    service.upload_document.return_value = document
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={
+                "file": (
+                    "proof.png",
+                    b"x" * MAX_EVIDENCE_FILE_SIZE_BYTES,
+                    "image/png",
+                )
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    service.upload_document.assert_called_once()
+
+
+def test_upload_knowledge_document_rejects_file_over_maximum_size():
+    service = MagicMock()
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents",
+            data={"user_id": "user-1", "document_type": "goal"},
+            files={
+                "file": (
+                    "goals.pdf",
+                    b"x" * (MAX_DOCUMENT_SIZE_BYTES + 1),
+                    "application/pdf",
+                )
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 413
+    service.upload_document.assert_not_called()
+
+
+def test_upload_knowledge_document_processes_supported_docx():
+    service = MagicMock()
+    document = _document()
+    document.document_type = DocumentType.GOAL
+    document.file_name = "goals.docx"
+    document.content_type = (
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    service.upload_document.return_value = document
+    service.process_document = AsyncMock(return_value=document)
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents",
+            data={"user_id": "user-1", "document_type": "goal"},
+            files={
+                "file": (
+                    "goals.docx",
+                    b"docx-bytes",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    service.upload_document.assert_called_once()
+    service.process_document.assert_awaited_once_with(document.id)
+
+
+@pytest.mark.parametrize(
+    ("file_name", "content_type"),
+    [
+        ("proof.pdf", "application/pdf"),
+        ("proof.pdf", "application/octet-stream"),
+        ("proof.png", "image/png"),
+        ("proof.png", "application/octet-stream"),
+        ("proof.jpg", "image/jpeg"),
+        ("proof.jpg", "application/octet-stream"),
+        ("proof.jpeg", "image/jpeg"),
+        ("proof.jpeg", "application/octet-stream"),
+        ("proof.gif", "image/gif"),
+        ("proof.gif", "application/octet-stream"),
+        ("proof.webp", "image/webp"),
+        ("proof.webp", "application/octet-stream"),
+    ],
+)
+def test_upload_evidence_file_accepts_supported_type_and_mime(file_name, content_type):
+    service = MagicMock()
+    document = _document()
+    document.document_type = DocumentType.PERSONAL_EVIDENCE
+    document.file_name = file_name
+    document.content_type = content_type
+    service.get_documents_by_user_id.return_value = []
+    service.upload_document.return_value = document
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={"file": (file_name, b"evidence", content_type)},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    service.upload_document.assert_called_once()
+
+
+def test_upload_evidence_file_rejects_mismatched_content_type():
+    service = MagicMock()
+    app.dependency_overrides[get_document_service] = lambda: service
+
+    try:
+        response = client.post(
+            "/api/v1/knowledge/documents/evidence-files",
+            data={"user_id": "user-1"},
+            files={"file": ("proof.png", b"not-an-image", "application/pdf")},
         )
     finally:
         app.dependency_overrides.clear()

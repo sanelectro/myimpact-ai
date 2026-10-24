@@ -1,0 +1,293 @@
+{
+  "captured_at": "2026-10-15T12:00:00Z",
+  "personas": [
+    {
+      "user_id": "user-1",
+      "name": "Alex Johnson",
+      "email": "user-lse@example.com",
+      "role": "Lead Software Engineer",
+      "slug": "lead-engineer",
+      "issue_key": "DEMO-101",
+      "goal_id": "goal-user1-reliability",
+      "goal_title": "Improve Production Reliability",
+      "goal_description": "Standardise alert coverage and service-readiness checks across six critical production services, then review repeat incidents and response trends each quarter.",
+      "scope": "ORGANIZATION",
+      "summary": "Lead the reliability uplift",
+      "evidence_description": "Rolled out consistent alerts and readiness runbooks across six services, and coached three engineers to lead release checks and incident follow-ups.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user1-mentoring",
+          "title": "Grow independent service ownership across the team",
+          "description": "Coach two engineers to lead service-readiness reviews and incident follow-ups, using the shared checklist and runbook in at least two production releases.",
+          "scope": "TEAM",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user1-capacity-planning",
+          "title": "Improve capacity-planning practice",
+          "description": "Build a repeatable capacity-planning approach for one critical service, including load assumptions, scaling thresholds, and a quarterly review with service owners.",
+          "scope": "PERSONAL",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-2",
+      "name": "Priya Sharma",
+      "email": "user-se@example.com",
+      "role": "Software Engineer",
+      "slug": "software-engineer",
+      "issue_key": "DEMO-102",
+      "goal_id": "goal-user2-quality",
+      "goal_title": "Improve Engineering Quality",
+      "goal_description": "Raise automated coverage for the customer workflow from 62% to at least 80% and reduce recurring CI failures through targeted regression tests.",
+      "scope": "TEAM",
+      "summary": "Improve automated test coverage",
+      "evidence_description": "Raised customer-workflow test coverage from 62% to 81% with 34 regression tests and reduced repeat CI failures by 28% over two releases.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user2-service-ownership",
+          "title": "Strengthen end-to-end service ownership",
+          "description": "Own the design and delivery of one customer-facing service workflow, document key trade-offs, and add tests for its primary failure paths before release.",
+          "scope": "PERSONAL",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user2-quality-community",
+          "title": "Share reusable quality practices across engineering",
+          "description": "Contribute a tested service-workflow pattern to the engineering quality guide and share one practical learning from recurring CI failures with the quality community.",
+          "scope": "ORGANIZATION",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-3",
+      "name": "Aditi Rao",
+      "email": "user-tse@example.com",
+      "role": "Trainee Software Engineer",
+      "slug": "trainee-engineer",
+      "issue_key": "DEMO-103",
+      "goal_id": "goal-user3-feature",
+      "goal_title": "Deliver a First Production Feature",
+      "goal_description": "Deliver one small user-facing feature with focused unit tests, respond to code-review feedback, and explain the implementation during the team demo.",
+      "scope": "PERSONAL",
+      "summary": "Deliver a first production feature",
+      "evidence_description": "Shipped a user preference filter with 12 unit tests, incorporated two rounds of review feedback, and demoed the change to the team.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user3-team-quality",
+          "title": "Build reliable team-delivery habits",
+          "description": "Take one small backlog item from refinement through code review, add focused unit tests, and incorporate reviewer feedback before the team release.",
+          "scope": "TEAM",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user3-accessibility",
+          "title": "Contribute to the engineering accessibility initiative",
+          "description": "With a mentor, resolve two prioritized accessibility issues in a shared user flow and document the checks that prevent regressions.",
+          "scope": "ORGANIZATION",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-4",
+      "name": "Omar Farouk",
+      "email": "user-jse@example.com",
+      "role": "Junior Software Engineer",
+      "slug": "junior-engineer",
+      "issue_key": "DEMO-104",
+      "goal_id": "goal-user4-feature-ownership",
+      "goal_title": "Own a Feature from Refinement to Release",
+      "goal_description": "Own one scoped feature from refinement through implementation, review and release, including an agreed API contract and regression coverage.",
+      "scope": "TEAM",
+      "summary": "Own a feature from refinement to release",
+      "evidence_description": "Delivered notification preferences from refinement to release, added integration coverage, and addressed review feedback before rollout.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user4-query-efficiency",
+          "title": "Improve query efficiency in the owned workflow",
+          "description": "Use query plans to identify avoidable database work in one service path, add a regression benchmark, and reduce its measured p95 latency by at least 10% without changing behavior.",
+          "scope": "PERSONAL",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user4-onboarding",
+          "title": "Improve onboarding documentation for the service",
+          "description": "Add a setup guide and troubleshooting notes for one service to the engineering onboarding material, then validate the instructions with a new team member.",
+          "scope": "ORGANIZATION",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-5",
+      "name": "Mei Chen",
+      "email": "user-sse@example.com",
+      "role": "Senior Software Engineer",
+      "slug": "senior-engineer",
+      "issue_key": "DEMO-105",
+      "goal_id": "goal-user5-latency",
+      "goal_title": "Reduce Latency in a Critical Workflow",
+      "goal_description": "Profile the high-traffic search workflow and reduce p95 latency from 420 ms to below 320 ms by eliminating avoidable database work without changing results.",
+      "scope": "TEAM",
+      "summary": "Reduce latency in a critical workflow",
+      "evidence_description": "Reduced search p95 latency from 420 ms to 305 ms by consolidating repeated database reads, with result-equivalence and load tests passing.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user5-reliability-coaching",
+          "title": "Develop reliability coaching through incident reviews",
+          "description": "Facilitate two blameless incident reviews, capture follow-up owners, and help a teammate apply the resulting operational improvements to another service.",
+          "scope": "PERSONAL",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user5-performance-budget",
+          "title": "Propose shared performance budgets",
+          "description": "Draft service-level latency and resource-budget guidance using production measurements, and review the proposal with two teams before wider adoption.",
+          "scope": "ORGANIZATION",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-6",
+      "name": "Rafael Costa",
+      "email": "user-lsa@example.com",
+      "role": "Lead Software Architect",
+      "slug": "software-architect",
+      "issue_key": "DEMO-106",
+      "goal_id": "goal-user6-platform-boundary",
+      "goal_title": "Define a Scalable Platform Boundary",
+      "goal_description": "Define ownership boundaries for the notification platform and a staged migration plan that can be adopted by three service teams without a coordinated release.",
+      "scope": "ORGANIZATION",
+      "summary": "Define a scalable platform boundary",
+      "evidence_description": "Published the notification-platform boundary decision, reviewed the migration sequence with three service owners, and recorded operational risks and rollback points.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user6-architecture-enablement",
+          "title": "Make platform architecture decisions easier to apply",
+          "description": "Publish an architecture decision template and facilitate reviews with two delivery teams, capturing migration risks and ownership before implementation begins.",
+          "scope": "TEAM",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user6-strategic-influence",
+          "title": "Strengthen strategic architecture communication",
+          "description": "Prepare a concise architecture-options brief for one platform investment, including trade-offs, operational impact, and a staged recommendation for leadership review.",
+          "scope": "PERSONAL",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-7",
+      "name": "Nina Patel",
+      "email": "user-em@example.com",
+      "role": "Engineering Manager",
+      "slug": "engineering-manager",
+      "issue_key": "DEMO-107",
+      "goal_id": "goal-user7-team-delivery",
+      "goal_title": "Improve Team Delivery Health",
+      "goal_description": "Improve delivery predictability across three sprints by making sprint outcomes explicit, surfacing risks early, and assigning follow-up owners.",
+      "scope": "TEAM",
+      "summary": "Improve team delivery health",
+      "evidence_description": "Introduced outcome-based sprint goals and a weekly risk review; the team raised planned-work completion from 65% to 82% across three sprints.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user7-coaching",
+          "title": "Build a consistent coaching practice",
+          "description": "Agree on a focused development action with each direct report, revisit progress in regular one-to-ones, and record outcomes at the next quarterly review.",
+          "scope": "PERSONAL",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user7-engineering-health",
+          "title": "Improve visibility of engineering health",
+          "description": "Pilot a quarterly team-health review covering delivery risks, quality signals, and workload sustainability, with owners and follow-up dates for agreed actions.",
+          "scope": "ORGANIZATION",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-8",
+      "name": "Jordan Lee",
+      "email": "user-sem@example.com",
+      "role": "Senior Engineering Manager",
+      "slug": "senior-engineering-manager",
+      "issue_key": "DEMO-108",
+      "goal_id": "goal-user8-platform-delivery",
+      "goal_title": "Improve Cross-Team Platform Delivery",
+      "goal_description": "Align three platform teams on quarterly milestones, dependency owners, and escalation paths, reducing avoidable cross-team carry-over.",
+      "scope": "ORGANIZATION",
+      "summary": "Improve cross-team platform delivery",
+      "evidence_description": "Aligned three teams on shared platform milestones and dependency owners, and resolved two release-blocking hand-offs before the quarterly launch.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user8-team-dependencies",
+          "title": "Reduce dependency friction between delivery teams",
+          "description": "Introduce a monthly dependency review for two platform teams, record accountable owners, and reduce unplanned cross-team carry-over against the current quarter baseline.",
+          "scope": "TEAM",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user8-leadership-communication",
+          "title": "Strengthen executive communication for platform work",
+          "description": "Create a concise monthly update connecting platform milestones, delivery risks, and customer outcomes, and use stakeholder feedback to improve the next update.",
+          "scope": "PERSONAL",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    },
+    {
+      "user_id": "user-9",
+      "name": "Samira Khan",
+      "email": "user-ed@example.com",
+      "role": "Engineering Director",
+      "slug": "engineering-director",
+      "issue_key": "DEMO-109",
+      "goal_id": "goal-user9-effectiveness",
+      "goal_title": "Raise Engineering Effectiveness",
+      "goal_description": "Establish consistent quality and delivery measures across four engineering groups and use quarterly reviews to assign and track improvement actions.",
+      "scope": "ORGANIZATION",
+      "summary": "Raise engineering effectiveness across the organisation",
+      "evidence_description": "Introduced a quarterly quality and delivery review across four engineering groups, with shared metric definitions, named action owners, and follow-up dates.",
+      "additional_goals": [
+        {
+          "goal_id": "goal-user9-leadership-health",
+          "title": "Strengthen leadership follow-through on engineering health",
+          "description": "Establish a quarterly review with engineering leaders for delivery predictability, quality, and operational health, assigning owners and tracking agreed actions to completion.",
+          "scope": "TEAM",
+          "status": "APPROVED",
+          "sub_status": "NOT_STARTED"
+        },
+        {
+          "goal_id": "goal-user9-portfolio-planning",
+          "title": "Improve strategic engineering portfolio planning",
+          "description": "Develop a personal decision brief for the next planning cycle that compares proposed engineering investments by customer value, risk reduction, and capacity required.",
+          "scope": "PERSONAL",
+          "status": "DRAFT",
+          "sub_status": "NEEDS_REVIEW"
+        }
+      ]
+    }
+  ]
+}

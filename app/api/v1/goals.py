@@ -38,19 +38,25 @@ def create_goal(
     user_id: Annotated[str, Query(min_length=1)],
     service: Annotated[GoalService, Depends(get_goal_service)],
 ) -> GoalResponse:
-    goal = service.create_goal(
-        GoalCreate(
-            user_id=user_id,
-            title=request.title,
-            description=request.description,
-            scope=request.scope,
-            start_date=request.start_date,
-            end_date=request.end_date,
-            status=GoalStatus.DRAFT,
-            source=request.source,
-            source_document_id=request.source_document_id,
+    try:
+        goal = service.create_goal(
+            GoalCreate(
+                user_id=user_id,
+                title=request.title,
+                description=request.description,
+                scope=request.scope,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                status=GoalStatus.DRAFT,
+                source=request.source,
+                source_document_id=request.source_document_id,
+            )
         )
-    )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
     return _to_response(goal)
 
 

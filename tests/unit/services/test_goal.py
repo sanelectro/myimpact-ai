@@ -45,6 +45,47 @@ def test_create_goal():
     session.commit.assert_called_once()
 
 
+def test_create_organization_goal_uses_users_company():
+    session = MagicMock(spec=Session)
+    session.get.return_value = MagicMock(organization_id="org-123")
+    repository = MagicMock(spec=GoalRepository)
+    repository.create.return_value = MagicMock(spec=GoalDB)
+    service = GoalService(session)
+    service.repository = repository
+
+    goal_data = GoalCreate(
+        user_id="user-1",
+        title="Improve reliability",
+        scope=GoalScope.ORGANIZATION,
+    )
+
+    service.create_goal(goal_data)
+
+    assert repository.create.call_args.kwargs["organization_id"] == "org-123"
+
+
+def test_create_organization_goal_requires_company_profile():
+    session = MagicMock(spec=Session)
+    session.get.return_value = MagicMock(organization_id=None)
+    repository = MagicMock(spec=GoalRepository)
+    service = GoalService(session)
+    service.repository = repository
+
+    goal_data = GoalCreate(
+        user_id="user-1",
+        title="Improve reliability",
+        scope=GoalScope.ORGANIZATION,
+    )
+
+    try:
+        service.create_goal(goal_data)
+    except ValueError as exc:
+        assert "profile" in str(exc)
+    else:
+        raise AssertionError("Expected organization goal without company to fail")
+    repository.create.assert_not_called()
+
+
 def test_get_goal_by_id():
     session = MagicMock(spec=Session)
     repository = MagicMock(spec=GoalRepository)

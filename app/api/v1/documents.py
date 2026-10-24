@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.api.routes.document import (
+    MAX_DOCUMENT_SIZE_BYTES,
     _validate_upload,
     get_document_service,
 )
@@ -31,7 +32,7 @@ async def import_document(
     scope_id: Annotated[str | None, Form()] = None,
     source: Annotated[str, Form()] = "file_import",
 ) -> Document:
-    content = await file.read()
+    content = await file.read(MAX_DOCUMENT_SIZE_BYTES + 1)
     _validate_upload(file.filename, file.content_type, content)
     try:
         document = service.upload_document(

@@ -14,6 +14,40 @@ M4 will build on this foundation to answer a different question:
 
 > **What evidence demonstrates that the expectations are being met, and what impact did it create?**
 
+## Authentication
+
+Product endpoints require an `Authorization: Bearer` access token issued by `myimpact-api`. The AI service verifies the RS256 signature through the issuer's JWKS endpoint and checks the configured issuer, `myimpact-platform` audience, expiry, and `myimpact-ai` scope. `/health` remains public. User IDs still present in request parameters or forms are checked against the verified token subject.
+
+Set `AUTH_ISSUER` to the same canonical issuer URL used by `myimpact-api`. Set `AUTH_JWKS_URL` to the issuer's reachable JWKS endpoint; in Kubernetes this can use the issuer's internal Service DNS name. Set `ALLOWED_ORIGINS` to the exact browser origins permitted to call AI. Do not rely on localhost URLs outside local development.
+
+## Organization profiles and goals
+
+Users manage their company, engineering role, and reporting manager from **My Profile**. Entering a new company name creates its organization record; manager choices are limited to the user's saved company profile. Engineers can report to an Engineering Manager or Senior Engineering Manager, and engineering managers can report to an Engineering Director. Reporting relationships are validated by the API, not only by the profile form.
+
+Organization-scoped goals are associated with the user's company and remain private to that user. Personal and team goals do not carry a company association. Apply the `myimpact-db` migration `V20261024090000__add_organizations_and_reporting_relationships.sql` before using profile or organization-goal features.
+
+## Evidence approvals and notifications
+
+Evidence attached to a goal creates a pending approval for the employee's reporting manager. Managers can review pending requests from **Pending requests**, where the API limits results and decisions to their current direct reports. Approving, rejecting, or requesting more information creates an unread notification for the employee. Employees can update and resubmit rejected evidence or evidence needing more information. Notifications, responses, and status transitions are retained with JSON metadata for status, reason, notes, and evidence snapshots. Apply the `myimpact-db` migrations `V20261024120000__add_evidence_approvals_and_notifications.sql` and `V20261024130000__add_notification_responses_and_history.sql` before enabling this workflow.
+
+## GitHub and Jira evidence discovery
+
+The goal detail page can search the connected user's GitHub contributions and delivered Jira stories for a date range. MyImpact makes read-only API requests from the AI service, uses the selected goal or milestone as AI summarization context, and returns source links for the user to review before selecting evidence. It does not infer goal completion or business impact from activity counts. MCP is not part of this production data path; it remains appropriate for IDE/agent development-time access.
+
+Configure these settings in the AI service deployment before connecting providers:
+
+- `SOURCE_TOKEN_ENCRYPTION_KEY`: a Fernet key used to encrypt per-user source access and refresh tokens at rest. Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Store it in the deployment secret manager; do not commit it.
+- `SOURCE_OAUTH_STATE_SECRET`: a separate high-entropy secret for signed OAuth state.
+- `SOURCE_INTEGRATIONS_WEB_URL`: trusted MyImpact web origin used for the provider callback redirect.
+- GitHub App client ID, client secret, and callback URL. Configure the GitHub App's user authorization callback to match `GITHUB_APP_CALLBACK_URL`, and grant only `Contents: read` and `Pull requests: read` (repository metadata is always read) for the enabled endpoints.
+- Atlassian OAuth 2.0 (3LO) client ID, client secret, and callback URL. Enable Jira user/work read scopes and `offline_access`; the current connection supports one accessible Jira site per user.
+
+Apply the `myimpact-db` migration for `source_connections` before enabling this flow. Source OAuth client credentials and the token-encryption key belong in the approved secret manager. Revoke a user's provider authorization by disconnecting it in the evidence discovery panel and, when needed, in the provider's app settings.
+
+For single-user local development only, `SOURCE_LOCAL_TOKENS_ENABLED=true` can use `GITHUB_TOKEN` and Jira's `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` directly. On macOS, set `SOURCE_LOCAL_TOKENS_FROM_KEYCHAIN=true` to read the GitHub and Jira tokens from generic-password items in the login Keychain instead of `.env`; use service `MyImpact-local` and accounts `GITHUB_TOKEN` and `JIRA_API_TOKEN`. Add both items in Keychain Access, then restart the AI service. The Jira site URL and email remain ordinary local settings. This fallback is accepted only when `APP_ENV=development`, appears as a locally managed connection, and is not disconnectable from the UI. Do not enable it in shared or production deployments: every local app user would act with the same configured provider credentials. The app calls the provider APIs directly; this setting does not configure an MCP server.
+
+For a repeatable local presentation, `SOURCE_DEMO_MOCKS_ENABLED=true` switches the same read-only GitHub/Jira request path to deterministic persona-specific fixtures in `demo-data/demo_personas.json`. It requires `APP_ENV=development`, needs no external source credentials or MCP server, and must remain disabled outside local demos. Run `myimpact-db/scripts/demo/seed_demo_data.sh` to register the demo accounts and seed three role-specific goals per employee (personal, team, and organization; active, approved, and draft), with related written, GitHub, and Jira evidence on each employee's active focus goal.
+
 ---
 
 # M3 Status

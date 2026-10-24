@@ -1,6 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import (
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +22,7 @@ class EvidenceMappingDB(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     evidence_id: Mapped[str] = mapped_column(String(64), ForeignKey("evidence.id", ondelete="CASCADE"), nullable=False, index=True)
     goal_id: Mapped[str] = mapped_column(String(64), ForeignKey("goals.id", ondelete="CASCADE"), nullable=False, index=True)
+    milestone_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     relevance: Mapped[EvidenceRelevance] = mapped_column(Enum(EvidenceRelevance, name="evidence_relevance"), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
@@ -22,4 +32,11 @@ class EvidenceMappingDB(Base):
     evidence = relationship("EvidenceDB", back_populates="mappings")
     goal = relationship("GoalDB", back_populates="evidence_mappings")
 
-    __table_args__ = (UniqueConstraint("evidence_id", "goal_id", name="uq_evidence_goal_mapping"),)
+    __table_args__ = (
+        UniqueConstraint("evidence_id", "goal_id", name="uq_evidence_goal_mapping"),
+        ForeignKeyConstraint(
+            ["milestone_id", "goal_id"],
+            ["milestones.id", "milestones.goal_id"],
+            name="fk_evidence_mappings_milestone_goal",
+        ),
+    )

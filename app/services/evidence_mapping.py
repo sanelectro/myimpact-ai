@@ -2,8 +2,10 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.exceptions import EvidenceMappingAlreadyExistsError
+from app.models.evidence_approval import EvidenceApprovalStatus
 from app.models.evidence_mapping import EvidenceRelevance
 from app.repositories.evidence_mapping import EvidenceMappingRepository
 from app.services.base import BaseService
@@ -22,6 +24,7 @@ class EvidenceMappingService(BaseService):
         relevance: EvidenceRelevance,
         confidence: float,
         reason: str | None = None,
+        milestone_id: str | None = None,
     ) -> EvidenceMappingDB:
         existing = self.repository.get_by_evidence_and_goal(
             evidence_id,
@@ -37,9 +40,18 @@ class EvidenceMappingService(BaseService):
             mapping_id=str(uuid4()),
             evidence_id=evidence_id,
             goal_id=goal_id,
+            milestone_id=milestone_id,
             relevance=relevance,
             confidence=confidence,
             reason=reason,
+        )
+        self.session.add(
+            EvidenceApprovalDB(
+                id=mapping.id,
+                mapping_id=mapping.id,
+                status=EvidenceApprovalStatus.PENDING,
+                created_at=mapping.created_at,
+            )
         )
         self.commit()
         return mapping

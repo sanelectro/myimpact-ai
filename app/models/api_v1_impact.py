@@ -8,11 +8,16 @@ from app.models.impact_intelligence import CareerInsight
 
 class GoalEvidenceResponse(BaseModel):
     evidence_id: str
+    approval_id: str | None = None
+    approval_status: str | None = None
+    approval_comment: str | None = None
+    milestone_id: str | None = None
     title: str
     description: str | None = None
     source_type: str
     source_url: str | None = None
     captured_at: datetime
+    source_updated_at: datetime | None = None
     relevance: str
     confidence: float = Field(ge=0.0, le=1.0)
     reason: str | None = None

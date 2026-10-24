@@ -56,3 +56,111 @@ def test_evidence_mapping_api_create_and_get():
             session.execute(delete(UserDB).where(UserDB.id == user_id))
         session.commit()
         session.close()
+
+
+@pytest.mark.integration
+def test_goal_evidence_can_attach_to_goal_or_goal_milestone():
+    session = SessionLocal()
+    user_id = None
+    goal_id = None
+    evidence_ids: list[str] = []
+    try:
+        user = UserService(session).create_user(
+            UserCreate(name="Evidence Destination User", email=f"{uuid4()}@example.com")
+        )
+        user_id = user.id
+        goal_id = client.post(
+            "/goals",
+            json={"user_id": user_id, "title": "Improve release reliability"},
+        ).json()["id"]
+        assert client.post(
+            f"/api/v1/goals/{goal_id}/approve",
+            params={"user_id": user_id},
+        ).status_code == 200
+        assert client.post(
+            f"/api/v1/goals/{goal_id}/activate",
+            params={"user_id": user_id},
+        ).status_code == 200
+
+        milestone_response = client.post(
+            f"/api/v1/goals/{goal_id}/milestones",
+            params={"user_id": user_id},
+            json={"title": "Automate release verification"},
+        )
+        assert milestone_response.status_code == 201
+        milestone_id = milestone_response.json()["id"]
+
+        common_evidence = {
+            "description": "Added automated release checks.",
+            "source_type": "personal",
+            "source_id": None,
+            "source_url": None,
+            "content_hash": None,
+            "captured_at": datetime.now(UTC).isoformat(),
+            "relevance": "high",
+        }
+        direct_response = client.post(
+            f"/api/v1/goals/{goal_id}/evidence",
+            params={"user_id": user_id},
+            json={**common_evidence, "title": "Goal-level evidence"},
+        )
+        assert direct_response.status_code == 201
+        evidence_ids.append(direct_response.json()["evidence_id"])
+        assert direct_response.json()["milestone_id"] is None
+
+        milestone_response = client.post(
+            f"/api/v1/goals/{goal_id}/evidence",
+            params={"user_id": user_id},
+            json={
+                **common_evidence,
+                "title": "Milestone-level evidence",
+                "milestone_id": milestone_id,
+            },
+        )
+        assert milestone_response.status_code == 201
+        evidence_ids.append(milestone_response.json()["evidence_id"])
+        assert milestone_response.json()["milestone_id"] == milestone_id
+
+        listed = client.get(
+            f"/api/v1/goals/{goal_id}/evidence",
+            params={"user_id": user_id},
+        )
+        assert listed.status_code == 200
+        destinations = {item["title"]: item["milestone_id"] for item in listed.json()}
+        assert destinations == {
+            "Goal-level evidence": None,
+            "Milestone-level evidence": milestone_id,
+        }
+
+        archived = client.post(
+            f"/api/v1/goals/{goal_id}/milestones/{milestone_id}/archive",
+            params={"user_id": user_id},
+        )
+        assert archived.status_code == 200
+        deleted = client.delete(
+            f"/api/v1/goals/{goal_id}/milestones/{milestone_id}",
+            params={"user_id": user_id},
+        )
+        assert deleted.status_code == 204
+
+        after_delete = client.get(
+            f"/api/v1/goals/{goal_id}/evidence",
+            params={"user_id": user_id},
+        )
+        assert after_delete.status_code == 200
+        remaining_destinations = {
+            item["title"]: item["milestone_id"] for item in after_delete.json()
+        }
+        assert remaining_destinations == {
+            "Goal-level evidence": None,
+            "Milestone-level evidence": None,
+        }
+    finally:
+        if evidence_ids:
+            session.execute(delete(EvidenceDB).where(EvidenceDB.id.in_(evidence_ids)))
+        if goal_id:
+            session.execute(delete(GoalDB).where(GoalDB.id == goal_id))
+        if user_id:
+            session.execute(delete(UserDB).where(UserDB.id == user_id))
+        session.commit()
+        session.close()

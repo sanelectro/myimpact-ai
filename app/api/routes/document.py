@@ -131,7 +131,7 @@ def _validate_upload(
 
     if len(content) > MAX_DOCUMENT_SIZE_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="The uploaded file exceeds the 10 MB size limit.",
         )
 
@@ -149,7 +149,7 @@ async def upload_document(
     scope_type: Annotated[DocumentScopeType, Form()] = DocumentScopeType.EMPLOYEE,
     scope_id: Annotated[str | None, Form()] = None,
 ) -> Document:
-    content = file.file.read()
+    content = await file.read(MAX_DOCUMENT_SIZE_BYTES + 1)
 
     _validate_upload(
         file.filename,
