@@ -5,8 +5,17 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.goals import _require_goal, get_goal_service
 from app.db.session import get_db
-from app.models.milestone import MilestoneCreate, MilestoneResponse, MilestoneUpdate
+from app.exceptions import MilestoneSuggestionError
+from app.models.goal import Goal
+from app.models.milestone import (
+    MilestoneCreate,
+    MilestoneResponse,
+    MilestoneSuggestion,
+    MilestoneUpdate,
+)
 from app.services.goal import GoalService
+from app.services.knowledge.milestone_suggestion import MilestoneSuggestionService
+from app.services.llm.factory import create_llm_service
 from app.services.milestone import MilestoneService
 
 router = APIRouter(prefix="/goals/{goal_id}/milestones", tags=["milestones"])
@@ -14,6 +23,10 @@ router = APIRouter(prefix="/goals/{goal_id}/milestones", tags=["milestones"])
 
 def get_milestone_service(db: Annotated[Session, Depends(get_db)]) -> MilestoneService:
     return MilestoneService(db)
+
+
+def get_milestone_suggestion_service() -> MilestoneSuggestionService:
+    return MilestoneSuggestionService(create_llm_service())
 
 
 def _require_owned_goal(goal_id: str, user_id: str, service: GoalService) -> None:
@@ -32,6 +45,27 @@ def list_milestones(
         MilestoneResponse.model_validate(item, from_attributes=True)
         for item in service.get_milestones_by_goal_id(goal_id)
     ]
+
+
+@router.post("/suggestions", response_model=list[MilestoneSuggestion])
+async def suggest_milestones(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
+    suggestion_service: Annotated[
+        MilestoneSuggestionService,
+        Depends(get_milestone_suggestion_service),
+    ],
+) -> list[MilestoneSuggestion]:
+    goal_db = _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    goal = Goal.model_validate(goal_db, from_attributes=True)
+    try:
+        return await suggestion_service.suggest(goal)
+    except MilestoneSuggestionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post("", response_model=MilestoneResponse, status_code=status.HTTP_201_CREATED)

@@ -9,10 +9,12 @@ from app.api.v1.evidence import router as evidence_router
 from app.api.v1.evidence_approvals import router as evidence_approvals_router
 from app.api.v1.expectations import router as expectations_router
 from app.api.v1.goal_assessment import router as goal_assessment_router
+from app.api.v1.goal_criteria import router as goal_criteria_router
 from app.api.v1.goal_import import router as goal_import_router
 from app.api.v1.goals import router as goals_router
 from app.api.v1.impact import router as impact_router
 from app.api.v1.profile import router as profile_router
+from app.api.v1.role_catalog import router as role_catalog_router
 from app.api.v1.insight import router as insight_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.knowledge import router as knowledge_router
@@ -38,6 +40,7 @@ router.include_router(knowledge_router)
 router.include_router(expectations_router)
 router.include_router(goals_router)
 router.include_router(goal_assessment_router)
+router.include_router(goal_criteria_router)
 router.include_router(evidence_router)
 router.include_router(evidence_approvals_router)
 router.include_router(impact_router)
@@ -50,4 +53,5 @@ router.include_router(goal_import_router)
 router.include_router(milestones_router)
 router.include_router(archives_router)
 router.include_router(profile_router)
+router.include_router(role_catalog_router)
 router.include_router(admin_router)

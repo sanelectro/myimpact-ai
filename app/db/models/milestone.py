@@ -4,7 +4,7 @@ from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, UniqueCon
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.models.milestone import MilestoneStatus
+from app.models.milestone import MilestoneSource, MilestoneStatus
 
 
 class MilestoneDB(Base):
@@ -24,6 +24,12 @@ class MilestoneDB(Base):
         Enum(MilestoneStatus, name="milestone_status"),
         nullable=False,
         default=MilestoneStatus.NOT_STARTED,
+    )
+    source: Mapped[MilestoneSource] = mapped_column(
+        String(20),
+        nullable=False,
+        default=MilestoneSource.MANUAL,
+        server_default=MilestoneSource.MANUAL.value,
     )
     due_date: Mapped[date | None] = mapped_column(Date)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

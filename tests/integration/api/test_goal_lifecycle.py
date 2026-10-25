@@ -88,8 +88,9 @@ def test_goal_api_crud_assessment_isolation_and_full_lifecycle():
             params={"user_id": user_id},
         )
         assert assessment.status_code == 200
-        assert assessment.json()["status"] == "not_started"
-        assert assessment.json()["qualifying_achievement_count"] == 0
+        assert assessment.json()["criteria_count"] == 0
+        assert assessment.json()["criteria_met_count"] == 0
+        assert assessment.json()["goal_progress_percentage"] is None
 
         wrong_owner = client.get(
             f"/api/v1/goals/{goal_id}",

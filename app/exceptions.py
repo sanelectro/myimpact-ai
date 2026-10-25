@@ -36,3 +36,15 @@ class EvidencePersistenceError(RuntimeError):
 
 class ImpactAssessmentEvaluationError(RuntimeError):
     """Raised when impact assessment evaluation cannot be completed safely."""
+
+
+class MilestoneSuggestionError(RuntimeError):
+    """Raised when AI milestone suggestions cannot be generated safely."""
+
+
+class GoalCriteriaGenerationError(RuntimeError):
+    """Raised when goal criteria cannot be generated safely."""
+
+
+class GoalCriterionAssessmentError(RuntimeError):
+    """Raised when goal evidence cannot be assessed safely."""

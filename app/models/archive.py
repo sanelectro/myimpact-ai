@@ -3,7 +3,7 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 from app.models.api_v1_goals import GoalResponse
-from app.models.milestone import MilestoneStatus
+from app.models.milestone import MilestoneSource, MilestoneStatus
 
 
 class ArchivedEvidenceResponse(BaseModel):
@@ -27,6 +27,7 @@ class ArchivedMilestoneResponse(BaseModel):
     status: MilestoneStatus
     due_date: date | None
     archived_at: datetime
+    source: MilestoneSource = MilestoneSource.MANUAL
 
 
 class ArchivesResponse(BaseModel):

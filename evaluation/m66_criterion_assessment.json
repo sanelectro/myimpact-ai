@@ -1,0 +1,356 @@
+{
+  "dataset_id": "m66-criterion-assessment-v1",
+  "purpose": "Representative review cases for source-grounded criterion assessment.",
+  "label_status": "DRAFT_UNREVIEWED",
+  "evaluation_record": {
+    "dataset_version": "m66-criterion-assessment-v1",
+    "approved_dataset_version": null,
+    "prompt_version": "m66-criterion-assessment-v1",
+    "approved_model_versions": [],
+    "required_case_ids": [
+      "verified-deployment-canary",
+      "partial-canary-rollout",
+      "contradictory-release-outcomes",
+      "semantic-match-without-relevance",
+      "no-evidence",
+      "team-outcome-without-attribution"
+    ],
+    "required_repeats": 3
+  },
+  "human_review": {
+    "status": "PENDING",
+    "reviewers": [],
+    "approved_at": null,
+    "approved_dataset_version": null,
+    "adjudication_status": "PENDING"
+  },
+  "threshold_approval": {
+    "status": "NOT_APPROVED",
+    "approved_by": [],
+    "approved_at": null,
+    "thresholds": {
+      "evidence_matching_precision": null,
+      "evidence_matching_recall": null,
+      "citation_validity": null,
+      "unsupported_assessment_claim_rate_max": null,
+      "assessment_agreement": null,
+      "insufficient_evidence_abstention_accuracy": null,
+      "repeatability": null,
+      "run_success_rate": null
+    }
+  },
+  "cases": [
+    {
+      "case_id": "verified-deployment-canary",
+      "scenario": "Direct evidence satisfies an approved completion condition; unrelated evidence is also present.",
+      "goal": {
+        "id": "goal-canary",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-canary",
+        "version_id": "criterion-canary-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled and verified for production releases.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-verified",
+          "evidence_version_id": "version-canary-verified",
+          "title": "Production canary rollout",
+          "source_url": "https://example.test/evidence/canary-rollout",
+          "captured_at": "2026-01-15T12:00:00Z",
+          "source_updated_at": "2026-01-15T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-verified",
+          "content": "Enabled production canary validation and verified the release checks in the production pipeline."
+        },
+        {
+          "mapping_id": "mapping-canary-irrelevant",
+          "evidence_version_id": "version-canary-irrelevant",
+          "title": "Team planning notes",
+          "source_url": null,
+          "captured_at": "2026-01-14T12:00:00Z",
+          "source_updated_at": null,
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-irrelevant",
+          "content": "The team discussed next quarter's hiring plan."
+        }
+      ],
+      "labels": {
+        "expected_result": "MET",
+        "relevant_supporting_mapping_ids": ["mapping-canary-verified"],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": ["mapping-canary-verified"],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The production pipeline evidence directly states that canary validation was enabled and verified.",
+        "expected_measured_value": null
+      }
+    },
+    {
+      "case_id": "partial-canary-rollout",
+      "scenario": "Evidence shows meaningful but incomplete progress toward a completion condition.",
+      "goal": {
+        "id": "goal-partial",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-partial",
+        "version_id": "criterion-partial-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled and verified for all production services.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-partial",
+          "evidence_version_id": "version-canary-partial",
+          "title": "Canary validation pilot",
+          "source_url": "https://example.test/evidence/canary-pilot",
+          "captured_at": "2026-02-10T12:00:00Z",
+          "source_updated_at": "2026-02-10T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-partial",
+          "content": "Canary validation is enabled for the payments service. Rollout to the other production services is still in progress."
+        }
+      ],
+      "labels": {
+        "expected_result": "IN_PROGRESS",
+        "relevant_supporting_mapping_ids": ["mapping-canary-partial"],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": ["mapping-canary-partial"],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The evidence confirms rollout for one service and explicitly states that rollout to the remaining services is incomplete.",
+        "expected_measured_value": null
+      }
+    },
+    {
+      "case_id": "contradictory-release-outcomes",
+      "scenario": "Relevant sources conflict, so the assessment should cite both and abstain from a definitive outcome.",
+      "goal": {
+        "id": "goal-contradiction",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-contradiction",
+        "version_id": "criterion-contradiction-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Reduce production release failures",
+          "completion_conditions": "Production release failures decrease after the release safeguards are introduced.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-release-improved",
+          "evidence_version_id": "version-release-improved",
+          "title": "Release reliability summary",
+          "source_url": "https://example.test/evidence/release-summary",
+          "captured_at": "2026-03-01T12:00:00Z",
+          "source_updated_at": "2026-03-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:release-improved",
+          "content": "The monthly report says production release failures decreased after safeguards were introduced."
+        },
+        {
+          "mapping_id": "mapping-release-regression",
+          "evidence_version_id": "version-release-regression",
+          "title": "Release regression incident report",
+          "source_url": "https://example.test/evidence/release-regression",
+          "captured_at": "2026-03-02T12:00:00Z",
+          "source_updated_at": "2026-03-02T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:release-regression",
+          "content": "The incident report says production release failures increased during the same period."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": ["mapping-release-improved"],
+        "relevant_contradictory_mapping_ids": ["mapping-release-regression"],
+        "expected_supporting_mapping_ids": ["mapping-release-improved"],
+        "expected_contradictory_mapping_ids": ["mapping-release-regression"],
+        "expected_rationale": "The supplied reports disagree about the direction of release failures, preventing a definitive conclusion.",
+        "expected_measured_value": null
+      }
+    },
+    {
+      "case_id": "semantic-match-without-relevance",
+      "scenario": "Topically similar text does not provide evidence for the criterion.",
+      "goal": {
+        "id": "goal-irrelevant",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-irrelevant",
+        "version_id": "criterion-irrelevant-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled in production.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": false,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-discussion",
+          "evidence_version_id": "version-canary-discussion",
+          "title": "Canary deployment discussion",
+          "source_url": null,
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": null,
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-discussion",
+          "content": "The team discussed canary birds and their migration patterns during a social event."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The text shares terminology with the criterion but contains no evidence about production canary validation.",
+        "expected_measured_value": null
+      }
+    },
+    {
+      "case_id": "no-evidence",
+      "scenario": "No evidence was retrieved or submitted; missing evidence is not proof of no progress.",
+      "goal": {
+        "id": "goal-no-evidence",
+        "title": "Improve service reliability",
+        "description": "Improve production service reliability."
+      },
+      "criterion": {
+        "id": "criterion-no-evidence",
+        "version_id": "criterion-no-evidence-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Reduce service incidents",
+          "completion_conditions": "Production service incidents decrease.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": false,
+      "assessment_sufficient": false,
+      "evidence": [],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "There is no evidence from which to assess progress; absence of evidence does not establish that work has not started.",
+        "expected_measured_value": null
+      }
+    },
+    {
+      "case_id": "team-outcome-without-attribution",
+      "scenario": "A positive team outcome is documented, but the employee's contribution is not established.",
+      "goal": {
+        "id": "goal-attribution",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-attribution",
+        "version_id": "criterion-attribution-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Lead implementation of production canary validation",
+          "completion_conditions": "The employee's contribution to enabling and validating production canary checks is documented.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-team-outcome",
+          "evidence_version_id": "version-team-outcome",
+          "title": "Team release report",
+          "source_url": "https://example.test/evidence/team-release-report",
+          "captured_at": "2026-05-01T12:00:00Z",
+          "source_updated_at": "2026-05-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:team-outcome",
+          "content": "The team enabled production canary validation and confirmed the checks passed. The report does not identify individual contributors."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The team outcome is relevant, but the source does not establish the employee's individual contribution.",
+        "expected_measured_value": null
+      }
+    }
+  ]
+}

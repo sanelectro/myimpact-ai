@@ -5,7 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.exceptions import ImpactAssessmentEvaluationError
-from app.models.api_v1_impact import ImpactAnalysisRequest, ImpactAnalysisResponse, ImpactAssessmentResponse
+from app.models.api_v1_impact import (
+    ImpactAnalysisRequest,
+    ImpactAnalysisResponse,
+    ImpactAssessmentResponse,
+)
 from app.models.goal import Goal
 from app.models.document_expectation import DocumentExpectation
 from app.services.document import DocumentService

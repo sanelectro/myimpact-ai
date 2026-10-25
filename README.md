@@ -449,3 +449,21 @@ At that point MyImpact has a usable **Personal Career Knowledge System** foundat
 ## M3.6.5 checkpoint
 
 Embedding storage and semantic retrieval are implemented as a vertical slice using PostgreSQL + pgvector. `DocumentChunk` remains the canonical source and embeddings remain derived data.
+
+## M66 criterion-assessment evaluation
+
+`evaluation/m66_criterion_assessment.json` contains varied criterion-assessment examples with reference outcomes, relevant and contradictory evidence mappings, evidence sufficiency labels, and expected rationale/citations. The labels are an initial draft, not human-approved ground truth. The release thresholds are deliberately unset until the team reviews the cases and approves numeric targets.
+
+With the AI service's normal LLM configuration available, run the exact assessment prompt against every example multiple times and print the comparison report:
+
+```bash
+python -m scripts.evaluate_m66_criterion_assessment --repeats 3
+```
+
+The report includes evidence-matching precision/recall, citation validity, unsupported-assessment-claim rate, assessment agreement, insufficient-evidence abstention accuracy, repeatability, and run-success rate. The unsupported-claim metric is currently an outcome-level proxy: it counts achievement predictions whose reference label or supporting citation does not justify an achievement; it does not automatically verify every factual statement in the rationale. Release eligibility also requires reviewer/adjudication and threshold approvals, matching dataset/prompt/model versions, complete unique case/repeat results, valid structured outputs and citations, and metrics meeting the approved thresholds. The report returns machine-readable ineligibility reasons, and exploratory metrics remain separate from eligibility. The runner does not persist assessments.
+
+Dataset and evaluator contract tests:
+
+```bash
+pytest tests/unit/evaluation tests/unit/services/test_goal_assessment.py -v
+```

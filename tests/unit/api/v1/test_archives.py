@@ -74,6 +74,7 @@ def test_list_archives_returns_owned_archived_items():
             description=None,
             completion_criteria=None,
             status="completed",
+            source="ai",
             due_date=None,
             archived_at=now,
         )
