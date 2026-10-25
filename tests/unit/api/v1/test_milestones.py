@@ -1,6 +1,6 @@
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,7 +8,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.v1.goals import get_goal_service
-from app.api.v1.milestones import get_milestone_service
+from app.api.v1.milestones import (
+    get_milestone_service,
+    get_milestone_suggestion_service,
+)
 from app.db.base import Base
 from app.db.models.goal import GoalDB
 from app.db.models.milestone import MilestoneDB
@@ -16,7 +19,9 @@ from app.db.models.user import UserDB
 from app.db.session import get_db
 from app.main import app
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
+from app.models.milestone import MilestoneSuggestion, MilestoneSource
 from app.services.goal import GoalService
+from app.services.knowledge.milestone_suggestion import MilestoneSuggestionService
 from app.services.milestone import MilestoneService
 
 client = TestClient(app)
@@ -45,6 +50,7 @@ def _milestone(**overrides):
         "description": "Document current risks",
         "completion_criteria": "Findings are reviewed",
         "status": "not_started",
+        "source": "manual",
         "due_date": date(2026, 12, 1),
         "created_at": now,
         "updated_at": now,
@@ -93,6 +99,58 @@ def test_create_milestone_returns_goal_linked_milestone():
     assert response.status_code == 201
     assert response.json()["goal_id"] == "goal-1"
     assert response.json()["status"] == "not_started"
+    assert response.json()["source"] == MilestoneSource.MANUAL.value
+
+
+def test_suggest_milestones_checks_goal_ownership():
+    goal_service = MagicMock(spec=GoalService)
+    goal_service.get_goal_by_id.return_value = _goal(user_id="owner")
+    suggestion_service = MagicMock(spec=MilestoneSuggestionService)
+    suggestion_service.suggest = AsyncMock()
+    app.dependency_overrides.update({
+        get_goal_service: lambda: goal_service,
+        get_milestone_suggestion_service: lambda: suggestion_service,
+    })
+    try:
+        response = client.post(
+            "/api/v1/goals/goal-1/milestones/suggestions",
+            params={"user_id": "other-user"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    suggestion_service.suggest.assert_not_awaited()
+
+
+def test_suggest_milestones_returns_goal_specific_suggestions():
+    goal_service = MagicMock(spec=GoalService)
+    goal_service.get_goal_by_id.return_value = _goal()
+    suggestions = [
+        MilestoneSuggestion(
+            title="Review current reliability",
+            description="Identify key reliability risks.",
+            completion_criteria="A reviewed list of priority risks exists.",
+        )
+    ]
+    suggestion_service = MagicMock(spec=MilestoneSuggestionService)
+    suggestion_service.suggest = AsyncMock(return_value=suggestions)
+    app.dependency_overrides.update({
+        get_goal_service: lambda: goal_service,
+        get_milestone_suggestion_service: lambda: suggestion_service,
+    })
+    try:
+        response = client.post(
+            "/api/v1/goals/goal-1/milestones/suggestions",
+            params={"user_id": "user-1"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()[0]["title"] == suggestions[0].title
+    assert "source" not in response.json()[0]
+    suggestion_service.suggest.assert_awaited_once()
 
 
 def test_update_milestone_changes_status_without_changing_goal():
@@ -197,9 +255,11 @@ def test_goal_milestone_flow_persists_without_changing_goal_assessment_state():
             json={
                 "title": "Assess current architecture",
                 "completion_criteria": "Findings are reviewed",
+                "source": "ai",
             },
         )
         assert created.status_code == 201
+        assert created.json()["source"] == "ai"
         milestone_id = created.json()["id"]
 
         updated = client.put(
@@ -216,6 +276,7 @@ def test_goal_milestone_flow_persists_without_changing_goal_assessment_state():
         )
         assert listed.status_code == 200
         assert listed.json()[0]["id"] == milestone_id
+        assert listed.json()[0]["source"] == "ai"
 
         unchanged_goal = client.get(
             "/api/v1/goals/goal-1",

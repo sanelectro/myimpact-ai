@@ -42,6 +42,11 @@ class GoalDB(Base):
         cascade="all, delete-orphan",
     )
     milestones = relationship("MilestoneDB", back_populates="goal", cascade="all, delete-orphan")
+    criteria = relationship(
+        "GoalCriterionDB",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def organization_name(self) -> str | None:

@@ -1,25 +1,26 @@
 # MyImpact — M6 Milestones and Delivery Plan
 
-**Document status:** Working plan; current M6.1–M6.5 validation passed on 24 October; expanded identity and admin scope is included; release readiness remains open
+**Document status:** Working plan; current M6.1–M6.5 validation passed on 24 October; expanded identity and admin scope is included; M7 release readiness remains open
 **Last known checkpoint:** 24 October 2026  
 **Purpose:** Capture M6 scope, last known implementation state, remaining work, and validation needed before milestones are considered complete.
 
-> **Status caveat:** Current M6.1–M6.5 build, browser, backend, and migration checks passed on 24 October 2026. M6.4 is complete for goal/document ingestion; evidence association is covered by M6.5. M6.6–M6.7 and M6.9–M6.10 are planned or unvalidated. M6.8 implementation is present, but its integrated admin/organization flows are not validated.
+> **Status caveat:** Current M6.1–M6.5 build, browser, backend, and migration checks passed on 24 October 2026. M6.4 is complete for goal/document ingestion; evidence association is covered by M6.5. M6.6 implementation is in progress and unvalidated for release; M6.7–M6.8 and M6.10 remain planned or unvalidated. M6.9 implementation is present, but its integrated admin/organization flows are not validated. M7 release readiness is open.
 
 ## 1. M6 overview
 
 | Milestone | Scope | Last known status | Remaining work |
 |---|---|---|---|
-| M6.1 | Frontend foundation and API integration | Validated on 24 October: production build, auth/browser flows, and live API integration through document ingestion | None for M6.1; full release regression remains M6.10 |
-| M6.2 | Dashboard | Validated on 24 October: empty, partial-progress, capped progress, and API-error browser scenarios | None for M6.2; full release regression remains M6.10 |
+| M6.1 | Frontend foundation and API integration | Validated on 24 October: production build, auth/browser flows, and live API integration through document ingestion | None for M6.1; integrated E2E validation remains M6.10 |
+| M6.2 | Dashboard | Validated on 24 October: empty, partial-progress, capped progress, and API-error browser scenarios | None for M6.2; integrated E2E validation remains M6.10 |
 | M6.3 | Goals and Expectations | Current backend suite and browser CRUD, scopes, lifecycle, assessment, and import checks passed on 24 October | Known limitation: lexical duplicate matching may miss semantic paraphrases |
 | M6.4 | Goal/document ingestion | Live-stack DOCX upload, extraction, provenance, idempotency, correction, approval, and activation passed on 24 October | M6.4 is scoped to goal/document ingestion; evidence association is validated under M6.5 |
-| M6.5 | Goal/milestone evidence association | Current API/browser checks and the association migration passed on 24 October | None for M6.5; manager review and impact scoring are M6.6 scope |
-| M6.6 | Impact Analysis | Planned; acceptance criteria and implementation are not confirmed complete | Define manager evidence review and weighted scoring; implement monthly goal/milestone analysis |
-| M6.7 | 1:1 and Career Reports | Planned; acceptance criteria and implementation are not confirmed complete | Define report periods, privacy/versioning/export; implement user-owned briefs and career reports using M6.6 results |
-| M6.8 | Admin Portal and Platform Access | Implementation, API, UI and migrations are present; integrated validation is not recorded | Validate authentication, organization/profile relationships, platform-admin access and admin workflows |
-| M6.9 | AI Assistant | Basic authenticated chat endpoint exists; grounded assistant scope and implementation are not confirmed complete | Define use cases, authorized-data grounding, source links, usage tracking and validation |
-| M6.10 | End-to-End UX Validation and Release Readiness | Not confirmed complete | Run the final integrated acceptance suite after all committed M6 scope, including M6.8 and M6.9 |
+| M6.5 | Goal/milestone evidence association | Current API/browser checks and the association migration passed on 24 October | None for M6.5; M6.6 adds AI-generated goal criteria and evidence-based assessment |
+| M6.6 | Goal criteria and evidence-based assessment | Product decisions finalized; implementation in progress; release acceptance not confirmed | Implement versioned criteria, evidence assessments, lifecycle/history, deterministic progress, shared UI, source freshness, and AI evaluation |
+| M6.7 | Impact Analysis | Planning scope: analyze validated goal assessments and traceable evidence; implementation and acceptance criteria are not confirmed complete | Define reporting periods, aggregation, source traceability, privacy, and uncertainty; implement and validate the Impact Analysis experience |
+| M6.8 | 1:1 and Career Reports | Planned; acceptance criteria and implementation are not confirmed complete | Define report periods, privacy/versioning/export; implement user-owned briefs and career reports using validated M6.6/M6.7 results |
+| M6.9 | Admin Portal and Platform Access | Implementation, API, UI and migrations are present; integrated validation is not recorded | Validate authentication, organization/profile relationships, platform-admin access and admin workflows |
+| M6.10 | End-to-End UX Validation | Not confirmed complete | Run integrated validation across all committed M6.1–M6.9 scope |
+| M7 | Release Readiness | Not confirmed complete | Complete operational, deployment, documentation, and release go/no-go checks after M6.10 |
 
 ## 2. Product decisions to preserve
 
@@ -48,7 +49,7 @@ Keep calculated assessment state separate from lifecycle and sub-status:
 
 There is no separate Achievement entity in this plan: a goal with lifecycle status `COMPLETED` is itself an achievement. Linked evidence and demonstrated impact support and substantiate the goal outcome; they are not separate achievements.
 
-Keep calculated assessment state separate from goal lifecycle. The current M6.3 implementation uses counts of evidence with linked impact and a target of three to calculate assessment/progress. That is the legacy model, not the product definition going forward; revise its labels and calculation so evidence records are not presented as separate achievements. M6.6 defines the replacement as evidence-based, weighted goal criteria: only employee-submitted evidence accepted by the reporting manager can contribute; AI may propose criterion progress with its supporting evidence and confidence, and the employee confirms a proposed partial value. Milestone and goal scores must follow the same evidence eligibility rule.
+Keep calculated assessment state separate from goal lifecycle. The current M6.3 implementation uses counts of evidence with linked impact and a target of three to calculate assessment/progress. That is the legacy model, not the product definition going forward; revise its labels and calculation so evidence records are not presented as separate achievements. M6.6 replaces that model with AI-proposed, employee-approved goal criteria and source-grounded evidence-to-criterion assessments. AI assesses all submitted evidence, while the evidence review state remains visible and AI conclusions are never presented as manager-verified achievements. The backend owns deterministic progress and aggregate calculations; AI suggestions are not achievements and must not change goal lifecycle. M6.6 criterion types, progress formulas, confirmation behavior, and evidence-review distinctions are finalized in [M6.6-README.md](./docs/milestones/M6.6-README.md).
 
 ### Goal UX requirements
 - Present the completed goal as the achievement, with its supporting evidence and demonstrated impact together.
@@ -67,7 +68,7 @@ Keep calculated assessment state separate from goal lifecycle. The current M6.3 
 - Organization-scoped goals are linked to the user's company and remain private to that user. Personal and team goals do not carry a company association.
 - Platform administrators can review customer users' goals, impact and evidence across companies, invite users, and disable or reactivate accounts. Public registration must never grant platform-admin privileges.
 - Before public production use, authentication still requires email verification and abuse protection such as rate limiting and bot controls. Production secrets, issuer URLs, CORS origins and secure-cookie settings must be configured for the deployment environment.
-- The Admin Portal and Platform Access scope is tracked in M6.8; the AI Assistant is M6.9. M6.10 remains the final release-readiness gate.
+- The Admin Portal and Platform Access scope is tracked in M6.9. M6.10 is the integrated E2E milestone; M7 owns release readiness. AI Assistant is not in the current M6/M7 scope.
 
 ### Milestones, Source Documents and Evidence
 
@@ -142,7 +143,7 @@ Keep calculated assessment state separate from goal lifecycle. The current M6.3 
 - [x] Verify every lifecycle/sub-status pair against the allowed matrix.
 - [x] Record the legacy assessment thresholds at 0, 1, 2, 3 and 4+ evidence-and-impact units.
 - [x] Record that active evidence without demonstrated impact does not qualify under the legacy assessment.
-- [ ] In M6.6, replace the legacy evidence-count assessment with weighted goal criteria backed only by employee-submitted, manager-accepted evidence; treat completed goals as achievements, not evidence records.
+- [ ] In M6.6, replace legacy evidence-count guidance with AI-generated, employee-approved goal criteria and evidence-based criterion assessments; treat completed goals as achievements, not evidence records.
 - [ ] Update assessment API terminology, user-facing guidance and tests as part of M6.6; retain coverage that unreviewed, rejected or unsupported evidence does not strengthen a goal outcome.
 - [x] Verify dashboard, list and detail assessment presentation is consistent for an active goal.
 - [x] Verify Personal, Team and Organization scopes through the goal form and list.
@@ -198,9 +199,11 @@ Keep calculated assessment state separate from goal lifecycle. The current M6.3 
 - [x] Implement/extend API contracts and frontend views; cover both destination choices with integration and Playwright tests and invalid associations with API tests.
 - [x] Keep impact analysis and assessment behavior unchanged; evidence attachment alone must not trigger analysis.
 
-## 8. M6.6 — Impact Analysis
+## 8. M6.6 — Goal Criteria Generation and Evidence-Based Assessment
 
-**Intended outcome:** Give employees an evidence-grounded view of progress against their goals and expectations, and help them identify useful next contributions. 1:1 preparation and career reports are split into M6.7.
+**Intended outcome:** Put AI-assisted criteria generation and evidence assessment into the existing Goals workflow. M6.7 adds a separate Impact Analysis experience that can aggregate validated goal assessments and cross-goal patterns.
+
+Implementation breakdown: [M6.6 Technical Plan](./docs/milestones/M6.6-TECHNICAL-PLAN.md).
 
 ### Current foundation and gap
 
@@ -208,148 +211,117 @@ Keep calculated assessment state separate from goal lifecycle. The current M6.3 
 
 ### Proposed first release
 
-### Impact analysis
+### Criteria and evidence assessment
 
-1. Analyze goals monthly against explicit expectations available from the employee's goals, role/company context and manager; preserve the source for each expectation and flag missing or conflicting expectations.
-2. Represent expectations as goal criteria with equal weights by default; allow employee/manager-adjusted weights where supported.
-3. The employee submits evidence for a goal or milestone. The reporting manager accepts or rejects each submission; rejected or unreviewed evidence does not contribute to a score.
-4. AI proposes evidence-to-criterion matches and evidence-based partial progress, with source links and confidence. The employee confirms or corrects a proposed partial value. Calculate the score from criterion weights and confirmed progress backed by manager-accepted evidence; never score an unsupported claim.
-5. Explain the result, evidence coverage, gaps and uncertainty. Suggest concrete next contributions tied to unmet criteria, clearly distinguished from completed work.
-6. Use the same evidence eligibility and scoring rules for goal and milestone scores. Monthly analysis is the initial period; quarterly and yearly analysis views can follow after the monthly model is validated.
+1. When an employee creates a goal, AI proposes observable or measurable criteria. The employee can edit, add, remove, and approve them.
+2. Reuse existing evidence records and supported ingestion/retrieval. External content is fetched only through authorized, supported APIs; unavailable sources must show their limitation.
+3. AI proposes evidence-to-criterion matches and status/progress with rationale, source references, confidence, and uncertainty. Validate every criterion/evidence ID and user authorization before recording decisions.
+4. AI assesses all submitted evidence regardless of manager-review state. Keep evidence attachment, AI assessment, optional employee confirmation, and manager review separate; attaching or accepting evidence does not itself mean a criterion is met.
+5. Store provenance/version information so changes to criteria or evidence do not silently rewrite prior assessments. Show freshness and failures explicitly.
+6. Use one backend assessment engine for Goal detail and the Goals page. The backend computes deterministic criterion progress and aggregate results using the finalized M6.6 criterion types and formulas, with equal criterion and milestone weights by default.
+7. Keep the separate Impact Analysis experience in M6.7, where it may aggregate validated goal assessments and cross-goal patterns.
 
-## 9. M6.7 — 1:1 and Career Reports
+### M6.6 decisions and acceptance checks
 
-**Intended outcome:** Turn M6.6's source-linked progress into private, reviewable employee-facing 1:1 briefs and career reports. A report is a user-controlled summary, not new evidence or an automatic manager feed.
+- [x] AI assesses all submitted evidence, independently of manager-review state; AI assessment, employee confirmation, and manager review remain distinct.
+- [x] Define criterion result states separately from `CURRENT`, `STALE`, and `OBSOLETE` assessment lifecycle states.
+- [x] Make employee confirmation optional for routine assessments; retain AI proposals when employees correct or challenge them.
+- [x] Define binary, milestone-based, and measurable-target criteria, with equal milestone/criterion weights by default and deterministic backend progress.
+- [x] Version criteria; material edits obsolete prior assessments and trigger reassessment without overwriting history.
+- [x] Define source freshness/access tracking, targeted invalidation, immutable history, and AI evaluation measures.
+- [ ] Validate model-referenced criterion/evidence IDs and authorization; handle provider failures and invalid outputs explicitly.
+- [ ] Implement API/service, UI, integration, and AI-evaluation tests for traceability, freshness, uncertainty, versioning, and access boundaries.
 
-### 1:1 preparation
+**M6.6 definition of done:** Employees can create a goal, approve AI-proposed criteria, attach supported evidence, and inspect source-linked AI assessments for each criterion. Goal detail and the Goals page reuse one assessment engine and deterministic progress/aggregation. Evidence review state, employee confirmation, manager review, uncertainty, stale/obsolete assessments, and history are explicit; access is enforced; and backend, UI, integration, and AI-evaluation tests validate the workflow against thresholds established from a human-reviewed dataset.
 
-1. User selects a date range (default to the current month, with the previous preparation date available when useful) and starts a draft.
-2. Present a concise employee-facing meeting brief: monthly expectations and progress, completed goals as achievements with source links, active goal/milestone progress, evidence awaiting manager review, blockers or risks, evidence gaps, suggested next contributions, and discussion topics or asks.
-3. Let the user edit the brief and add private notes/questions; clearly distinguish user-authored notes and AI suggestions from linked MyImpact facts.
-4. Save a user-owned draft/version. Sharing is a deliberate user action; merely generating or saving a brief does not notify or grant access to the manager.
+## 9. M6.7 — Impact Analysis
 
-### Career report
+**Intended outcome:** Help employees understand progress and impact across their goals by analyzing validated M6.6 criterion assessments and their traceable evidence. Impact Analysis summarizes existing goal/evidence data; it does not create evidence or replace criterion-level decisions.
 
-1. User selects a reporting period and report type (initial focus: quarterly impact/career summary; promotion evidence can follow if the core workflow is validated).
-2. Generate a structured draft from completed goals (the achievements), other in-period goal progress, linked evidence and impact assessments.
-3. Include period boundaries, generation date, source dates and traceable links/references for factual claims.
-4. Let the user review, correct, remove or add content before printing/exporting. Clearly flag gaps and omit unsupported claims rather than filling them in.
+### Proposed scope
 
-### Shared behavior and boundaries
+- Summarize goal and criterion progress for a user-selected reporting period, with source links to validated assessments and evidence.
+- Make evidence gaps, uncertainty, stale assessments, and out-of-period sources explicit.
+- Separate source facts, deterministic aggregation, and any generated narrative; do not invent achievements or imply performance ratings.
+- Reuse M6.6 assessment and authorization rules; do not add a second evidence store or independent goal-scoring system.
+- Keep the initial experience employee-scoped. Manager sharing, organization-wide analytics, and predictive performance decisions require separate approval.
 
-- Keep reports private to their owner by default. Manager evidence-review access does not grant access to private 1:1 notes or career reports. Do not add organization-wide reporting or automatic delivery.
-- Keep generated content tied to its source snapshot and period; edits must not rewrite source evidence or assessments.
-- Make stale/out-of-date content visible if its source goals or evidence change after generation; regeneration should create a reviewable version rather than silently overwriting user edits.
-- Treat export/print as a user-initiated output. Decide whether editable drafts and exported files need separate retention behavior before implementation.
-- Keep the first release to user-facing preparation and career summaries. Scheduling, manager collaboration, performance ratings, calibration and predictive promotion recommendations are out of scope unless explicitly added.
+### Decisions and acceptance checks
 
-### M6.6–M6.7 shared workstreams and acceptance checks
+- [ ] Confirm reporting periods, analysis views, and whether narrative generation is in scope.
+- [ ] Define how criterion assessments are aggregated across goals without introducing unapproved scoring or weights.
+- [ ] Preserve source references, assessment versions, source dates, and access boundaries in every result.
+- [ ] Handle empty periods, weak evidence, stale assessments, and analysis/provider failures explicitly.
+- [ ] Add focused API/service/UI and end-to-end tests for traceability, authorization, period filtering, and uncertainty.
 
-- [ ] Confirm first-release report types, sections, period defaults and whether an edited report can be regenerated while retaining prior versions.
-- [ ] Define expectation sources and criterion creation, including how role/company and manager expectations are reconciled with employee goals.
-- [ ] Define evidence-review states, manager authorization, rejection/resubmission behavior, and the audit trail for accepted evidence.
-- [ ] Define score calculation, adjusted-weight rules, AI partial-progress proposals, employee confirmation, confidence display and migration from the legacy M6.3 assessment.
-- [ ] Define the source-data query and inclusion rules, including completed goals as achievements, archived-goal handling, evidence dates and the user's selected period.
-- [ ] Define report content as structured sections rather than relying only on an opaque text blob; preserve report type, period, version, status and generation timestamp.
-- [ ] Define 1:1 draft behavior, private notes, manual edits and the user-controlled share/export boundary.
-- [ ] Generate summaries from traceable goals, linked evidence and impact; describe completed goals as achievements without introducing a separate achievement record, and distinguish source facts, AI suggestions and user-authored text.
-- [ ] Generate next-contribution recommendations from unmet criteria without presenting suggestions as completed work.
-- [ ] Make reporting periods and source dates explicit, and identify missing, stale or out-of-period data.
-- [ ] Handle empty or weakly supported periods without inventing accomplishments; explain when there is insufficient information.
-- [ ] Enforce owner-scoped access for analysis and report flows, and reporting-manager-scoped access only for evidence review.
-- [ ] Add a Reports UI for creating, reviewing, editing, saving and revisiting drafts; add print/export only after format and retention are decided.
-- [ ] Add API/service tests for evidence approval, scoring, period filtering, source traceability, empty data, versions and access boundaries; add UI and end-to-end coverage for evidence review, analysis, 1:1 preparation and career reports.
+**M6.7 definition of done:** Users can view a period-based, source-linked analysis of validated goal assessments. It distinguishes evidence from generated explanation, surfaces gaps and uncertainty, respects owner access, and does not create or modify source records.
 
-### M6.6–M6.7 product decisions to resolve before implementation
+## 10. M6.8 — 1:1 and Career Reports
 
-- Which expectations should be included in analysis? **Planning direction:** employee goals plus available role/company and manager expectations, with source attribution and explicit gaps where context is unavailable.
-- How should the manager evidence review and employee confirmation steps work, including edits, rejection reasons and resubmission? Define before implementation.
-- Is the initial career report primarily a quarterly review, an annual review, or a flexible user-selected report? **Planning default:** quarterly, with custom periods supported by the underlying model.
-- Should career-report sharing be included now, and if so, what exact recipient/access and revocation behavior is required? **Planning default:** private draft plus explicit user-controlled export; manager access is limited to evidence review.
-- Which content must persist as editable report state versus being regenerated from source data? **Planning default:** save a versioned user-reviewed snapshot and retain source references.
-- Which export format is required for the first release? **Planning default:** browser print/PDF only if the edited preview is stable; defer integrations and automated delivery.
+**Intended outcome:** Turn M6.6 goal assessments and M6.7 Impact Analysis into private, reviewable employee-facing 1:1 briefs and career reports. Reports are user-controlled summaries, not new evidence or automatic manager feeds.
 
-**M6.6 definition of done:** Goal and milestone analysis uses only employee-submitted, manager-accepted evidence and the agreed weighted-criteria rules. Employees can inspect source-linked scores, coverage, uncertainty, and gaps; confirm or correct AI proposals; and see next contributions clearly distinguished from completed work. Access is scoped, unsupported claims are omitted or flagged, and backend/UI/end-to-end tests cover the analysis workflow.
+See [M6.8-README.md](./docs/milestones/M6.8-README.md) for report scope and acceptance criteria.
 
-**M6.7 definition of done:** Users can create, edit, save, and revisit private 1:1 briefs and career reports from the selected period and authorized source context. Sharing/export is deliberate, unsupported claims are omitted or flagged, source records remain unchanged, and backend/UI/end-to-end tests cover both workflows and their privacy boundaries.
+**M6.8 definition of done:** Users can create, edit, save, and revisit private 1:1 briefs and career reports from selected periods and authorized source context. Sharing/export is deliberate, unsupported claims are omitted or flagged, source records remain unchanged, and backend/UI/end-to-end tests cover the workflows and privacy boundaries.
 
-## 10. M6.8 — Admin Portal and Platform Access
+## 11. M6.9 — Admin Portal and Platform Access
 
 **Status:** Implementation, API, UI, and migrations are present; integrated validation is not recorded.
 
-Validate authentication, organization/profile relationships, reporting-manager rules, platform-admin access, and admin workflows. See [M6.8-README.md](./docs/milestones/M6.8-README.md) for acceptance criteria and deployment constraints.
+Validate authentication, organization/profile relationships, reporting-manager rules, platform-admin access, and admin workflows. See [M6.9-README.md](./docs/milestones/M6.9-README.md) for acceptance criteria and deployment constraints.
 
-## 11. M6.9 — AI Assistant
+## 12. M6.10 — End-to-End UX Validation
 
-**Intended outcome:** Help users understand goals, identify evidence gaps, and improve goal and evidence descriptions. Impact analysis is M6.6; 1:1 and career reports are M6.7. The existing authenticated `/chat` endpoint is only a basic LLM call and does not, by itself, meet this milestone's grounding requirements.
-
-**Work to define/complete**
-- [ ] Define supported use cases and boundaries.
-- [ ] Ground answers in the user's authorized MyImpact data.
-- [ ] Link answers to goals/evidence/documents where possible.
-- [ ] Ask for clarification instead of inventing missing details.
-- [ ] Add AI usage/token tracking if required.
-- [ ] Confirm AI ON/OFF behavior if retained in scope.
-- [ ] Handle timeouts, model errors, empty retrieval and low-confidence results.
-- [ ] Test authorization and prevent cross-user data leakage.
-- [ ] Add evaluations for factuality, relevance and safe failure behavior.
-
-## 12. M6.10 — End-to-End UX Validation and Release Readiness
-
-**Scope:** Validate the complete agreed M6 journey, including authentication, organization/profile relationships, goals and documents, evidence capture, assessment, platform administration, impact analysis, 1:1 and career reports, and the AI assistant where committed.
+**Scope:** Validate the integrated, committed M6 journey across authentication, organization/profile relationships, goals and documents, M6.6 assessment, M6.7 Impact Analysis, M6.8 reports, and M6.9 admin workflows.
 
 **Acceptance checklist**
-- [ ] Fresh setup and migrations work from documented instructions.
-- [ ] Seed/demo data loads without enum or conflict errors.
-- [ ] Backend tests pass in the full repository.
-- [ ] Frontend build and tests pass.
-- [ ] No known API contract mismatches or unresolved CORS issues.
-- [ ] Registration, login, token refresh/rotation and logout work through the documented issuer flow.
-- [ ] Protected AI/API routes validate the expected issuer, audience, scope and user identity.
-- [ ] Organization registration/linking behaves correctly for new and normalized-matching company names.
-- [ ] Profile company, role and reporting-manager changes enforce organization and role constraints at the API.
-- [ ] Organization-scoped goals are associated with the correct company and remain private to the owning user.
-- [ ] Platform-admin privileges cannot be self-assigned through public registration or ordinary user flows.
-- [ ] Admin workflows cover authorized cross-company review, invitations, invitation expiry/resend, account disable/reactivation and refresh-session revocation.
-- [ ] Non-admin users are denied platform-admin routes and APIs; customer data access is checked across organization boundaries.
-- [ ] Deployment configuration documents secure cookies, signing-key handling, trusted origins and the remaining email-verification/abuse-protection requirements.
-- [ ] Manual goal creation and document import work end to end.
-- [ ] Duplicate-import scenarios pass.
-- [ ] Goal lifecycle and assessment calculations pass.
-- [ ] Evidence links and provenance are correct.
-- [ ] Dashboard and goal detail pages agree on status/progress.
-- [ ] Loading, empty, error and retry states are covered.
-- [ ] Authentication and user-level data isolation are tested.
-- [ ] Responsive layout/accessibility receive a basic review.
-- [ ] Logs provide useful diagnostics without leaking sensitive content.
-- [ ] README/runbook and known limitations are updated.
-- [ ] Final regression results are recorded before M6 is marked complete.
+- [ ] Run the agreed backend, frontend, integration, and browser suites against current source.
+- [ ] Validate user journeys across goals, evidence, goal assessment, Impact Analysis, reports, and admin operations.
+- [ ] Verify representative no-data, partial-data, error/retry, and authorization paths.
+- [ ] Verify cross-user and cross-organization data isolation throughout the integrated journeys.
+- [ ] Record environment, exact commands, scenarios, results, and unresolved integration defects.
 
-## 13. Recommended execution order
+## 13. M7 — Release Readiness
+
+**Scope:** Make a release go/no-go decision after M6.10 integrated validation is complete.
+
+**Release acceptance checklist**
+- [ ] Fresh setup and database migrations work using documented instructions.
+- [ ] Seed/demo data loads without enum, migration, or conflict errors.
+- [ ] Full backend tests, frontend tests, type-check, and production build pass.
+- [ ] API contracts, base URL configuration, CORS, and authentication issuer settings are verified.
+- [ ] Production requirements for secrets, signing keys, HTTPS, secure cookies, trusted origins, email verification, and abuse protection are documented and satisfied.
+- [ ] Deployment/rollback procedures, monitoring, diagnostics, and support runbooks are ready.
+- [ ] Known limitations, deferred scope, and data/privacy boundaries are documented.
+- [ ] Final regression evidence and an explicit release go/no-go decision are recorded.
+
+## 14. Recommended execution order
 
 1. **Re-establish baseline:** record the current source revisions, working-tree state, service configuration and applied database migrations across `myimpact-ai`, `myimpact-api`, `myimpact-web` and `myimpact-db`.
 2. **Validate M6.1/M6.2:** run builds/tests and smoke-test API integration and dashboard behavior.
 3. **Confirm M6.3–M6.5:** retain the recorded results, reconcile M6.4's evidence scope, and include the latest goal/milestone evidence migration in the migration baseline.
-4. **Define and implement M6.6:** manager-reviewed evidence, weighted impact analysis and monthly goal/milestone scoring.
-5. **Define and implement M6.7:** private 1:1 preparation and career reports using M6.6 source-linked results.
-6. **Validate M6.8:** test authentication, organization linking, reporting-manager rules, platform-admin authorization and admin workflows end to end.
-7. **Define and implement M6.9:** grounded AI assistant, authorization, usage and error handling.
-8. **Run M6.10 last:** execute end-to-end regression across the agreed scope, update documentation and record the release decision.
+4. **Define and implement M6.6:** AI-generated goal criteria and evidence-based assessment in the Goals workflow.
+5. **Define and implement M6.7:** source-linked Impact Analysis built on validated goal assessments.
+6. **Define and implement M6.8:** private 1:1 preparation and career reports using M6.6/M6.7 results.
+7. **Validate M6.9:** test authentication, organization linking, reporting-manager rules, platform-admin authorization and admin workflows end to end.
+8. **Run M6.10:** execute integrated end-to-end validation across all committed M6.1–M6.9 scope and record results.
+9. **Run M7 last:** complete deployment/operational readiness and record the release go/no-go decision.
 
-## 14. Immediate next actions
+## 15. Immediate next actions
 
 - [x] Run the M6.3 small-DOCX upload/extraction smoke test with a configured LLM provider.
 - [x] Validate migrations on a disposable test database.
 - [x] Verify upload validation limits and JWT-protected authorization/user isolation.
 - [x] Reconcile M6.4's goal/document-ingestion boundary with M6.5 evidence association; reserve manager evidence review for the appropriate later scope.
 - [x] Revalidate M6.1 and M6.2 against current source.
-- [ ] Validate M6.8 authentication, organization/reporting-manager and platform-admin flows, including latest migrations and cross-organization authorization.
-- [ ] Resolve M6.6 evidence-review and scoring decisions; then implement and validate the agreed analysis MVP.
-- [ ] Resolve M6.7 report types, sharing, versioning and export decisions; then implement and validate the 1:1 and career-report workflows.
-- [ ] Define and validate M6.9's authorized-data grounding, use cases, usage tracking and error behavior.
-- [ ] Run M6.10 only after all committed M6.6–M6.9 scope is ready for integrated validation.
+- [ ] Validate M6.9 authentication, organization/reporting-manager and platform-admin flows, including latest migrations and cross-organization authorization.
+- [ ] Implement and validate M6.6 using the finalized evidence, status, progress, versioning, freshness, and evaluation decisions in [M6.6-README.md](./docs/milestones/M6.6-README.md).
+- [ ] Define M6.7 Impact Analysis periods, aggregation, source traceability, and uncertainty; then implement and validate.
+- [ ] Resolve M6.8 report types, sharing, versioning and export decisions; then implement and validate the 1:1 and career-report workflows.
+- [ ] Run M6.10 after all committed M6.6–M6.9 scope is ready for integrated validation.
+- [ ] Run M7 release readiness only after M6.10 passes.
 
-## 15. Completion tracking
+## 16. Completion tracking
 
 | Check | Result | Evidence / notes |
 |---|---|---|
@@ -372,9 +344,10 @@ Validate authentication, organization/profile relationships, reporting-manager r
 | Disposable-database migration run | Pass | Created an isolated validation database, applied all 22 SQL migrations in order, verified the recorded history, then dropped only that temporary database |
 | M6.4 document provenance and M6.5 evidence association | Pass | Live-stack document import checks plus backend/API and browser coverage of goal- and milestone-level evidence |
 | Authentication issuer registration and sign-in | Pass | Auth issuer tests passed; real-stack M6.4 registration and protected AI API journey passed |
-| M6.8 organization/reporting-manager and platform-admin integrated flows | Not recorded | Current profile unit coverage passed, but cross-organization and admin browser journeys remain unvalidated |
-| Latest M6.5/M6.8 database migrations | Pass | All 22 current migrations validated and applied on the fresh disposable database; milestone-evidence and organization/team schema are included |
-| Full M6 end-to-end flow | Not run | M6.10 release validation remains, including M6.8 and M6.9 |
+| M6.9 organization/reporting-manager and platform-admin integrated flows | Not recorded | Current profile unit coverage passed, but cross-organization and admin browser journeys remain unvalidated |
+| Latest M6.5/M6.9 database migrations | Pass | All 22 current migrations validated and applied on the fresh disposable database; milestone-evidence and organization/team schema are included |
+| Full M6 end-to-end flow | Not run | M6.10 integrated validation remains, including M6.7 Impact Analysis, M6.8 reports, and M6.9 admin workflows |
+| M7 release readiness | Not run | Release go/no-go checklist remains after M6.10 |
 
 ---
 

@@ -45,6 +45,7 @@ class MilestoneRepository(BaseRepository):
             description=values.description,
             completion_criteria=values.completion_criteria,
             status=values.status,
+            source=values.source,
             due_date=values.due_date,
             created_at=now,
             updated_at=now,

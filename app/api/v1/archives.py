@@ -90,6 +90,7 @@ def list_archives(
                     description=milestone.description,
                     completion_criteria=milestone.completion_criteria,
                     status=milestone.status,
+                    source=milestone.source,
                     due_date=milestone.due_date,
                     archived_at=milestone.archived_at,
                 )
