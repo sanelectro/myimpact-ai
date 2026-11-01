@@ -1,0 +1,15 @@
+from enum import Enum
+
+
+class M66CaseReviewStatus(str, Enum):
+    PENDING_REVIEW = "PENDING_REVIEW"
+    AGREED = "AGREED"
+    DISAGREEMENT = "DISAGREEMENT"
+    ADJUDICATED = "ADJUDICATED"
+
+
+class M66DatasetReviewStatus(str, Enum):
+    DRAFT_UNREVIEWED = "DRAFT_UNREVIEWED"
+    IN_REVIEW = "IN_REVIEW"
+    REVIEW_BLOCKED = "REVIEW_BLOCKED"
+    HUMAN_REVIEWED = "HUMAN_REVIEWED"

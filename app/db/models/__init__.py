@@ -20,6 +20,14 @@ from app.db.models.goal_criterion import (
 )
 from app.db.models.impact_assessment import ImpactAssessmentDB
 from app.db.models.milestone import MilestoneDB
+from app.db.models.human_review import (
+    M66AdjudicationDB,
+    M66ReviewAssignmentDB,
+    M66ReviewAuditEventDB,
+    M66ReviewBatchDB,
+    M66ReviewCaseDB,
+    M66ReviewDB,
+)
 from app.db.models.notification import NotificationDB
 from app.db.models.notification_history import NotificationHistoryDB
 from app.db.models.notification_response import NotificationResponseDB
@@ -56,6 +64,12 @@ __all__ = [
     "GoalStatusHistoryDB",
     "ImpactAssessmentDB",
     "MilestoneDB",
+    "M66AdjudicationDB",
+    "M66ReviewAssignmentDB",
+    "M66ReviewAuditEventDB",
+    "M66ReviewBatchDB",
+    "M66ReviewCaseDB",
+    "M66ReviewDB",
     "NotificationDB",
     "NotificationHistoryDB",
     "NotificationResponseDB",
