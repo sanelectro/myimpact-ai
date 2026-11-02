@@ -4,8 +4,12 @@ import json
 import pytest
 from openai import OpenAIError
 
-from app.evaluation.m66 import load_dataset, run_evaluation
-from app.evaluation.m66_eligibility import calculate_metrics
+from app.evaluation.assessment_evaluation import (
+    load_dataset,
+    load_dataset_by_id,
+    run_evaluation,
+)
+from app.evaluation.evaluation_eligibility import calculate_metrics
 from app.models.llm import LLMResponse
 
 
@@ -39,6 +43,35 @@ def test_dataset_has_varied_reviewable_cases_and_unapproved_thresholds():
             set(labels["expected_supporting_mapping_ids"])
             & set(labels["expected_contradictory_mapping_ids"])
         )
+
+
+def test_intelligence_comparison_dataset_covers_goal_and_evidence_categories():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v1",
+        "m66-intelligence-comparison-v1",
+    )
+
+    assert dataset["evaluation_record"]["review_mode"] == "SINGLE_REVIEWER"
+    assert dataset["human_review"]["adjudication_status"] == "NOT_REQUIRED"
+    assert len(dataset["cases"]) == 14
+    assert {
+        case["category"] for case in dataset["cases"]
+    } == {
+        "abstention",
+        "attribution",
+        "citation_grounding",
+        "contradiction_handling",
+        "criterion_clarity",
+        "duration_achievability",
+        "evidence_relevance",
+        "evidence_sufficiency",
+        "outcome_classification",
+        "quantitative_measurement",
+        "smart_goal",
+        "time_validity",
+        "valid_goal",
+    }
+    assert all(case["review_label_options"] for case in dataset["cases"])
 
 
 class LabelledFixtureLLM:

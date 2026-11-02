@@ -36,11 +36,15 @@ class Settings(BaseSettings):
 
     # LLM
     llm_provider: str = "groq"
+    llm_timeout_seconds: float = 60.0
+    llm_min_interval_seconds: float = 10.0
 
     # Groq
     groq_api_key: str = ""
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "openai/gpt-oss-20b"
+    groq_max_retries: int = 2
+    groq_retry_base_seconds: float = 2.0
 
     # Embeddings
     embedding_provider: EmbeddingProvider = EmbeddingProvider.MOCK

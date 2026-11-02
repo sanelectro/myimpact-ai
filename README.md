@@ -20,6 +20,19 @@ Product endpoints require an `Authorization: Bearer` access token issued by `myi
 
 Set `AUTH_ISSUER` to the same canonical issuer URL used by `myimpact-api`. Set `AUTH_JWKS_URL` to the issuer's reachable JWKS endpoint; in Kubernetes this can use the issuer's internal Service DNS name. Set `ALLOWED_ORIGINS` to the exact browser origins permitted to call AI. Do not rely on localhost URLs outside local development.
 
+## Groq request pacing
+
+When `LLM_PROVIDER=groq`, all requests share a provider-level pacing gate. The
+gate uses `LLM_MIN_INTERVAL_SECONDS` (10 seconds by default), logs the wait
+duration at INFO level, and retries rate-limit responses with bounded
+exponential backoff. Configure `GROQ_MAX_RETRIES` and
+`GROQ_RETRY_BASE_SECONDS` when needed. Azure requests are not affected by these
+Groq-specific controls.
+
+The pacing gate is process-local. Deployments with multiple AI workers or
+replicas should use one Groq worker or add a shared distributed limiter so
+each process does not maintain an independent request schedule.
+
 ## Organization profiles and goals
 
 Users manage their company, engineering role, and reporting manager from **My Profile**. Entering a new company name creates its organization record; manager choices are limited to the user's saved company profile. Engineers can report to an Engineering Manager or Senior Engineering Manager, and engineering managers can report to an Engineering Director. Reporting relationships are validated by the API, not only by the profile form.
@@ -47,6 +60,23 @@ Apply the `myimpact-db` migration for `source_connections` before enabling this 
 For single-user local development only, `SOURCE_LOCAL_TOKENS_ENABLED=true` can use `GITHUB_TOKEN` and Jira's `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` directly. On macOS, set `SOURCE_LOCAL_TOKENS_FROM_KEYCHAIN=true` to read the GitHub and Jira tokens from generic-password items in the login Keychain instead of `.env`; use service `MyImpact-local` and accounts `GITHUB_TOKEN` and `JIRA_API_TOKEN`. Add both items in Keychain Access, then restart the AI service. The Jira site URL and email remain ordinary local settings. This fallback is accepted only when `APP_ENV=development`, appears as a locally managed connection, and is not disconnectable from the UI. Do not enable it in shared or production deployments: every local app user would act with the same configured provider credentials. The app calls the provider APIs directly; this setting does not configure an MCP server.
 
 For a repeatable local presentation, `SOURCE_DEMO_MOCKS_ENABLED=true` switches the same read-only GitHub/Jira request path to deterministic persona-specific fixtures in `demo-data/demo_personas.json`. It requires `APP_ENV=development`, needs no external source credentials or MCP server, and must remain disabled outside local demos. Run `myimpact-db/scripts/demo/seed_demo_data.sh` to register the demo accounts and seed three role-specific goals per employee (personal, team, and organization; active, approved, and draft), with related written, GitHub, and Jira evidence on each employee's active focus goal.
+
+### Source retrieval reliability
+
+Source searches are deliberately bounded by the requested date window and
+configured provider/result limits; they are not exhaustive change detection.
+Retrieval history distinguishes complete searches, scoped no-results,
+inaccessible sources, failed searches, and partial results. A failed
+verification does not replace the last successful verification timestamp.
+
+Read-only source requests use bounded retries for transient failures and rate
+limits only. Authentication, permission, missing-resource, and invalid-request
+errors are not retried. Retry-After guidance is honored within the configured
+cap, and provider error details are sanitized before they reach users or logs.
+Assessment source history includes the retrieval outcome, search bounds,
+coverage, safe error category, retry count, and last successful verification
+or retrieval timestamps so unavailable evidence is never treated as proof of
+no progress.
 
 ---
 
@@ -457,7 +487,7 @@ Embedding storage and semantic retrieval are implemented as a vertical slice usi
 With the AI service's normal LLM configuration available, run the exact assessment prompt against every example multiple times and print the comparison report:
 
 ```bash
-python -m scripts.evaluate_m66_criterion_assessment --repeats 3
+python -m scripts.evaluate_criterion_assessment --repeats 3
 ```
 
 The report includes evidence-matching precision/recall, citation validity, unsupported-assessment-claim rate, assessment agreement, insufficient-evidence abstention accuracy, repeatability, and run-success rate. The unsupported-claim metric is currently an outcome-level proxy: it counts achievement predictions whose reference label or supporting citation does not justify an achievement; it does not automatically verify every factual statement in the rationale. Release eligibility also requires reviewer/adjudication and threshold approvals, matching dataset/prompt/model versions, complete unique case/repeat results, valid structured outputs and citations, and metrics meeting the approved thresholds. The report returns machine-readable ineligibility reasons, and exploratory metrics remain separate from eligibility. The runner does not persist assessments.

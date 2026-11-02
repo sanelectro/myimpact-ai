@@ -1,6 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -26,6 +35,14 @@ class GoalSourceRetrievalDB(Base):
     failure_reason: Mapped[str | None] = mapped_column(Text)
     used_snapshot: Mapped[bool] = mapped_column(nullable=False, default=False)
     snapshot_captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False, default="COMPLETE")
+    error_category: Mapped[str | None] = mapped_column(String(40))
+    attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_retrieved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    bounds: Mapped[dict | None] = mapped_column(JSON)
+    coverage: Mapped[dict | None] = mapped_column(JSON)
 
     __table_args__ = (
         CheckConstraint(
@@ -35,6 +52,10 @@ class GoalSourceRetrievalDB(Base):
         CheckConstraint(
             "status IN ('SUCCESS', 'FAILURE')",
             name="ck_goal_source_retrieval_status",
+        ),
+        CheckConstraint(
+            "outcome IN ('COMPLETE', 'PARTIAL', 'NO_RESULTS', 'INACCESSIBLE', 'FAILED')",
+            name="ck_goal_source_retrieval_outcome",
         ),
         Index("ix_goal_source_retrievals_goal_checked", "goal_id", "checked_at"),
     )

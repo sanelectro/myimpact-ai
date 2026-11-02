@@ -6,12 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.base import Base
 from app.db.models.human_review import (
-    M66AdjudicationDB,
-    M66ReviewAssignmentDB,
-    M66ReviewAuditEventDB,
-    M66ReviewBatchDB,
-    M66ReviewCaseDB,
-    M66ReviewDB,
+    AdjudicationDB,
+    ReviewAssignmentDB,
+    ReviewAuditEventDB,
+    ReviewBatchDB,
+    ReviewCaseDB,
+    ReviewDB,
 )
 from app.db.models.organization import OrganizationDB
 from app.db.models.team import TeamDB
@@ -32,12 +32,12 @@ def db():
         UserDB.__table__,
         OrganizationDB.__table__,
         TeamDB.__table__,
-        M66ReviewBatchDB.__table__,
-        M66ReviewCaseDB.__table__,
-        M66ReviewAssignmentDB.__table__,
-        M66ReviewDB.__table__,
-        M66AdjudicationDB.__table__,
-        M66ReviewAuditEventDB.__table__,
+        ReviewBatchDB.__table__,
+        ReviewCaseDB.__table__,
+        ReviewAssignmentDB.__table__,
+        ReviewDB.__table__,
+        AdjudicationDB.__table__,
+        ReviewAuditEventDB.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)
     with Session(engine) as session:
@@ -101,7 +101,7 @@ def test_matching_reviews_are_agreed_and_reviews_are_immutable(db: Session):
         rationale="The same evidence supports completion.",
     )
 
-    case = db.query(M66ReviewCaseDB).filter_by(case_id="case-agree").one()
+    case = db.query(ReviewCaseDB).filter_by(case_id="case-agree").one()
     assert case.status.value == "AGREED"
     with pytest.raises(M66ReviewError, match="cannot submit a case review twice"):
         submit_review(
@@ -112,7 +112,7 @@ def test_matching_reviews_are_agreed_and_reviews_are_immutable(db: Session):
             label="NEEDS_REVIEW",
             rationale="Attempted amendment.",
         )
-    assert db.get(M66ReviewDB, first.id).rationale == "The evidence supports completion."
+    assert db.get(ReviewDB, first.id).rationale == "The evidence supports completion."
 
 
 def test_disagreement_requires_distinct_adjudicator_and_can_be_resolved(db: Session):
@@ -152,10 +152,10 @@ def test_disagreement_requires_distinct_adjudicator_and_can_be_resolved(db: Sess
         final_label="NEEDS_REVIEW",
         rationale="The conflicting source requires a cautious outcome.",
     )
-    case = db.query(M66ReviewCaseDB).filter_by(case_id="case-disagree").one()
+    case = db.query(ReviewCaseDB).filter_by(case_id="case-disagree").one()
     assert case.status.value == "ADJUDICATED"
     assert adjudication.review_1_id != adjudication.review_2_id
-    assert db.query(M66ReviewDB).filter_by(case_record_id=case.id).count() == 2
+    assert db.query(ReviewDB).filter_by(case_record_id=case.id).count() == 2
 
 
 def test_batch_becomes_human_reviewed_only_after_every_case_is_complete(db: Session):
@@ -176,7 +176,7 @@ def test_batch_becomes_human_reviewed_only_after_every_case_is_complete(db: Sess
         label="MET",
         rationale="Supported.",
     )
-    batch = db.get(M66ReviewBatchDB, batch_id)
+    batch = db.get(ReviewBatchDB, batch_id)
     assert batch.status.value == "IN_REVIEW"
 
     for reviewer, label, rationale in [
@@ -191,7 +191,7 @@ def test_batch_becomes_human_reviewed_only_after_every_case_is_complete(db: Sess
             label=label,
             rationale=rationale,
         )
-    assert db.get(M66ReviewBatchDB, batch_id).status.value == "IN_REVIEW"
+    assert db.get(ReviewBatchDB, batch_id).status.value == "IN_REVIEW"
 
     submit_adjudication(
         db,
@@ -201,4 +201,34 @@ def test_batch_becomes_human_reviewed_only_after_every_case_is_complete(db: Sess
         final_label="NEEDS_REVIEW",
         rationale="Adjudicated from both source-grounded reviews.",
     )
-    assert db.get(M66ReviewBatchDB, batch_id).status.value == "HUMAN_REVIEWED"
+    assert db.get(ReviewBatchDB, batch_id).status.value == "HUMAN_REVIEWED"
+
+
+def test_single_reviewer_batch_completes_without_second_review_or_adjudication(
+    db: Session,
+):
+    batch_id = create_review_batch(
+        db,
+        dataset_id="m66-intelligence-comparison",
+        dataset_version="v1",
+        case_ids=["case-single"],
+        started_by_user_id="owner",
+        assignments={"case-single": ["reviewer-a"]},
+        review_mode="SINGLE_REVIEWER",
+        batch_id="single-batch",
+        started_at=datetime(2026, 11, 1, tzinfo=UTC),
+    ).id
+
+    submit_review(
+        db,
+        batch_id=batch_id,
+        case_id="case-single",
+        reviewer_user_id="reviewer-a",
+        label="VALID",
+        rationale="The goal is specific and connected to a meaningful outcome.",
+        allowed_labels={"VALID", "INVALID", "NEEDS_REVIEW"},
+    )
+
+    case = db.query(ReviewCaseDB).filter_by(case_id="case-single").one()
+    assert case.status.value == "REVIEWED"
+    assert db.get(ReviewBatchDB, batch_id).status.value == "HUMAN_REVIEWED"

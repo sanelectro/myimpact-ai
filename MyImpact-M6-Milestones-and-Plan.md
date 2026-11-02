@@ -15,7 +15,7 @@
 | M6.3 | Goals and Expectations | Current backend suite and browser CRUD, scopes, lifecycle, assessment, and import checks passed on 24 October | Known limitation: lexical duplicate matching may miss semantic paraphrases |
 | M6.4 | Goal/document ingestion | Live-stack DOCX upload, extraction, provenance, idempotency, correction, approval, and activation passed on 24 October | M6.4 is scoped to goal/document ingestion; evidence association is validated under M6.5 |
 | M6.5 | Goal/milestone evidence association | Current API/browser checks and the association migration passed on 24 October | None for M6.5; M6.6 adds AI-generated goal criteria and evidence-based assessment |
-| M6.6 | Goal criteria and evidence-based assessment | Product decisions finalized; implementation in progress; release acceptance not confirmed | Implement versioned criteria, evidence assessments, lifecycle/history, deterministic progress, shared UI, source freshness, and AI evaluation |
+| M6.6 | Goal criteria and evidence-based assessment | Core implementation is substantially in place; M6.6.4 reliability/repeatability is development-complete and validated; overall release acceptance not confirmed | Complete human review/adjudication, approve the dataset and numeric thresholds, complete integrated validation, and close remaining release blockers |
 | M6.7 | Impact Analysis | Planning scope: analyze validated goal assessments and traceable evidence; implementation and acceptance criteria are not confirmed complete | Define reporting periods, aggregation, source traceability, privacy, and uncertainty; implement and validate the Impact Analysis experience |
 | M6.8 | 1:1 and Career Reports | Planned; acceptance criteria and implementation are not confirmed complete | Define report periods, privacy/versioning/export; implement user-owned briefs and career reports using validated M6.6/M6.7 results |
 | M6.9 | Admin Portal and Platform Access | Implementation, API, UI and migrations are present; integrated validation is not recorded | Validate authentication, organization/profile relationships, platform-admin access and admin workflows |
@@ -229,8 +229,11 @@ Implementation breakdown: [M6.6 Technical Plan](./docs/milestones/M6.6-TECHNICAL
 - [x] Define binary, milestone-based, and measurable-target criteria, with equal milestone/criterion weights by default and deterministic backend progress.
 - [x] Version criteria; material edits obsolete prior assessments and trigger reassessment without overwriting history.
 - [x] Define source freshness/access tracking, targeted invalidation, immutable history, and AI evaluation measures.
+- [x] Implement the M6.6.2 human-review persistence, independent reviewer assignments, adjudication rules, authenticated API, reviewer UI, and platform-admin adjudication UI.
+- [x] Assign the six-case `m66-criterion-assessment-v1` batch to two existing MyImpact Demo Engineering users; no review decisions have been submitted yet.
 - [ ] Validate model-referenced criterion/evidence IDs and authorization; handle provider failures and invalid outputs explicitly.
-- [ ] Implement API/service, UI, integration, and AI-evaluation tests for traceability, freshness, uncertainty, versioning, and access boundaries.
+- [ ] Complete real independent human review and adjudication, then add integrated/API/browser coverage for the workflow.
+- [ ] Implement and validate remaining API/service, UI, integration, and AI-evaluation tests for traceability, freshness, uncertainty, versioning, and access boundaries.
 
 **M6.6 definition of done:** Employees can create a goal, approve AI-proposed criteria, attach supported evidence, and inspect source-linked AI assessments for each criterion. Goal detail and the Goals page reuse one assessment engine and deterministic progress/aggregation. Evidence review state, employee confirmation, manager review, uncertainty, stale/obsolete assessments, and history are explicit; access is enforced; and backend, UI, integration, and AI-evaluation tests validate the workflow against thresholds established from a human-reviewed dataset.
 

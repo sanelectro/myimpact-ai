@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.evaluation.evaluation_metrics import MetricResult, get_metric_definition
 from app.exceptions import GoalCriterionAssessmentError
 from app.models.goal_criteria import (
     GoalCriterionAssessmentProposal,
@@ -44,7 +45,7 @@ ACHIEVEMENT_RESULTS = {
 APPROVED_ADJUDICATION_STATUSES = {"COMPLETED", "NO_DISAGREEMENT"}
 
 
-def calculate_metrics(
+def calculate_metric_results(
     cases: list[dict[str, Any]],
     run_records: list[dict[str, Any]],
     expected_repeats: int,
@@ -182,23 +183,60 @@ def calculate_metrics(
             repeatable_cases += 1
 
     return {
-        "evidence_matching_precision": _ratio(
-            matching_evidence_count, predicted_evidence_count
+        "evidence_matching_precision": _metric_result(
+            "evidence_matching_precision",
+            matching_evidence_count,
+            predicted_evidence_count,
         ),
-        "evidence_matching_recall": _ratio(
-            matching_evidence_count, expected_evidence_count
+        "evidence_matching_recall": _metric_result(
+            "evidence_matching_recall",
+            matching_evidence_count,
+            expected_evidence_count,
         ),
-        "citation_validity": _ratio(matching_citation_count, citation_count),
-        "unsupported_assessment_claim_rate": _ratio(
+        "citation_validity": _metric_result(
+            "citation_validity",
+            matching_citation_count,
+            citation_count,
+        ),
+        "unsupported_assessment_claim_rate": _metric_result(
+            "unsupported_assessment_claim_rate",
             unsupported_assessment_claim_count,
             achievement_prediction_count,
         ),
-        "assessment_agreement": _ratio(agreement_count, expected_slot_count),
-        "insufficient_evidence_abstention_accuracy": _ratio(
-            correct_abstention_count, abstention_count
+        "assessment_agreement": _metric_result(
+            "assessment_agreement",
+            agreement_count,
+            expected_slot_count,
         ),
-        "repeatability": _ratio(repeatable_cases, len(cases)),
-        "run_success_rate": _ratio(successful_slots, expected_slot_count),
+        "insufficient_evidence_abstention_accuracy": _metric_result(
+            "insufficient_evidence_abstention_accuracy",
+            correct_abstention_count,
+            abstention_count,
+        ),
+        "repeatability": _metric_result(
+            "repeatability",
+            repeatable_cases,
+            len(cases),
+        ),
+        "run_success_rate": _metric_result(
+            "run_success_rate",
+            successful_slots,
+            expected_slot_count,
+        ),
+    }
+
+
+def calculate_metrics(
+    cases: list[dict[str, Any]],
+    run_records: list[dict[str, Any]],
+    expected_repeats: int,
+) -> dict[str, float | None]:
+    """Return the legacy metric-value mapping used by the eligibility contract."""
+    return {
+        metric_id: result.value
+        for metric_id, result in calculate_metric_results(
+            cases, run_records, expected_repeats
+        ).items()
     }
 
 
@@ -1068,3 +1106,25 @@ def _add_reason(
 
 def _ratio(numerator: int, denominator: int) -> float | None:
     return round(numerator / denominator, 4) if denominator else None
+
+
+def _metric_result(
+    metric_id: str,
+    numerator: int,
+    denominator: int,
+) -> MetricResult:
+    definition = get_metric_definition(metric_id)
+    return MetricResult(
+        metric_id=metric_id,
+        definition_version=definition.definition_version,
+        calculation_version=definition.calculation_version,
+        value=_ratio(numerator, denominator),
+        numerator=numerator,
+        denominator=denominator,
+        available=denominator > 0,
+        unavailable_reason=(
+            None
+            if denominator > 0
+            else definition.zero_denominator_behavior
+        ),
+    )

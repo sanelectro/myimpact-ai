@@ -5,17 +5,35 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.human_review import (
-    M66AdjudicationDB,
-    M66ReviewAssignmentDB,
-    M66ReviewAuditEventDB,
-    M66ReviewBatchDB,
-    M66ReviewCaseDB,
-    M66ReviewDB,
+    AdjudicationDB,
+    ReviewAssignmentDB,
+    ReviewAuditEventDB,
+    ReviewBatchDB,
+    ReviewCaseDB,
+    ReviewDB,
 )
 from app.models.goal_criteria import GoalCriterionResult
 from app.models.human_review import M66CaseReviewStatus, M66DatasetReviewStatus
 
 M66_REVIEW_LABELS = {label.value for label in GoalCriterionResult}
+M66_REVIEW_LABELS.update(
+    {
+        "VALID",
+        "INVALID",
+        "SMART",
+        "NOT_SMART",
+        "ACHIEVABLE",
+        "NOT_ACHIEVABLE",
+        "CLEAR",
+        "UNCLEAR",
+        "CURRENT",
+        "OUTDATED",
+        "SUPPORTED",
+        "UNSUPPORTED",
+        "GROUNDED",
+        "UNGROUNDED",
+    }
+)
 
 
 class M66ReviewError(ValueError):
@@ -30,43 +48,52 @@ def create_review_batch(
     case_ids: list[str],
     started_by_user_id: str,
     assignments: dict[str, list[str]],
+    review_mode: str = "DUAL_ADJUDICATED",
     batch_id: str | None = None,
     started_at: datetime | None = None,
-) -> M66ReviewBatchDB:
+) -> ReviewBatchDB:
     if not dataset_id.strip() or not dataset_version.strip():
         raise M66ReviewError("Dataset ID and version are required.")
+    if review_mode not in {"SINGLE_REVIEWER", "DUAL_ADJUDICATED"}:
+        raise M66ReviewError("Review mode must be SINGLE_REVIEWER or DUAL_ADJUDICATED.")
     if not case_ids or len(set(case_ids)) != len(case_ids):
         raise M66ReviewError("A review batch requires unique cases.")
     if set(assignments) != set(case_ids):
-        raise M66ReviewError("Every case must have exactly two assigned reviewers.")
+        raise M66ReviewError("Every case must have assigned reviewers.")
 
     existing = db.scalar(
-        select(M66ReviewBatchDB).where(
-            M66ReviewBatchDB.dataset_id == dataset_id,
-            M66ReviewBatchDB.dataset_version == dataset_version,
+        select(ReviewBatchDB).where(
+            ReviewBatchDB.dataset_id == dataset_id,
+            ReviewBatchDB.dataset_version == dataset_version,
         )
     )
     if existing is not None:
         raise M66ReviewError("This dataset version already has a review batch.")
 
     now = started_at or datetime.now(UTC)
-    batch = M66ReviewBatchDB(
+    batch = ReviewBatchDB(
         id=batch_id or str(uuid4()),
         dataset_id=dataset_id,
         dataset_version=dataset_version,
+        review_mode=review_mode,
         status=M66DatasetReviewStatus.DRAFT_UNREVIEWED,
         expected_case_count=len(case_ids),
         started_by_user_id=started_by_user_id,
         started_at=now,
     )
     db.add(batch)
+    db.flush()
     for case_id in case_ids:
         reviewers = assignments[case_id]
-        if len(reviewers) != 2 or len(set(reviewers)) != 2:
+        expected_reviewer_count = 1 if review_mode == "SINGLE_REVIEWER" else 2
+        if (
+            len(reviewers) != expected_reviewer_count
+            or len(set(reviewers)) != expected_reviewer_count
+        ):
             raise M66ReviewError(
-                f"Case {case_id} must have two distinct assigned reviewers."
+                f"Case {case_id} must have {expected_reviewer_count} distinct assigned reviewer(s)."
             )
-        case = M66ReviewCaseDB(
+        case = ReviewCaseDB(
             id=f"{batch.id}:{case_id}",
             batch_id=batch.id,
             case_id=case_id,
@@ -75,7 +102,7 @@ def create_review_batch(
         db.add(case)
         for slot, reviewer_id in enumerate(reviewers, start=1):
             db.add(
-                M66ReviewAssignmentDB(
+                ReviewAssignmentDB(
                     id=str(uuid4()),
                     case_record_id=case.id,
                     reviewer_user_id=reviewer_id,
@@ -106,40 +133,42 @@ def submit_review(
     reviewer_user_id: str,
     label: str,
     rationale: str,
+    allowed_labels: set[str] | None = None,
     review_id: str | None = None,
     submitted_at: datetime | None = None,
-) -> M66ReviewDB:
+) -> ReviewDB:
     normalized_label = label.strip().upper()
     normalized_rationale = rationale.strip()
-    if normalized_label not in M66_REVIEW_LABELS:
-        raise M66ReviewError("The review label is not a canonical M6.6 result.")
+    if normalized_label not in (allowed_labels or M66_REVIEW_LABELS):
+        raise M66ReviewError("The review label is not allowed for this evaluation case.")
     if not normalized_rationale:
         raise M66ReviewError("Review rationale is required.")
 
     case = _get_case(db, batch_id, case_id)
     assignment = db.scalar(
-        select(M66ReviewAssignmentDB).where(
-            M66ReviewAssignmentDB.case_record_id == case.id,
-            M66ReviewAssignmentDB.reviewer_user_id == reviewer_user_id,
+        select(ReviewAssignmentDB).where(
+            ReviewAssignmentDB.case_record_id == case.id,
+            ReviewAssignmentDB.reviewer_user_id == reviewer_user_id,
         )
     )
     if assignment is None:
         raise M66ReviewError("The reviewer is not assigned to this case.")
     if db.scalar(
-        select(M66ReviewDB).where(
-            M66ReviewDB.case_record_id == case.id,
-            M66ReviewDB.reviewer_user_id == reviewer_user_id,
+        select(ReviewDB).where(
+            ReviewDB.case_record_id == case.id,
+            ReviewDB.reviewer_user_id == reviewer_user_id,
         )
     ) is not None:
         raise M66ReviewError("A reviewer cannot submit a case review twice.")
     if case.status in {
+        M66CaseReviewStatus.REVIEWED,
         M66CaseReviewStatus.AGREED,
         M66CaseReviewStatus.ADJUDICATED,
     }:
         raise M66ReviewError("This case is no longer accepting independent reviews.")
 
     now = submitted_at or datetime.now(UTC)
-    review = M66ReviewDB(
+    review = ReviewDB(
         id=review_id or str(uuid4()),
         case_record_id=case.id,
         dataset_id=case.batch.dataset_id,
@@ -178,28 +207,28 @@ def get_case_for_reviewer(
 ) -> dict[str, object]:
     case = _get_case(db, batch_id, case_id)
     assignment = db.scalar(
-        select(M66ReviewAssignmentDB).where(
-            M66ReviewAssignmentDB.case_record_id == case.id,
-            M66ReviewAssignmentDB.reviewer_user_id == reviewer_user_id,
+        select(ReviewAssignmentDB).where(
+            ReviewAssignmentDB.case_record_id == case.id,
+            ReviewAssignmentDB.reviewer_user_id == reviewer_user_id,
         )
     )
     if assignment is None:
         raise M66ReviewError("The reviewer is not assigned to this case.")
     own_review = db.scalar(
-        select(M66ReviewDB).where(
-            M66ReviewDB.case_record_id == case.id,
-            M66ReviewDB.reviewer_user_id == reviewer_user_id,
+        select(ReviewDB).where(
+            ReviewDB.case_record_id == case.id,
+            ReviewDB.reviewer_user_id == reviewer_user_id,
         )
     )
     reviews = db.scalars(
-        select(M66ReviewDB)
+        select(ReviewDB)
         .where(
-            M66ReviewDB.case_record_id == case.id,
-            M66ReviewDB.reviewer_user_id == reviewer_user_id
+            ReviewDB.case_record_id == case.id,
+            ReviewDB.reviewer_user_id == reviewer_user_id
             if own_review is None
             else True,
         )
-        .order_by(M66ReviewDB.submitted_at, M66ReviewDB.id)
+        .order_by(ReviewDB.submitted_at, ReviewDB.id)
     ).all()
     return {
         "case": case,
@@ -218,7 +247,7 @@ def submit_adjudication(
     rationale: str,
     adjudication_id: str | None = None,
     adjudicated_at: datetime | None = None,
-) -> M66AdjudicationDB:
+) -> AdjudicationDB:
     normalized_label = final_label.strip().upper()
     normalized_rationale = rationale.strip()
     if normalized_label not in M66_REVIEW_LABELS:
@@ -228,9 +257,9 @@ def submit_adjudication(
 
     case = _get_case(db, batch_id, case_id)
     reviews = db.scalars(
-        select(M66ReviewDB)
-        .where(M66ReviewDB.case_record_id == case.id)
-        .order_by(M66ReviewDB.submitted_at, M66ReviewDB.id)
+        select(ReviewDB)
+        .where(ReviewDB.case_record_id == case.id)
+        .order_by(ReviewDB.submitted_at, ReviewDB.id)
     ).all()
     if len(reviews) != 2 or len({review.reviewer_user_id for review in reviews}) != 2:
         raise M66ReviewError("Adjudication requires two distinct independent reviews.")
@@ -239,12 +268,12 @@ def submit_adjudication(
     if adjudicator_user_id in {review.reviewer_user_id for review in reviews}:
         raise M66ReviewError("The adjudicator must be distinct from both reviewers.")
     if db.scalar(
-        select(M66AdjudicationDB).where(M66AdjudicationDB.case_record_id == case.id)
+        select(AdjudicationDB).where(AdjudicationDB.case_record_id == case.id)
     ) is not None:
         raise M66ReviewError("This case already has an adjudication.")
 
     now = adjudicated_at or datetime.now(UTC)
-    adjudication = M66AdjudicationDB(
+    adjudication = AdjudicationDB(
         id=adjudication_id or str(uuid4()),
         case_record_id=case.id,
         dataset_id=case.batch.dataset_id,
@@ -275,11 +304,11 @@ def submit_adjudication(
     return adjudication
 
 
-def _get_case(db: Session, batch_id: str, case_id: str) -> M66ReviewCaseDB:
+def _get_case(db: Session, batch_id: str, case_id: str) -> ReviewCaseDB:
     case = db.scalar(
-        select(M66ReviewCaseDB).where(
-            M66ReviewCaseDB.batch_id == batch_id,
-            M66ReviewCaseDB.case_id == case_id,
+        select(ReviewCaseDB).where(
+            ReviewCaseDB.batch_id == batch_id,
+            ReviewCaseDB.case_id == case_id,
         )
     )
     if case is None:
@@ -287,11 +316,17 @@ def _get_case(db: Session, batch_id: str, case_id: str) -> M66ReviewCaseDB:
     return case
 
 
-def _recalculate_case(db: Session, case: M66ReviewCaseDB) -> None:
+def _recalculate_case(db: Session, case: ReviewCaseDB) -> None:
     reviews = db.scalars(
-        select(M66ReviewDB).where(M66ReviewDB.case_record_id == case.id)
+        select(ReviewDB).where(ReviewDB.case_record_id == case.id)
     ).all()
-    if len(reviews) < 2:
+    if case.batch.review_mode == "SINGLE_REVIEWER":
+        case.status = (
+            M66CaseReviewStatus.REVIEWED
+            if len(reviews) == 1
+            else M66CaseReviewStatus.PENDING_REVIEW
+        )
+    elif len(reviews) < 2:
         case.status = M66CaseReviewStatus.PENDING_REVIEW
     elif reviews[0].label == reviews[1].label:
         case.status = M66CaseReviewStatus.AGREED
@@ -299,14 +334,15 @@ def _recalculate_case(db: Session, case: M66ReviewCaseDB) -> None:
         case.status = M66CaseReviewStatus.DISAGREEMENT
 
 
-def _recalculate_batch(db: Session, batch: M66ReviewBatchDB) -> None:
+def _recalculate_batch(db: Session, batch: ReviewBatchDB) -> None:
     cases = db.scalars(
-        select(M66ReviewCaseDB).where(M66ReviewCaseDB.batch_id == batch.id)
+        select(ReviewCaseDB).where(ReviewCaseDB.batch_id == batch.id)
     ).all()
     if len(cases) != batch.expected_case_count:
         batch.status = M66DatasetReviewStatus.REVIEW_BLOCKED
         batch.completed_at = None
     elif all(case.status in {
+        M66CaseReviewStatus.REVIEWED,
         M66CaseReviewStatus.AGREED,
         M66CaseReviewStatus.ADJUDICATED,
     } for case in cases):
@@ -320,16 +356,16 @@ def _recalculate_batch(db: Session, batch: M66ReviewBatchDB) -> None:
 def _audit(
     db: Session,
     *,
-    batch: M66ReviewBatchDB,
+    batch: ReviewBatchDB,
     actor_user_id: str,
     event_type: str,
     entity_id: str,
     details: dict[str, object],
     created_at: datetime,
-    case: M66ReviewCaseDB | None = None,
+    case: ReviewCaseDB | None = None,
 ) -> None:
     db.add(
-        M66ReviewAuditEventDB(
+        ReviewAuditEventDB(
             id=str(uuid4()),
             batch_id=batch.id,
             case_record_id=case.id if case else None,

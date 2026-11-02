@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import json
 
-from app.evaluation.m66 import load_dataset, run_evaluation
+from app.evaluation.assessment_evaluation import load_dataset, run_evaluation
 from app.services.llm.factory import create_llm_service
 
 

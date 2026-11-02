@@ -1,0 +1,945 @@
+{
+  "dataset_id": "m66-intelligence-comparison-v1",
+  "purpose": "Single-reviewer human-versus-AI comparison across goal, evidence, and explanation categories.",
+  "label_status": "DRAFT_UNREVIEWED",
+  "evaluation_record": {
+    "dataset_version": "m66-intelligence-comparison-v1",
+    "approved_dataset_version": null,
+    "prompt_version": "m66-category-assessment-v1",
+    "approved_model_versions": [],
+    "required_case_ids": [
+      "verified-deployment-canary",
+      "partial-canary-rollout",
+      "contradictory-release-outcomes",
+      "semantic-match-without-relevance",
+      "no-evidence",
+      "team-outcome-without-attribution",
+      "v2-valid-goal",
+      "v2-smart-goal",
+      "v2-duration-achievability",
+      "v2-criterion-clarity",
+      "v2-time-validity",
+      "v2-quantitative-measurement",
+      "v2-citation-grounding",
+      "v2-abstention"
+    ],
+    "required_repeats": 3,
+    "review_mode": "SINGLE_REVIEWER",
+    "categories": [
+      "abstention",
+      "attribution",
+      "citation_grounding",
+      "contradiction_handling",
+      "criterion_clarity",
+      "duration_achievability",
+      "evidence_relevance",
+      "evidence_sufficiency",
+      "outcome_classification",
+      "quantitative_measurement",
+      "smart_goal",
+      "time_validity",
+      "valid_goal"
+    ]
+  },
+  "human_review": {
+    "status": "PENDING",
+    "reviewers": [],
+    "approved_at": null,
+    "approved_dataset_version": null,
+    "adjudication_status": "NOT_REQUIRED",
+    "review_mode": "SINGLE_REVIEWER"
+  },
+  "threshold_approval": {
+    "status": "NOT_APPROVED",
+    "approved_by": [],
+    "approved_at": null,
+    "thresholds": {
+      "evidence_matching_precision": null,
+      "evidence_matching_recall": null,
+      "citation_validity": null,
+      "unsupported_assessment_claim_rate_max": null,
+      "assessment_agreement": null,
+      "insufficient_evidence_abstention_accuracy": null,
+      "repeatability": null,
+      "run_success_rate": null
+    }
+  },
+  "cases": [
+    {
+      "case_id": "verified-deployment-canary",
+      "scenario": "Direct evidence satisfies an approved completion condition; unrelated evidence is also present.",
+      "goal": {
+        "id": "goal-canary",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-canary",
+        "version_id": "criterion-canary-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled and verified for production releases.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-verified",
+          "evidence_version_id": "version-canary-verified",
+          "title": "Production canary rollout",
+          "source_url": "https://example.test/evidence/canary-rollout",
+          "captured_at": "2026-01-15T12:00:00Z",
+          "source_updated_at": "2026-01-15T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-verified",
+          "content": "Enabled production canary validation and verified the release checks in the production pipeline."
+        },
+        {
+          "mapping_id": "mapping-canary-irrelevant",
+          "evidence_version_id": "version-canary-irrelevant",
+          "title": "Team planning notes",
+          "source_url": null,
+          "captured_at": "2026-01-14T12:00:00Z",
+          "source_updated_at": null,
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-irrelevant",
+          "content": "The team discussed next quarter's hiring plan."
+        }
+      ],
+      "labels": {
+        "expected_result": "MET",
+        "relevant_supporting_mapping_ids": [
+          "mapping-canary-verified"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "mapping-canary-verified"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The production pipeline evidence directly states that canary validation was enabled and verified.",
+        "expected_measured_value": null
+      },
+      "category": "outcome_classification",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "partial-canary-rollout",
+      "scenario": "Evidence shows meaningful but incomplete progress toward a completion condition.",
+      "goal": {
+        "id": "goal-partial",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-partial",
+        "version_id": "criterion-partial-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled and verified for all production services.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-partial",
+          "evidence_version_id": "version-canary-partial",
+          "title": "Canary validation pilot",
+          "source_url": "https://example.test/evidence/canary-pilot",
+          "captured_at": "2026-02-10T12:00:00Z",
+          "source_updated_at": "2026-02-10T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-partial",
+          "content": "Canary validation is enabled for the payments service. Rollout to the other production services is still in progress."
+        }
+      ],
+      "labels": {
+        "expected_result": "IN_PROGRESS",
+        "relevant_supporting_mapping_ids": [
+          "mapping-canary-partial"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "mapping-canary-partial"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The evidence confirms rollout for one service and explicitly states that rollout to the remaining services is incomplete.",
+        "expected_measured_value": null
+      },
+      "category": "outcome_classification",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "contradictory-release-outcomes",
+      "scenario": "Relevant sources conflict, so the assessment should cite both and abstain from a definitive outcome.",
+      "goal": {
+        "id": "goal-contradiction",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-contradiction",
+        "version_id": "criterion-contradiction-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Reduce production release failures",
+          "completion_conditions": "Production release failures decrease after the release safeguards are introduced.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-release-improved",
+          "evidence_version_id": "version-release-improved",
+          "title": "Release reliability summary",
+          "source_url": "https://example.test/evidence/release-summary",
+          "captured_at": "2026-03-01T12:00:00Z",
+          "source_updated_at": "2026-03-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:release-improved",
+          "content": "The monthly report says production release failures decreased after safeguards were introduced."
+        },
+        {
+          "mapping_id": "mapping-release-regression",
+          "evidence_version_id": "version-release-regression",
+          "title": "Release regression incident report",
+          "source_url": "https://example.test/evidence/release-regression",
+          "captured_at": "2026-03-02T12:00:00Z",
+          "source_updated_at": "2026-03-02T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:release-regression",
+          "content": "The incident report says production release failures increased during the same period."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [
+          "mapping-release-improved"
+        ],
+        "relevant_contradictory_mapping_ids": [
+          "mapping-release-regression"
+        ],
+        "expected_supporting_mapping_ids": [
+          "mapping-release-improved"
+        ],
+        "expected_contradictory_mapping_ids": [
+          "mapping-release-regression"
+        ],
+        "expected_rationale": "The supplied reports disagree about the direction of release failures, preventing a definitive conclusion.",
+        "expected_measured_value": null
+      },
+      "category": "contradiction_handling",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "semantic-match-without-relevance",
+      "scenario": "Topically similar text does not provide evidence for the criterion.",
+      "goal": {
+        "id": "goal-irrelevant",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-irrelevant",
+        "version_id": "criterion-irrelevant-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Enable production canary validation",
+          "completion_conditions": "Canary validation is enabled in production.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": false,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-canary-discussion",
+          "evidence_version_id": "version-canary-discussion",
+          "title": "Canary deployment discussion",
+          "source_url": null,
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": null,
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:canary-discussion",
+          "content": "The team discussed canary birds and their migration patterns during a social event."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The text shares terminology with the criterion but contains no evidence about production canary validation.",
+        "expected_measured_value": null
+      },
+      "category": "evidence_relevance",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "no-evidence",
+      "scenario": "No evidence was retrieved or submitted; missing evidence is not proof of no progress.",
+      "goal": {
+        "id": "goal-no-evidence",
+        "title": "Improve service reliability",
+        "description": "Improve production service reliability."
+      },
+      "criterion": {
+        "id": "criterion-no-evidence",
+        "version_id": "criterion-no-evidence-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Reduce service incidents",
+          "completion_conditions": "Production service incidents decrease.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": false,
+      "assessment_sufficient": false,
+      "evidence": [],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "There is no evidence from which to assess progress; absence of evidence does not establish that work has not started.",
+        "expected_measured_value": null
+      },
+      "category": "evidence_sufficiency",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "team-outcome-without-attribution",
+      "scenario": "A positive team outcome is documented, but the employee's contribution is not established.",
+      "goal": {
+        "id": "goal-attribution",
+        "title": "Improve release safety",
+        "description": "Reduce production deployment risk through verified release controls."
+      },
+      "criterion": {
+        "id": "criterion-attribution",
+        "version_id": "criterion-attribution-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Lead implementation of production canary validation",
+          "completion_conditions": "The employee's contribution to enabling and validating production canary checks is documented.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": false,
+      "evidence": [
+        {
+          "mapping_id": "mapping-team-outcome",
+          "evidence_version_id": "version-team-outcome",
+          "title": "Team release report",
+          "source_url": "https://example.test/evidence/team-release-report",
+          "captured_at": "2026-05-01T12:00:00Z",
+          "source_updated_at": "2026-05-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:team-outcome",
+          "content": "The team enabled production canary validation and confirmed the checks passed. The report does not identify individual contributors."
+        }
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The team outcome is relevant, but the source does not establish the employee's individual contribution.",
+        "expected_measured_value": null
+      },
+      "category": "attribution",
+      "review_label_options": [
+        "NOT_ASSESSED",
+        "NOT_STARTED",
+        "IN_PROGRESS",
+        "MET",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {}
+    },
+    {
+      "case_id": "v2-valid-goal",
+      "category": "valid_goal",
+      "scenario": "The goal is concrete, relevant, and connected to a meaningful work outcome.",
+      "goal": {
+        "id": "goal-v2-valid-goal",
+        "title": "Improve customer support",
+        "description": "Reduce avoidable customer wait time by improving support triage."
+      },
+      "criterion": {
+        "id": "criterion-v2-valid-goal",
+        "version_id": "criterion-v2-valid-goal-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Define a valid customer support improvement goal",
+          "completion_conditions": "The goal describes a meaningful outcome that can be acted on and evaluated.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "valid-goal",
+          "evidence_version_id": "version-valid-goal",
+          "title": "Support improvement plan",
+          "source_url": "https://example.test/evidence/valid-goal",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:valid-goal",
+          "content": "The team identified customer wait time as a business problem and proposed a measurable triage improvement."
+        }
+      ],
+      "review_label_options": [
+        "VALID",
+        "INVALID",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "MET",
+        "relevant_supporting_mapping_ids": [
+          "valid-goal"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "valid-goal"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The goal addresses a meaningful business outcome and can be evaluated.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "VALID",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-smart-goal",
+      "category": "smart_goal",
+      "scenario": "The goal includes a clear measure, target, owner, and deadline.",
+      "goal": {
+        "id": "goal-v2-smart-goal",
+        "title": "Reduce response time",
+        "description": "Reduce average customer response time from 24 hours to 8 hours by 30 June 2026."
+      },
+      "criterion": {
+        "id": "criterion-v2-smart-goal",
+        "version_id": "criterion-v2-smart-goal-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the goal is SMART",
+          "completion_conditions": "The goal is specific, measurable, achievable, relevant, and time-bound.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "smart-goal",
+          "evidence_version_id": "version-smart-goal",
+          "title": "Response-time target",
+          "source_url": "https://example.test/evidence/smart-goal",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:smart-goal",
+          "content": "The goal states the baseline, target, metric, and completion date."
+        }
+      ],
+      "review_label_options": [
+        "SMART",
+        "NOT_SMART",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "MET",
+        "relevant_supporting_mapping_ids": [
+          "smart-goal"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "smart-goal"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The goal specifies what changes, how it is measured, and by when.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "SMART",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-duration-achievability",
+      "category": "duration_achievability",
+      "scenario": "The requested result is much larger than the available time and resources.",
+      "goal": {
+        "id": "goal-v2-duration-achievability",
+        "title": "Migrate all enterprise customers",
+        "description": "Migrate every enterprise customer to the new platform in two days with one engineer."
+      },
+      "criterion": {
+        "id": "criterion-v2-duration-achievability",
+        "version_id": "criterion-v2-duration-achievability-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the goal is achievable in the stated duration",
+          "completion_conditions": "The scope and available capacity make the goal realistically achievable within the stated duration.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "duration-achievability",
+          "evidence_version_id": "version-duration-achievability",
+          "title": "Migration capacity note",
+          "source_url": "https://example.test/evidence/duration-achievability",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:duration-achievability",
+          "content": "There are 240 enterprise customers, each migration requires a validation window, and only one engineer is assigned for the two-day period."
+        }
+      ],
+      "review_label_options": [
+        "ACHIEVABLE",
+        "NOT_ACHIEVABLE",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [
+          "duration-achievability"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "duration-achievability"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The scope and available capacity do not provide enough information to support achievability.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "ACHIEVABLE",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-criterion-clarity",
+      "category": "criterion_clarity",
+      "scenario": "The goal uses an ambiguous success phrase without defining how success will be measured.",
+      "goal": {
+        "id": "goal-v2-criterion-clarity",
+        "title": "Improve collaboration",
+        "description": "Make the team collaborate better this quarter."
+      },
+      "criterion": {
+        "id": "criterion-v2-criterion-clarity",
+        "version_id": "criterion-v2-criterion-clarity-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the success criterion is clear",
+          "completion_conditions": "The criterion defines an observable and measurable condition for success.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "criterion-clarity",
+          "evidence_version_id": "version-criterion-clarity",
+          "title": "Team goal wording",
+          "source_url": "https://example.test/evidence/criterion-clarity",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:criterion-clarity",
+          "content": "The goal says to collaborate better but does not name a behavior, measure, baseline, or target."
+        }
+      ],
+      "review_label_options": [
+        "CLEAR",
+        "UNCLEAR",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "NOT_ASSESSED",
+        "relevant_supporting_mapping_ids": [
+          "criterion-clarity"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "criterion-clarity"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The wording does not define an observable or measurable success condition.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "CLEAR",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-time-validity",
+      "category": "time_validity",
+      "scenario": "The evidence describes an old result outside the evaluation period.",
+      "goal": {
+        "id": "goal-v2-time-validity",
+        "title": "Improve incident response",
+        "description": "Reduce incident resolution time during Q2 2026."
+      },
+      "criterion": {
+        "id": "criterion-v2-time-validity",
+        "version_id": "criterion-v2-time-validity-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the evidence is current for the evaluation period",
+          "completion_conditions": "The evidence falls within the stated Q2 2026 evaluation period.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "time-validity",
+          "evidence_version_id": "version-time-validity",
+          "title": "Prior-quarter incident report",
+          "source_url": "https://example.test/evidence/time-validity",
+          "captured_at": "2026-01-15T12:00:00Z",
+          "source_updated_at": "2026-01-15T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:time-validity",
+          "content": "The report covers Q4 2025 and does not provide incident resolution results for Q2 2026."
+        }
+      ],
+      "review_label_options": [
+        "CURRENT",
+        "OUTDATED",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [
+          "time-validity"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "time-validity"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The evidence is outside the stated evaluation period, so it cannot establish the Q2 result.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "CURRENT",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-quantitative-measurement",
+      "category": "quantitative_measurement",
+      "scenario": "The evidence claims improvement but does not support the stated numeric target.",
+      "goal": {
+        "id": "goal-v2-quantitative-measurement",
+        "title": "Reduce build failures",
+        "description": "Reduce build failures from 10% to 5%."
+      },
+      "criterion": {
+        "id": "criterion-v2-quantitative-measurement",
+        "version_id": "criterion-v2-quantitative-measurement-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the evidence supports the numeric target",
+          "completion_conditions": "The evidence contains measurements showing the result reached the 5% target.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "quantitative-measurement",
+          "evidence_version_id": "version-quantitative-measurement",
+          "title": "Build quality summary",
+          "source_url": "https://example.test/evidence/quantitative-measurement",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:quantitative-measurement",
+          "content": "The summary says build quality improved but gives no failure rate, baseline, or measured target value."
+        }
+      ],
+      "review_label_options": [
+        "SUPPORTED",
+        "UNSUPPORTED",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "NEEDS_REVIEW",
+        "relevant_supporting_mapping_ids": [
+          "quantitative-measurement"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "quantitative-measurement"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The evidence does not contain the measurements needed to verify the 5% target.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "SUPPORTED",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-citation-grounding",
+      "category": "citation_grounding",
+      "scenario": "The explanation cites evidence that does not support the stated conclusion.",
+      "goal": {
+        "id": "goal-v2-citation-grounding",
+        "title": "Improve deployment safety",
+        "description": "Verify deployment safeguards before production release."
+      },
+      "criterion": {
+        "id": "criterion-v2-citation-grounding",
+        "version_id": "criterion-v2-citation-grounding-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether the explanation cites supporting evidence",
+          "completion_conditions": "The cited evidence directly supports the assessment conclusion.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": true,
+      "assessment_sufficient": true,
+      "evidence": [
+        {
+          "mapping_id": "citation-grounding",
+          "evidence_version_id": "version-citation-grounding",
+          "title": "Deployment checklist",
+          "source_url": "https://example.test/evidence/citation-grounding",
+          "captured_at": "2026-04-01T12:00:00Z",
+          "source_updated_at": "2026-04-01T12:00:00Z",
+          "review_state": "pending",
+          "source_validity": "STORED_SNAPSHOT",
+          "source_type": "DOCUMENT",
+          "content_hash": "sha256:citation-grounding",
+          "content": "The checklist records that production canary validation was enabled and verified."
+        }
+      ],
+      "review_label_options": [
+        "GROUNDED",
+        "UNGROUNDED",
+        "NEEDS_REVIEW"
+      ],
+      "labels": {
+        "expected_result": "MET",
+        "relevant_supporting_mapping_ids": [
+          "citation-grounding"
+        ],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [
+          "citation-grounding"
+        ],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "The deployment checklist directly supports the conclusion that the safeguard was verified.",
+        "expected_measured_value": null
+      },
+      "ai_label_map": {
+        "MET": "GROUNDED",
+        "NOT_ASSESSED": "NEEDS_REVIEW"
+      }
+    },
+    {
+      "case_id": "v2-abstention",
+      "scenario": "The available information is too incomplete to decide whether the goal was met.",
+      "goal": {
+        "id": "goal-v2-abstention",
+        "title": "Improve onboarding completion",
+        "description": "Increase successful new-hire onboarding completion."
+      },
+      "criterion": {
+        "id": "criterion-v2-abstention",
+        "version_id": "criterion-v2-abstention-v1",
+        "version": 1,
+        "definition": {
+          "criterion_type": "BINARY",
+          "description": "Check whether onboarding completion improved",
+          "completion_conditions": "The evidence demonstrates improved onboarding completion.",
+          "milestones": [],
+          "target_value": null,
+          "unit": null,
+          "evidence_suggestions": [],
+          "assumptions_and_clarifications": []
+        }
+      },
+      "retrieval_sufficient": false,
+      "assessment_sufficient": false,
+      "evidence": [],
+      "labels": {
+        "expected_result": "NOT_ASSESSED",
+        "relevant_supporting_mapping_ids": [],
+        "relevant_contradictory_mapping_ids": [],
+        "expected_supporting_mapping_ids": [],
+        "expected_contradictory_mapping_ids": [],
+        "expected_rationale": "No evidence was supplied, so the system should abstain rather than claim an outcome.",
+        "expected_measured_value": null
+      },
+      "category": "abstention",
+      "review_label_options": [
+        "ABSTAIN",
+        "DECIDE",
+        "NEEDS_REVIEW"
+      ],
+      "ai_label_map": {
+        "NEEDS_REVIEW": "ABSTAIN",
+        "MET": "DECIDE"
+      }
+    }
+  ]
+}

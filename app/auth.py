@@ -32,6 +32,7 @@ class AuthenticatedUser:
         scopes: set[str],
         name: str | None = None,
         is_platform_admin: bool = False,
+        is_reviewer: bool = False,
     ):
         self.user_id = user_id
         self.email = email
@@ -39,6 +40,7 @@ class AuthenticatedUser:
         self.scopes = scopes
         self.name = name
         self.is_platform_admin = is_platform_admin
+        self.is_reviewer = is_reviewer
 
 
 @lru_cache
@@ -116,6 +118,7 @@ def get_current_user(
         scopes,
         name if isinstance(name, str) else None,
         claims.get("is_platform_admin") is True,
+        claims.get("is_reviewer") is True,
     )
 
 

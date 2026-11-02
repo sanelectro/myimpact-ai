@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.evaluation.m66 import load_dataset
-from app.evaluation.m66_eligibility import (
+from app.evaluation.assessment_evaluation import load_dataset
+from app.evaluation.evaluation_eligibility import (
     MAXIMUM_THRESHOLD_METRICS,
     MINIMUM_THRESHOLD_METRICS,
     evaluate_release_eligibility,

@@ -3,6 +3,7 @@ from enum import Enum
 
 class M66CaseReviewStatus(str, Enum):
     PENDING_REVIEW = "PENDING_REVIEW"
+    REVIEWED = "REVIEWED"
     AGREED = "AGREED"
     DISAGREEMENT = "DISAGREEMENT"
     ADJUDICATED = "ADJUDICATED"

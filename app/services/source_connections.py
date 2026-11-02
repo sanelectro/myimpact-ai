@@ -1,4 +1,3 @@
-from app.services.demo_source_mocks import mock_source_response
 import base64
 import hashlib
 import hmac
@@ -12,7 +11,9 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from functools import lru_cache
+from time import monotonic, sleep
 from uuid import uuid4
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.db.models.source_connection import SourceConnectionDB
-
+from app.services.demo_source_mocks import mock_source_response
 
 SUPPORTED_PROVIDERS = {"github", "jira"}
 OAUTH_STATE_TTL_SECONDS = 600
@@ -29,7 +30,37 @@ logger = logging.getLogger(__name__)
 
 
 class SourceConnectionError(Exception):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        category: "SourceErrorCategory" = None,
+        retryable: bool = False,
+        retry_after_seconds: float | None = None,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.category = category or SourceErrorCategory.UNKNOWN
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
+        self.status_code = status_code
+
+
+class SourceErrorCategory(str, Enum):
+    AUTH_REQUIRED = "AUTH_REQUIRED"
+    PERMISSION_DENIED = "PERMISSION_DENIED"
+    SOURCE_NOT_FOUND = "SOURCE_NOT_FOUND"
+    RATE_LIMITED = "RATE_LIMITED"
+    TEMPORARILY_UNAVAILABLE = "TEMPORARILY_UNAVAILABLE"
+    INVALID_REQUEST = "INVALID_REQUEST"
+    INVALID_RESPONSE = "INVALID_RESPONSE"
+    UNKNOWN = "UNKNOWN"
+
+
+MAX_SOURCE_RETRIES = 3
+SOURCE_RETRY_INITIAL_DELAY_SECONDS = 1.0
+SOURCE_RETRY_MAX_DELAY_SECONDS = 8.0
+SOURCE_OPERATION_DEADLINE_SECONDS = 20.0
 
 
 @lru_cache(maxsize=2)
@@ -262,6 +293,7 @@ def _request_json(
     method: str = "GET",
     headers: dict[str, str] | None = None,
     body: dict | None = None,
+    retry_safe: bool = False,
 ) -> dict | list:
     request_headers = {"Accept": "application/json"}
     request_headers.update(headers or {})
@@ -278,20 +310,111 @@ def _request_json(
         headers=request_headers,
         method=method,
     )
+    deadline = monotonic() + SOURCE_OPERATION_DEADLINE_SECONDS
+    attempt = 0
+    while True:
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                parsed = json.loads(response.read().decode("utf-8"))
+                if not isinstance(parsed, (dict, list)):
+                    raise SourceConnectionError(
+                        "The source returned an invalid response.",
+                        category=SourceErrorCategory.INVALID_RESPONSE,
+                    )
+                return parsed
+        except urllib.error.HTTPError as exc:
+            retry_after = _retry_after_seconds(exc.headers.get("Retry-After"))
+            error = _source_http_error(exc.code, retry_after)
+        except (urllib.error.URLError, TimeoutError):
+            error = SourceConnectionError(
+                "The source could not be reached.",
+                category=SourceErrorCategory.TEMPORARILY_UNAVAILABLE,
+                retryable=True,
+            )
+        except json.JSONDecodeError as exc:
+            raise SourceConnectionError(
+                "The source returned invalid JSON.",
+                category=SourceErrorCategory.INVALID_RESPONSE,
+            ) from exc
+
+        if (
+            not retry_safe
+            or not error.retryable
+            or attempt >= MAX_SOURCE_RETRIES
+            or monotonic() >= deadline
+        ):
+            raise error
+        delay = min(
+            SOURCE_RETRY_INITIAL_DELAY_SECONDS * (2**attempt),
+            SOURCE_RETRY_MAX_DELAY_SECONDS,
+        )
+        if error.retry_after_seconds is not None:
+            delay = min(error.retry_after_seconds, SOURCE_RETRY_MAX_DELAY_SECONDS)
+        remaining = max(0.0, deadline - monotonic())
+        if delay > remaining:
+            raise error
+        attempt += 1
+        logger.info(
+            "Retrying source request path=%s category=%s attempt=%d",
+            urllib.parse.urlsplit(url).path,
+            error.category,
+            attempt,
+        )
+        sleep(delay)
+
+
+def _retry_after_seconds(value: str | None) -> float | None:
+    if not value:
+        return None
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            parsed = json.loads(response.read().decode("utf-8"))
-            if not isinstance(parsed, (dict, list)):
-                raise SourceConnectionError("The source returned an invalid response.")
-            return parsed
-    except urllib.error.HTTPError as exc:
-        raise SourceConnectionError(
-            f"The source request failed with HTTP {exc.code}."
-        ) from exc
-    except (urllib.error.URLError, TimeoutError) as exc:
-        raise SourceConnectionError("The source could not be reached.") from exc
-    except json.JSONDecodeError as exc:
-        raise SourceConnectionError("The source returned invalid JSON.") from exc
+        return max(0.0, float(value))
+    except ValueError:
+        return None
+
+
+def _source_http_error(
+    status_code: int,
+    retry_after_seconds: float | None,
+) -> SourceConnectionError:
+    if status_code in {401}:
+        return SourceConnectionError(
+            "Source authorization is required.",
+            category=SourceErrorCategory.AUTH_REQUIRED,
+            status_code=status_code,
+        )
+    if status_code in {403}:
+        return SourceConnectionError(
+            "The connected account cannot access this source.",
+            category=SourceErrorCategory.PERMISSION_DENIED,
+            status_code=status_code,
+        )
+    if status_code == 404:
+        return SourceConnectionError(
+            "The requested source resource could not be accessed.",
+            category=SourceErrorCategory.SOURCE_NOT_FOUND,
+            status_code=status_code,
+        )
+    if status_code == 429:
+        return SourceConnectionError(
+            "The source rate limit was reached.",
+            category=SourceErrorCategory.RATE_LIMITED,
+            retryable=True,
+            retry_after_seconds=retry_after_seconds,
+            status_code=status_code,
+        )
+    if status_code == 408 or status_code >= 500:
+        return SourceConnectionError(
+            "The source is temporarily unavailable.",
+            category=SourceErrorCategory.TEMPORARILY_UNAVAILABLE,
+            retryable=True,
+            retry_after_seconds=retry_after_seconds,
+            status_code=status_code,
+        )
+    return SourceConnectionError(
+        "The source request was invalid.",
+        category=SourceErrorCategory.INVALID_REQUEST,
+        status_code=status_code,
+    )
 
 
 def get_authorization_url(provider: str, user_id: str, goal_id: str) -> str:
@@ -549,7 +672,10 @@ def get_access_token(
     if connection is None:
         local_connection = _get_local_source_connection(provider)
         if local_connection is None:
-            raise SourceConnectionError(f"Connect your {provider.title()} account first.")
+            raise SourceConnectionError(
+                f"Connect your {provider.title()} account first.",
+                category=SourceErrorCategory.AUTH_REQUIRED,
+            )
         source = (
             "Keychain"
             if get_settings().source_local_tokens_from_keychain
@@ -564,7 +690,8 @@ def get_access_token(
         ).decode("utf-8")
     except (InvalidToken, UnicodeDecodeError) as exc:
         raise SourceConnectionError(
-            f"Your {provider.title()} connection could not be decrypted. Reconnect it."
+            f"Your {provider.title()} connection could not be decrypted. Reconnect it.",
+            category=SourceErrorCategory.AUTH_REQUIRED,
         ) from exc
 
     if connection.expires_at and connection.expires_at <= datetime.now(UTC) + TOKEN_REFRESH_MARGIN:
@@ -575,7 +702,8 @@ def get_access_token(
 def _refresh_access_token(session: Session, connection: SourceConnectionDB) -> str:
     if not connection.refresh_token_ciphertext:
         raise SourceConnectionError(
-            f"Your {connection.provider.title()} authorization expired. Reconnect it."
+            f"Your {connection.provider.title()} authorization expired. Reconnect it.",
+            category=SourceErrorCategory.AUTH_REQUIRED,
         )
     try:
         refresh_token = _fernet().decrypt(
@@ -583,7 +711,8 @@ def _refresh_access_token(session: Session, connection: SourceConnectionDB) -> s
         ).decode("utf-8")
     except (InvalidToken, UnicodeDecodeError) as exc:
         raise SourceConnectionError(
-            f"Your {connection.provider.title()} connection could not be decrypted. Reconnect it."
+            f"Your {connection.provider.title()} connection could not be decrypted. Reconnect it.",
+            category=SourceErrorCategory.AUTH_REQUIRED,
         ) from exc
     settings = get_settings()
     if connection.provider == "github":
@@ -612,7 +741,8 @@ def _refresh_access_token(session: Session, connection: SourceConnectionDB) -> s
     next_refresh_token = token_data.get("refresh_token")
     if not isinstance(access_token, str) or not access_token:
         raise SourceConnectionError(
-            f"{connection.provider.title()} could not refresh authorization. Reconnect it."
+            f"{connection.provider.title()} could not refresh authorization. Reconnect it.",
+            category=SourceErrorCategory.AUTH_REQUIRED,
         )
     fernet = _fernet()
     connection.access_token_ciphertext = fernet.encrypt(access_token.encode()).decode("ascii")
@@ -646,7 +776,7 @@ def source_api_get(
         url = f"{url}?{urllib.parse.urlencode(params)}"
     if provider == "jira" and jira_email:
         credentials = base64.b64encode(
-            f"{jira_email}:{access_token}".encode("utf-8")
+            f"{jira_email}:{access_token}".encode()
         ).decode("ascii")
         authorization = f"Basic {credentials}"
     else:
@@ -660,7 +790,7 @@ def source_api_get(
             }
         )
     try:
-        return _request_json(url, headers=headers)
+        return _request_json(url, headers=headers, retry_safe=True)
     except SourceConnectionError as exc:
         provider_name = "GitHub" if provider == "github" else provider.title()
         request_path = urllib.parse.urlsplit(url).path
@@ -690,7 +820,7 @@ def source_api_post(
         )
     if jira_email:
         credentials = base64.b64encode(
-            f"{jira_email}:{access_token}".encode("utf-8")
+            f"{jira_email}:{access_token}".encode()
         ).decode("ascii")
         authorization = f"Basic {credentials}"
     else:
@@ -704,6 +834,7 @@ def source_api_post(
                 "Content-Type": "application/json",
             },
             body=body,
+            retry_safe=True,
         )
     except SourceConnectionError as exc:
         request_path = urllib.parse.urlsplit(url).path

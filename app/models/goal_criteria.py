@@ -43,6 +43,14 @@ class GoalSourceRetrievalStatus(str, Enum):
     FAILURE = "FAILURE"
 
 
+class GoalSourceRetrievalOutcome(str, Enum):
+    COMPLETE = "COMPLETE"
+    PARTIAL = "PARTIAL"
+    NO_RESULTS = "NO_RESULTS"
+    INACCESSIBLE = "INACCESSIBLE"
+    FAILED = "FAILED"
+
+
 class GoalAssessmentFeedbackType(str, Enum):
     CONFIRMED = "CONFIRMED"
     CORRECTED = "CORRECTED"
@@ -217,6 +225,14 @@ class GoalSourceRetrievalResponse(BaseModel):
     failure_reason: str | None
     used_snapshot: bool
     snapshot_captured_at: datetime | None
+    outcome: GoalSourceRetrievalOutcome
+    error_category: str | None = None
+    attempted_at: datetime | None = None
+    last_verified_at: datetime | None = None
+    last_retrieved_at: datetime | None = None
+    retry_count: int = 0
+    bounds: dict | None = None
+    coverage: dict | None = None
 
 
 class GoalAssessmentRunResponse(BaseModel):

@@ -16,10 +16,13 @@ from app.api.v1.impact import router as impact_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.role_catalog import router as role_catalog_router
 from app.api.v1.insight import router as insight_router
+from app.api.v1.human_review import router as human_review_router
 from app.api.v1.integrations import router as integrations_router
 from app.api.v1.knowledge import router as knowledge_router
 from app.api.v1.milestones import router as milestones_router
 from app.api.v1.report import router as report_router
+from app.api.v1.reliability import router as reliability_router
+from app.api.v1.threshold_governance import router as threshold_governance_router
 
 
 class ApiV1Info(BaseModel):
@@ -45,8 +48,11 @@ router.include_router(evidence_router)
 router.include_router(evidence_approvals_router)
 router.include_router(impact_router)
 router.include_router(insight_router)
+router.include_router(human_review_router)
 router.include_router(integrations_router)
 router.include_router(report_router)
+router.include_router(reliability_router)
+router.include_router(threshold_governance_router)
 router.include_router(chat_router)
 router.include_router(documents_router)
 router.include_router(goal_import_router)

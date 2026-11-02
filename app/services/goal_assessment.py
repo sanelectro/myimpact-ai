@@ -1,22 +1,19 @@
 import hashlib
 import json
 import logging
-from datetime import UTC, datetime, timedelta
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from importlib.resources import files
 from uuid import uuid4
 
 from pydantic import ValidationError
-from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.models.evidence import EvidenceDB
 from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.db.models.goal import GoalDB
-from app.db.models.goal_source_retrieval import GoalSourceRetrievalDB
-from app.db.models.goal_source_fetch_state import GoalSourceFetchStateDB
 from app.db.models.goal_criterion import (
     GoalAssessmentRunDB,
     GoalCriterionAssessmentDB,
@@ -25,9 +22,12 @@ from app.db.models.goal_criterion import (
     GoalCriterionDB,
     GoalCriterionVersionDB,
 )
+from app.db.models.goal_source_fetch_state import GoalSourceFetchStateDB
+from app.db.models.goal_source_retrieval import GoalSourceRetrievalDB
 from app.exceptions import GoalCriterionAssessmentError
 from app.models.evidence import EvidenceSourceType, EvidenceStatus
 from app.models.evidence_approval import EvidenceApprovalStatus
+from app.models.evidence_mapping import EvidenceRelevance
 from app.models.goal_criteria import (
     GoalAssessmentBatchResponse,
     GoalAssessmentLifecycle,
@@ -35,17 +35,17 @@ from app.models.goal_criteria import (
     GoalAssessmentRunStatus,
     GoalAssessmentSummaryResponse,
     GoalCriterionAssessmentEventResponse,
-    GoalCriterionEvidenceResponse,
     GoalCriterionAssessmentProposal,
     GoalCriterionAssessmentResponse,
     GoalCriterionDefinition,
+    GoalCriterionEvidenceResponse,
     GoalCriterionResult,
     GoalCriterionSummary,
     GoalCriterionType,
-    GoalSourceRetrievalStatus,
+    GoalSourceRetrievalOutcome,
     GoalSourceRetrievalResponse,
+    GoalSourceRetrievalStatus,
 )
-from app.models.evidence_mapping import EvidenceRelevance
 from app.models.llm import LLMRequest
 from app.repositories.goal_criterion import (
     GoalAssessmentRepository,
@@ -59,6 +59,7 @@ from app.services.evidence_discovery import (
 from app.services.llm.interface import ILLMService
 from app.services.source_connections import (
     SourceConnectionError,
+    SourceErrorCategory,
     get_connection_status,
 )
 
@@ -350,6 +351,8 @@ class GoalAssessmentService(BaseService):
                         GoalSourceRetrievalStatus.FAILURE,
                         message,
                         snapshot_date,
+                        error_category=SourceErrorCategory.TEMPORARILY_UNAVAILABLE.value,
+                        outcome=GoalSourceRetrievalOutcome.INACCESSIBLE,
                     )
             return result
 
@@ -379,6 +382,8 @@ class GoalAssessmentService(BaseService):
                     GoalSourceRetrievalStatus.FAILURE,
                     message,
                     snapshot_dates.get(provider),
+                    error_category=SourceErrorCategory.AUTH_REQUIRED.value,
+                    outcome=GoalSourceRetrievalOutcome.INACCESSIBLE,
                 )
         related_jira_keys: set[str] = set()
         for provider in ("github", "jira"):
@@ -431,6 +436,17 @@ class GoalAssessmentService(BaseService):
                     GoalSourceRetrievalStatus.FAILURE,
                     message,
                     snapshot_dates.get(provider),
+                    error_category=exc.category.value,
+                    outcome=(
+                        GoalSourceRetrievalOutcome.INACCESSIBLE
+                        if exc.category
+                        in {
+                            SourceErrorCategory.AUTH_REQUIRED,
+                            SourceErrorCategory.PERMISSION_DENIED,
+                            SourceErrorCategory.SOURCE_NOT_FOUND,
+                        }
+                        else GoalSourceRetrievalOutcome.FAILED
+                    ),
                 )
                 continue
 
@@ -439,6 +455,20 @@ class GoalAssessmentService(BaseService):
                 run_id,
                 provider,
                 GoalSourceRetrievalStatus.SUCCESS,
+                outcome=(
+                    GoalSourceRetrievalOutcome.NO_RESULTS
+                    if not discovered
+                    else GoalSourceRetrievalOutcome.COMPLETE
+                ),
+                bounds={
+                    "start_date": provider_start_date.isoformat(),
+                    "end_date": end_date.isoformat(),
+                    "max_github_commits": MAX_REANALYSIS_GITHUB_COMMITS,
+                    "max_github_pull_request_lookups": MAX_REANALYSIS_GITHUB_PULL_REQUEST_LOOKUPS,
+                    "max_jira_results": MAX_REANALYSIS_JIRA_RESULTS,
+                    "max_candidates": MAX_REANALYSIS_CANDIDATES,
+                },
+                coverage={"result_count": len(discovered)},
             )
             result.source_refreshed = True
             if criterion_contexts:
@@ -532,7 +562,18 @@ class GoalAssessmentService(BaseService):
         status: GoalSourceRetrievalStatus,
         failure_reason: str | None = None,
         snapshot_captured_at: datetime | None = None,
+        error_category: str | None = None,
+        outcome: GoalSourceRetrievalOutcome | None = None,
+        bounds: dict | None = None,
+        coverage: dict | None = None,
+        retry_count: int = 0,
     ) -> None:
+        checked_at = datetime.now(UTC)
+        resolved_outcome = outcome or (
+            GoalSourceRetrievalOutcome.COMPLETE
+            if status == GoalSourceRetrievalStatus.SUCCESS
+            else GoalSourceRetrievalOutcome.INACCESSIBLE
+        )
         self.session.add(
             GoalSourceRetrievalDB(
                 id=str(uuid4()),
@@ -540,7 +581,7 @@ class GoalAssessmentService(BaseService):
                 run_id=run_id,
                 provider=provider,
                 status=status.value,
-                checked_at=datetime.now(UTC),
+                checked_at=checked_at,
                 failure_reason=failure_reason,
                 used_snapshot=status == GoalSourceRetrievalStatus.FAILURE
                 and snapshot_captured_at is not None,
@@ -549,6 +590,18 @@ class GoalAssessmentService(BaseService):
                     if status == GoalSourceRetrievalStatus.FAILURE
                     else None
                 ),
+                outcome=resolved_outcome.value,
+                error_category=error_category,
+                attempted_at=checked_at,
+                last_verified_at=checked_at
+                if status == GoalSourceRetrievalStatus.SUCCESS
+                else None,
+                last_retrieved_at=checked_at
+                if status == GoalSourceRetrievalStatus.SUCCESS
+                else None,
+                retry_count=retry_count,
+                bounds=bounds,
+                coverage=coverage,
             )
         )
 

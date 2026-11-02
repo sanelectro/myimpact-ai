@@ -14,6 +14,8 @@ class AzureAIService(ILLMService):
             api_key=settings.azure_openai_api_key,
             azure_endpoint=settings.azure_openai_endpoint,
             api_version=settings.azure_openai_api_version,
+            timeout=settings.llm_timeout_seconds,
+            max_retries=0,
         )
 
         self.model = settings.azure_openai_deployment

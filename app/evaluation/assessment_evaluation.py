@@ -6,11 +6,11 @@ from typing import Any
 from openai import OpenAIError
 from pydantic import ValidationError
 
-from app.exceptions import GoalCriterionAssessmentError
-from app.evaluation.m66_eligibility import (
+from app.evaluation.evaluation_eligibility import (
     calculate_metrics,
     evaluate_release_eligibility,
 )
+from app.exceptions import GoalCriterionAssessmentError
 from app.models.goal_criteria import (
     GoalCriterionAssessmentProposal,
     GoalCriterionDefinition,
@@ -31,11 +31,33 @@ DATASET_PATH = (
     / "evaluation"
     / "m66_criterion_assessment.json"
 )
+INTELLIGENCE_COMPARISON_DATASET_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "evaluation"
+    / "m66_intelligence_comparison.json"
+)
+DATASET_PATHS = {
+    "m66-criterion-assessment-v1": DATASET_PATH,
+    "m66-intelligence-comparison-v1": INTELLIGENCE_COMPARISON_DATASET_PATH,
+}
 
 
 def load_dataset(path: Path = DATASET_PATH) -> dict[str, Any]:
     with path.open(encoding="utf-8") as dataset_file:
         return json.load(dataset_file)
+
+
+def load_dataset_by_id(dataset_id: str, dataset_version: str) -> dict[str, Any]:
+    path = DATASET_PATHS.get(dataset_id)
+    if path is None:
+        raise FileNotFoundError(f"Unknown evaluation dataset: {dataset_id}")
+    dataset = load_dataset(path)
+    declared_version = dataset.get("evaluation_record", {}).get("dataset_version")
+    if declared_version != dataset_version:
+        raise FileNotFoundError(
+            f"Unknown evaluation dataset version: {dataset_id}/{dataset_version}"
+        )
+    return dataset
 
 
 async def run_evaluation(

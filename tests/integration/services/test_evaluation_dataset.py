@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.db.models.goal_criterion import GoalCriterionAssessmentDB
-from app.evaluation.m66 import load_dataset
+from app.evaluation.assessment_evaluation import load_dataset
 from app.models.goal import GoalScope
 from app.models.llm import LLMResponse
 from app.services.goal_assessment import GoalAssessmentService

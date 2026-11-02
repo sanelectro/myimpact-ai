@@ -20,13 +20,26 @@ from app.db.models.goal_criterion import (
 )
 from app.db.models.impact_assessment import ImpactAssessmentDB
 from app.db.models.milestone import MilestoneDB
+from app.db.models.threshold_governance import (
+    MetricDefinitionDB,
+    ThresholdApprovalDB,
+    ThresholdAuditEventDB,
+    ThresholdItemDB,
+    ThresholdSetDB,
+)
 from app.db.models.human_review import (
-    M66AdjudicationDB,
-    M66ReviewAssignmentDB,
-    M66ReviewAuditEventDB,
-    M66ReviewBatchDB,
-    M66ReviewCaseDB,
-    M66ReviewDB,
+    AdjudicationDB,
+    ReviewAssignmentDB,
+    ReviewAuditEventDB,
+    ReviewBatchDB,
+    ReviewCaseDB,
+    ReviewDB,
+)
+from app.db.models.reliability import (
+    ReliabilityAttemptDB,
+    ReliabilityComparisonDB,
+    ReliabilityExperimentDB,
+    ReliabilityReportDB,
 )
 from app.db.models.notification import NotificationDB
 from app.db.models.notification_history import NotificationHistoryDB
@@ -64,12 +77,21 @@ __all__ = [
     "GoalStatusHistoryDB",
     "ImpactAssessmentDB",
     "MilestoneDB",
-    "M66AdjudicationDB",
-    "M66ReviewAssignmentDB",
-    "M66ReviewAuditEventDB",
-    "M66ReviewBatchDB",
-    "M66ReviewCaseDB",
-    "M66ReviewDB",
+    "MetricDefinitionDB",
+    "ThresholdApprovalDB",
+    "ThresholdAuditEventDB",
+    "ThresholdItemDB",
+    "ThresholdSetDB",
+    "AdjudicationDB",
+    "ReviewAssignmentDB",
+    "ReviewAuditEventDB",
+    "ReviewBatchDB",
+    "ReviewCaseDB",
+    "ReviewDB",
+    "ReliabilityAttemptDB",
+    "ReliabilityComparisonDB",
+    "ReliabilityExperimentDB",
+    "ReliabilityReportDB",
     "NotificationDB",
     "NotificationHistoryDB",
     "NotificationResponseDB",
