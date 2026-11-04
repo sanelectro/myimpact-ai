@@ -36,9 +36,21 @@ INTELLIGENCE_COMPARISON_DATASET_PATH = (
     / "evaluation"
     / "m66_intelligence_comparison.json"
 )
+EXPANDED_INTELLIGENCE_COMPARISON_DATASET_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "evaluation"
+    / "m66_intelligence_comparison_v2.json"
+)
+OPTIMIZED_INTELLIGENCE_COMPARISON_DATASET_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "evaluation"
+    / "m66_intelligence_comparison_v3.json"
+)
 DATASET_PATHS = {
     "m66-criterion-assessment-v1": DATASET_PATH,
     "m66-intelligence-comparison-v1": INTELLIGENCE_COMPARISON_DATASET_PATH,
+    "m66-intelligence-comparison-v2": EXPANDED_INTELLIGENCE_COMPARISON_DATASET_PATH,
+    "m66-intelligence-comparison-v3": OPTIMIZED_INTELLIGENCE_COMPARISON_DATASET_PATH,
 }
 
 
@@ -101,6 +113,8 @@ async def run_evaluation(
             definition=definition,
             evidence_inputs=case["evidence"],
             retrieval_sufficient=case["retrieval_sufficient"],
+            role_context=case.get("role_context"),
+            evaluation_period=case.get("evaluation_period"),
         )
         for repeat_index in range(1, repeats + 1):
             record = {

@@ -512,6 +512,8 @@ async def run_reliability_experiment(
             definition=definition,
             evidence_inputs=case["evidence"],
             retrieval_sufficient=case["retrieval_sufficient"],
+            role_context=case.get("role_context"),
+            evaluation_period=case.get("evaluation_period"),
         )
         prompt = _append_category_instruction(prompt, case)
         mapping_ids = {item["mapping_id"] for item in case["evidence"]}

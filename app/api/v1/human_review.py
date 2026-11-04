@@ -59,6 +59,8 @@ class ReviewBatchResponse(BaseModel):
     review_mode: str
     status: M66DatasetReviewStatus
     expected_case_count: int
+    started_at: str
+    completed_at: str | None
 
 
 class ReviewCaseSummary(BaseModel):
@@ -86,6 +88,8 @@ class ReviewProgressResponse(BaseModel):
     agreed: int
     disagreement: int
     adjudicated: int
+    category_progress: list[dict]
+    evaluation: dict
 
 
 def _require_platform_admin(current_user: AuthenticatedUser) -> None:
@@ -112,6 +116,8 @@ def _batch_response(batch: ReviewBatchDB) -> ReviewBatchResponse:
         review_mode=batch.review_mode,
         status=batch.status,
         expected_case_count=batch.expected_case_count,
+        started_at=batch.started_at.isoformat(),
+        completed_at=batch.completed_at.isoformat() if batch.completed_at else None,
     )
 
 
@@ -420,6 +426,12 @@ def review_progress(
     cases = db.scalars(
         select(ReviewCaseDB).where(ReviewCaseDB.batch_id == batch.id)
     ).all()
+    dataset = load_dataset_by_id(batch.dataset_id, batch.dataset_version)
+    dataset_cases = {
+        case["case_id"]: case
+        for case in dataset.get("cases", [])
+        if isinstance(case, dict) and isinstance(case.get("case_id"), str)
+    }
     counts = {
         "awaiting_first_review": 0,
         "awaiting_second_review": 0,
@@ -441,9 +453,91 @@ def review_progress(
             counts["disagreement"] += 1
         elif case.status == M66CaseReviewStatus.ADJUDICATED:
             counts["adjudicated"] += 1
+    category_counts: dict[str, dict[str, object]] = {}
+    for review_case in cases:
+        category = dataset_cases.get(review_case.case_id, {}).get(
+            "category", "uncategorized"
+        )
+        summary = category_counts.setdefault(
+            str(category),
+            {
+                "category": str(category),
+                "total_cases": 0,
+                "reviewed_cases": 0,
+                "agreed_cases": 0,
+                "disagreement_cases": 0,
+                "adjudicated_cases": 0,
+                "last_reviewed_at": None,
+            },
+        )
+        summary["total_cases"] = int(summary["total_cases"]) + 1
+        if review_case.reviews:
+            summary["reviewed_cases"] = int(summary["reviewed_cases"]) + 1
+            latest_review = max(
+                review_case.reviews,
+                key=lambda review: review.submitted_at,
+            )
+            latest_review_at = latest_review.submitted_at.isoformat()
+            if (
+                summary["last_reviewed_at"] is None
+                or latest_review_at > str(summary["last_reviewed_at"])
+            ):
+                summary["last_reviewed_at"] = latest_review_at
+        if review_case.status == M66CaseReviewStatus.AGREED:
+            summary["agreed_cases"] = int(summary["agreed_cases"]) + 1
+        elif review_case.status == M66CaseReviewStatus.DISAGREEMENT:
+            summary["disagreement_cases"] = int(summary["disagreement_cases"]) + 1
+        elif review_case.status == M66CaseReviewStatus.ADJUDICATED:
+            summary["adjudicated_cases"] = int(summary["adjudicated_cases"]) + 1
+    latest_experiment = db.scalar(
+        select(ReliabilityExperimentDB)
+        .where(
+            ReliabilityExperimentDB.dataset_id == batch.dataset_id,
+            ReliabilityExperimentDB.dataset_version == batch.dataset_version,
+        )
+        .order_by(ReliabilityExperimentDB.created_at.desc())
+    )
+    evaluated_case_ids: set[str] = set()
+    evaluation_attempt_count = 0
+    if latest_experiment is not None:
+        attempts = db.scalars(
+            select(ReliabilityAttemptDB).where(
+                ReliabilityAttemptDB.experiment_id == latest_experiment.id,
+                ReliabilityAttemptDB.status == "SUCCEEDED",
+            )
+        ).all()
+        evaluation_attempt_count = len(attempts)
+        evaluated_case_ids = {attempt.case_id for attempt in attempts}
+    for summary in category_counts.values():
+        category = str(summary["category"])
+        category_case_ids = {
+            case_id
+            for case_id, case in dataset_cases.items()
+            if str(case.get("category", "uncategorized")) == category
+        }
+        summary["evaluated_cases"] = len(evaluated_case_ids & category_case_ids)
     return ReviewProgressResponse(
         batch=_batch_response(batch),
         total_cases=len(cases),
+        category_progress=sorted(
+            category_counts.values(), key=lambda item: str(item["category"])
+        ),
+        evaluation={
+            "status": latest_experiment.status if latest_experiment else "NOT_STARTED",
+            "experiment_id": latest_experiment.id if latest_experiment else None,
+            "started_at": (
+                latest_experiment.started_at.isoformat()
+                if latest_experiment and latest_experiment.started_at
+                else None
+            ),
+            "finished_at": (
+                latest_experiment.finished_at.isoformat()
+                if latest_experiment and latest_experiment.finished_at
+                else None
+            ),
+            "evaluated_case_count": len(evaluated_case_ids),
+            "attempt_count": evaluation_attempt_count,
+        },
         **counts,
     )
 

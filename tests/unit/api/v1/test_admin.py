@@ -235,3 +235,60 @@ def test_non_admin_cannot_update_company():
     assert response.json()["error"]["message"] == (
         "Platform administrator access is required."
     )
+
+
+def test_platform_admin_can_create_category_and_criterion_template():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    test_session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def override_get_db():
+        with test_session() as db:
+            yield db
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        "admin-1",
+        "admin@example.com",
+        None,
+        {"myimpact-ai"},
+        is_platform_admin=True,
+    )
+    try:
+        category_response = client.post(
+            "/api/v1/admin/assessment-categories",
+            json={"name": " Evidence quality ", "description": "Source-grounded assessment."},
+        )
+        category_id = category_response.json()["id"]
+        criterion_response = client.post(
+            f"/api/v1/admin/assessment-categories/{category_id}/criteria",
+            json={
+                "title": "Evidence supports the outcome",
+                "definition": {
+                    "criterion_type": "BINARY",
+                    "description": "Evidence supports the claimed outcome.",
+                    "completion_conditions": "A source directly supports the claim.",
+                    "milestones": [],
+                    "target_value": None,
+                    "unit": None,
+                    "evidence_suggestions": [],
+                    "assumptions_and_clarifications": [],
+                },
+            },
+        )
+        list_response = client.get("/api/v1/admin/assessment-categories")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+    assert category_response.status_code == 201
+    assert criterion_response.status_code == 200
+    assert len(criterion_response.json()["criteria"]) == 1
+    assert list_response.status_code == 200
+    assert list_response.json()[0]["name"] == "Evidence quality"

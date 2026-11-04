@@ -104,6 +104,7 @@ class ReportResponse(BaseModel):
     divergent_case_ids: list[str]
     limitations: list[str]
     generated_at: datetime
+    benchmark: dict | None = None
 
 
 def _require_evaluation_access(user: AuthenticatedUser) -> None:
@@ -500,4 +501,118 @@ def get_report(
     )
     if report is None:
         raise HTTPException(status_code=404, detail="Reliability report not found.")
-    return ReportResponse.model_validate(report, from_attributes=True)
+    response = ReportResponse.model_validate(report, from_attributes=True)
+    try:
+        dataset = load_dataset_by_id(experiment.dataset_id, experiment.dataset_version)
+    except FileNotFoundError:
+        return response
+    cases = dataset.get("cases", [])
+    categories = sorted(
+        {
+            case["category"]
+            for case in cases
+            if isinstance(case, dict) and isinstance(case.get("category"), str)
+        }
+    )
+    category_by_case = {
+        case["case_id"]: case.get("category", "uncategorized")
+        for case in cases
+        if isinstance(case, dict) and isinstance(case.get("case_id"), str)
+    }
+    comparisons = db.scalars(
+        select(ReliabilityComparisonDB).where(
+            ReliabilityComparisonDB.experiment_id == experiment.id
+        )
+    ).all()
+    category_breakdown: dict[str, dict[str, int]] = {}
+    for comparison in comparisons:
+        category = category_by_case.get(comparison.case_id, "uncategorized")
+        summary = category_breakdown.setdefault(
+            category,
+            {"cases": 0, "complete": 0, "divergent": 0},
+        )
+        summary["cases"] += 1
+        if comparison.status == "COMPLETE":
+            summary["complete"] += 1
+        if comparison.differences:
+            summary["divergent"] += 1
+    expected_by_case = {
+        case["case_id"]: case.get("labels", {}).get("expected_result")
+        for case in cases
+        if isinstance(case, dict) and isinstance(case.get("case_id"), str)
+    }
+    attempts = db.scalars(
+        select(ReliabilityAttemptDB).where(
+            ReliabilityAttemptDB.experiment_id == experiment.id
+        )
+    ).all()
+    successful_attempts = [
+        attempt
+        for attempt in attempts
+        if attempt.status == "SUCCEEDED"
+        and attempt.schema_valid
+        and isinstance(attempt.normalized_output, dict)
+    ]
+    correctness_numerator = sum(
+        attempt.normalized_output.get("result")
+        == expected_by_case.get(attempt.case_id)
+        for attempt in successful_attempts
+    )
+    correctness_denominator = len(attempts)
+    robustness_attempts = [
+        attempt
+        for attempt in successful_attempts
+        if not next(
+            (
+                case.get("assessment_sufficient", True)
+                for case in cases
+                if isinstance(case, dict)
+                and case.get("case_id") == attempt.case_id
+            ),
+            True,
+        )
+    ]
+    robustness_numerator = sum(
+        attempt.normalized_output.get("result") == "NEEDS_REVIEW"
+        for attempt in robustness_attempts
+    )
+    return response.model_copy(
+        update={
+            "benchmark": {
+                "dataset_id": dataset.get("dataset_id"),
+                "dataset_version": dataset.get("evaluation_record", {}).get(
+                    "dataset_version"
+                ),
+                "label_status": dataset.get("label_status"),
+                "human_review_status": dataset.get("human_review", {}).get("status"),
+                "threshold_approval_status": dataset.get(
+                    "threshold_approval", {}
+                ).get("status"),
+                "case_count": len(cases),
+                "categories": categories,
+                "category_breakdown": category_breakdown,
+                "metrics": {
+                    "correctness": {
+                        "value": None,
+                        "numerator": correctness_numerator,
+                        "denominator": correctness_denominator,
+                        "status": "NOT_EVALUABLE",
+                        "reason": "Provisional labels require human approval before correctness is evaluated.",
+                    },
+                    "robustness_abstention": {
+                        "value": None,
+                        "numerator": robustness_numerator,
+                        "denominator": len(robustness_attempts),
+                        "status": "NOT_EVALUABLE",
+                        "reason": "Robustness cases remain provisional until dual adjudication is complete.",
+                    },
+                },
+                "baseline_dataset_id": dataset.get("benchmark_governance", {}).get(
+                    "baseline_dataset_id"
+                ),
+                "minimum_sample_policy": dataset.get(
+                    "benchmark_governance", {}
+                ).get("minimum_sample_policy"),
+            }
+        }
+    )

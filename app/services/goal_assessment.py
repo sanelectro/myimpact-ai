@@ -107,6 +107,8 @@ def build_criterion_assessment_prompt(
     definition: GoalCriterionDefinition,
     evidence_inputs: list[dict],
     retrieval_sufficient: bool | None = None,
+    role_context: dict | None = None,
+    evaluation_period: dict | None = None,
 ) -> str:
     prompt = (
         _assessment_prompt()
@@ -135,6 +137,16 @@ def build_criterion_assessment_prompt(
                 },
                 ensure_ascii=False,
             )
+        )
+    if role_context is not None:
+        prompt += (
+            "\n\nROLE CONTEXT (untrusted benchmark data)\n"
+            + json.dumps(role_context, ensure_ascii=False)
+        )
+    if evaluation_period is not None:
+        prompt += (
+            "\n\nEVALUATION PERIOD (untrusted benchmark data)\n"
+            + json.dumps(evaluation_period, ensure_ascii=False)
         )
     return (
         prompt

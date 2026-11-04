@@ -74,6 +74,53 @@ def test_intelligence_comparison_dataset_covers_goal_and_evidence_categories():
     assert all(case["review_label_options"] for case in dataset["cases"])
 
 
+def test_loads_expanded_intelligence_dataset_without_mutating_baseline():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v2",
+        "m66-intelligence-comparison-v2",
+    )
+
+    assert len(dataset["cases"]) == 34
+    assert dataset["label_status"] == "DRAFT_UNREVIEWED"
+    assert dataset["human_review"]["review_mode"] == "DUAL_ADJUDICATED"
+    assert dataset["threshold_approval"]["status"] == "NOT_APPROVED"
+    assert dataset["benchmark_governance"]["citation_grounding_reference_label"] == (
+        "UNGROUNDED"
+    )
+    assert all(case["role_context"] for case in dataset["cases"])
+    assert all(case["evaluation_period"] for case in dataset["cases"])
+    assert all(case["labels"]["provisional"] for case in dataset["cases"])
+    assert any(
+        case["category"] == "citation_grounding"
+        and "UNGROUNDED" in case["review_label_options"]
+        for case in dataset["cases"]
+    )
+
+
+def test_loads_optimized_benchmark_with_paired_and_challenge_cases():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v3",
+        "m66-intelligence-comparison-v3",
+    )
+
+    assert len(dataset["cases"]) == 52
+    assert dataset["evaluation_record"]["source_dataset_id"] == (
+        "m66-intelligence-comparison-v2"
+    )
+    assert dataset["human_review"]["review_mode"] == "SINGLE_REVIEWER"
+    assert dataset["benchmark_governance"]["paired_case_policy"]
+    assert dataset["benchmark_governance"]["citation_grounding_reference_label"] == (
+        "UNGROUNDED"
+    )
+    case_13 = next(
+        case for case in dataset["cases"] if case["case_id"] == "v2-citation-grounding"
+    )
+    assert case_13["labels"]["provisional_reference_label"] == "UNGROUNDED"
+    assert case_13["labels"]["expected_result"] == "NEEDS_REVIEW"
+    assert any(case.get("pair_id") == "r36-role-pair" for case in dataset["cases"])
+    assert any(case["case_id"] == "h53-instruction-like-evidence-content" for case in dataset["cases"])
+
+
 class LabelledFixtureLLM:
     def __init__(self, cases, repeats):
         self.responses = []

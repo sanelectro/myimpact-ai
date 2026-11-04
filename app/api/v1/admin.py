@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -8,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import AuthenticatedUser, get_current_user
+from app.db.models.assessment_category import AssessmentCategoryDB
 from app.db.models.organization import OrganizationDB
 from app.db.models.user import UserDB
 from app.db.models.user_invitation import UserInvitationDB
@@ -47,16 +49,52 @@ class AdminCompanyUpdateRequest(BaseModel):
         return normalized
 
 
-@router.get("/users", response_model=list[AdminUserResponse])
-def get_all_users(
-    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-) -> list[AdminUserResponse]:
+class AssessmentCategoryCriterionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=300)
+    definition: dict
+
+
+class AssessmentCategoryCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2000)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Category name must not be blank.")
+        return normalized
+
+
+class AssessmentCategoryResponse(BaseModel):
+    id: str
+    name: str
+    description: str | None
+    criteria: list[dict]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+def _require_platform_admin(current_user: AuthenticatedUser) -> None:
     if not current_user.is_platform_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Platform administrator access is required.",
         )
+
+
+@router.get("/users", response_model=list[AdminUserResponse])
+def get_all_users(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[AdminUserResponse]:
+    _require_platform_admin(current_user)
 
     invitation_pending = exists(
         select(1).where(
@@ -89,11 +127,7 @@ def get_all_companies(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[AdminCompanyResponse]:
-    if not current_user.is_platform_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Platform administrator access is required.",
-        )
+    _require_platform_admin(current_user)
 
     companies = db.execute(
         select(OrganizationDB, func.count(UserDB.id).label("user_count"))
@@ -122,11 +156,7 @@ def update_company(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminCompanyResponse:
-    if not current_user.is_platform_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Platform administrator access is required.",
-        )
+    _require_platform_admin(current_user)
 
     company = db.get(OrganizationDB, company_id)
     if company is None:
@@ -168,3 +198,98 @@ def update_company(
         user_count=user_count or 0,
         created_at=company.created_at,
     )
+
+
+@router.get(
+    "/assessment-categories",
+    response_model=list[AssessmentCategoryResponse],
+)
+def list_assessment_categories(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[AssessmentCategoryResponse]:
+    _require_platform_admin(current_user)
+    categories = db.scalars(
+        select(AssessmentCategoryDB).order_by(
+            AssessmentCategoryDB.name, AssessmentCategoryDB.id
+        )
+    ).all()
+    return [
+        AssessmentCategoryResponse.model_validate(category, from_attributes=True)
+        for category in categories
+    ]
+
+
+@router.post(
+    "/assessment-categories",
+    response_model=AssessmentCategoryResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_assessment_category(
+    request: AssessmentCategoryCreateRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> AssessmentCategoryResponse:
+    _require_platform_admin(current_user)
+    now = datetime.now(UTC)
+    category = AssessmentCategoryDB(
+        id=str(uuid4()),
+        name=request.name,
+        normalized_name=request.name.casefold(),
+        description=request.description,
+        criteria=[],
+        created_by_user_id=current_user.user_id,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(category)
+    try:
+        db.commit()
+    except IntegrityError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An assessment category with this name already exists.",
+        ) from error
+    db.refresh(category)
+    return AssessmentCategoryResponse.model_validate(category, from_attributes=True)
+
+
+@router.post(
+    "/assessment-categories/{category_id}/criteria",
+    response_model=AssessmentCategoryResponse,
+)
+def add_assessment_category_criterion(
+    category_id: str,
+    request: AssessmentCategoryCriterionRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> AssessmentCategoryResponse:
+    _require_platform_admin(current_user)
+    category = db.get(AssessmentCategoryDB, category_id)
+    if category is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assessment category not found.",
+        )
+    from app.models.goal_criteria import GoalCriterionDefinition
+
+    try:
+        definition = GoalCriterionDefinition.model_validate(request.definition)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Criterion definition is invalid.",
+        ) from error
+    criterion = {
+        "id": str(uuid4()),
+        "title": request.title,
+        "definition": definition.model_dump(mode="json"),
+        "created_at": datetime.now(UTC).isoformat(),
+        "created_by_user_id": current_user.user_id,
+    }
+    category.criteria = [*category.criteria, criterion]
+    category.updated_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(category)
+    return AssessmentCategoryResponse.model_validate(category, from_attributes=True)

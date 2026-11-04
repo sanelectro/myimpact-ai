@@ -1,4 +1,5 @@
 from app.db.models.document import DocumentDB
+from app.db.models.assessment_category import AssessmentCategoryDB
 from app.db.models.document_chunk import DocumentChunkDB
 from app.db.models.document_chunk_embedding import DocumentChunkEmbeddingDB
 from app.db.models.evidence import EvidenceDB
@@ -57,6 +58,7 @@ from app.db.models.source_connection import SourceConnectionDB
 from app.db.models.user import UserDB
 
 __all__ = [
+    "AssessmentCategoryDB",
     "DocumentChunkDB",
     "DocumentChunkEmbeddingDB",
     "DocumentDB",
