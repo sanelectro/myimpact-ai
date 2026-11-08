@@ -59,6 +59,25 @@ compares it with the stored deferrals under the goal row lock and returns HTTP
 409 if they changed. Clients that omit the optional expectation retain their
 existing behavior, including preservation when deferrals are omitted.
 
+## Mixed-version deployment and rollback
+
+The current AI service preserves existing deferrals when an older client omits
+them from a definition update. This compatibility requires the current AI
+writer: the pre-feature `origin/dev` AI service replaces structured fields and
+can erase deferrals. Its strict response schema also rejects stored
+`deferred_requirements`, so making old writers read-only does not make that
+server a safe reader. New clients sending goal levels or parent IDs are not
+compatible with the old server's strict request schema.
+
+Do not run the old and new AI services concurrently against shared goal data,
+or roll back to the old AI service after the new service has written it. A
+coordinated cutover must drain old AI instances before the new AI writer is
+enabled, and deploy the new UI only after the new AI service is available.
+If rollback is necessary, retain a compatible AI reader/writer or stop goal
+traffic until one is available; retain the additive database schema and
+relationship history. A safe rollback release and the complete deployment
+matrix still require validation.
+
 ## Separate measures
 
 `GET /{id}/measures` reports direct-child lifecycle status counts, including
