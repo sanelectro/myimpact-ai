@@ -187,6 +187,69 @@ class GoalService(BaseService):
     def get_goal_by_id(self, goal_id: str) -> GoalDB | None:
         return self.repository.get_by_id(goal_id)
 
+    def is_evidence_submission_eligible(self, goal: GoalDB) -> bool:
+        return self.get_evidence_submission_eligibility(goal)["eligible"]
+
+    def get_evidence_submission_eligibility(self, goal: GoalDB) -> dict:
+        latest_version = self.repository.get_latest_version(goal.id)
+        legacy_compatibility = self._legacy_validation_exempt(latest_version)
+        has_ready_validation = bool(
+            latest_version
+            and self.repository.has_ready_validation_for_version(
+                goal.id, latest_version.id
+            )
+        )
+        is_approved = bool(
+            latest_version
+            and self.repository.has_approval_for_version(latest_version.id)
+        )
+        eligible = legacy_compatibility or bool(
+            goal.status == GoalStatus.ACTIVE
+            and latest_version is not None
+            and has_ready_validation
+            and (latest_version.origin == "LEGACY" or is_approved)
+        )
+
+        if legacy_compatibility:
+            reason = (
+                "Evidence submission is allowed by legacy compatibility. This "
+                "legacy goal version is exempt from the current lifecycle, "
+                "validation, and approval requirements."
+            )
+        elif latest_version is None:
+            reason = "This goal has no version available for evidence submission."
+        elif goal.status != GoalStatus.ACTIVE:
+            reason = (
+                f"This goal is {goal.status.value}; only active goals can accept "
+                "evidence."
+            )
+        elif not has_ready_validation:
+            reason = (
+                f"Goal version {latest_version.version} needs a persisted READY "
+                "validation before it can accept evidence."
+            )
+        elif latest_version.origin != "LEGACY" and not is_approved:
+            reason = (
+                f"Goal version {latest_version.version} must be approved before "
+                "it can accept evidence."
+            )
+        else:
+            reason = (
+                f"Active goal version {latest_version.version} has a persisted "
+                "READY validation and approval; evidence can be submitted."
+            )
+
+        return {
+            "eligible": eligible,
+            "reason": reason,
+            "goal_status": goal.status.value,
+            "latest_version": latest_version.version if latest_version else None,
+            "latest_version_origin": latest_version.origin if latest_version else None,
+            "legacy_compatibility": legacy_compatibility,
+            "ready_validation_exists": has_ready_validation,
+            "approved_for_latest_version": is_approved,
+        }
+
     def get_goals_by_user_id(self, user_id: str) -> list[GoalDB]:
         return self.repository.get_by_user_id(user_id)
     def update_goal(

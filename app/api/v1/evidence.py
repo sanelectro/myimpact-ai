@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Annotated
 from urllib.parse import urlsplit, urlunsplit
@@ -9,18 +10,18 @@ from sqlalchemy.orm import Session
 
 from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.session import get_db
-from app.models.api_v1_impact import GoalEvidenceResponse
-from app.models.evidence import EvidenceCreate, EvidenceSourceType
-from app.models.evidence_mapping import EvidenceRelevance
-from app.models.evidence import EvidenceStatus
-from app.models.evidence_approval import EvidenceApprovalStatus
 from app.exceptions import EvidenceMappingAlreadyExistsError
+from app.models.api_v1_impact import GoalEvidenceResponse
+from app.models.evidence import EvidenceCreate, EvidenceSourceType, EvidenceStatus
+from app.models.evidence_approval import EvidenceApprovalStatus
+from app.models.evidence_mapping import EvidenceRelevance
 from app.services.evidence import EvidenceService
 from app.services.evidence_mapping import EvidenceMappingService
 from app.services.goal import GoalService
 from app.services.milestone import MilestoneService
 
 router = APIRouter(prefix="/goals", tags=["goal-evidence"])
+logger = logging.getLogger(__name__)
 
 
 class GoalEvidenceCreateRequest(BaseModel):
@@ -34,6 +35,17 @@ class GoalEvidenceCreateRequest(BaseModel):
     source_updated_at: datetime | None = None
     relevance: EvidenceRelevance
     milestone_id: str | None = None
+
+
+class GoalEvidenceEligibilityResponse(BaseModel):
+    eligible: bool
+    reason: str
+    goal_status: str
+    latest_version: int | None = None
+    latest_version_origin: str | None = None
+    legacy_compatibility: bool
+    ready_validation_exists: bool
+    approved_for_latest_version: bool
 
 
 def get_goal_service(db: Annotated[Session, Depends(get_db)]) -> GoalService:
@@ -81,6 +93,21 @@ def _normalized_url(url: str | None) -> str | None:
     )
 
 
+@router.get(
+    "/{goal_id}/evidence-eligibility",
+    response_model=GoalEvidenceEligibilityResponse,
+)
+def get_goal_evidence_eligibility(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
+) -> GoalEvidenceEligibilityResponse:
+    goal = _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    return GoalEvidenceEligibilityResponse(
+        **goal_service.get_evidence_submission_eligibility(goal)
+    )
+
+
 @router.post(
     "/{goal_id}/evidence",
     response_model=GoalEvidenceResponse,
@@ -95,7 +122,19 @@ def create_goal_evidence(
     mapping_service: Annotated[EvidenceMappingService, Depends(get_evidence_mapping_service)],
     milestone_service: Annotated[MilestoneService, Depends(get_milestone_service)],
 ) -> GoalEvidenceResponse:
-    _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    goal = _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    if not goal_service.is_evidence_submission_eligible(goal):
+        logger.info(
+            "goal_evidence_submission_rejected",
+            extra={"goal_id": goal_id, "rejection_reason": "goal_not_eligible"},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Evidence submission requires an active goal with a READY "
+                "validation run and approval for its latest version."
+            ),
+        )
     if request.milestone_id is not None:
         milestone = milestone_service.get_milestone_by_id_and_goal(
             request.milestone_id,
