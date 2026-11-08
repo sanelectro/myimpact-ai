@@ -47,3 +47,15 @@ only; inherited evidence does not create parent mappings or approvals. These
 endpoints do not aggregate child outcomes or impact. Deploy the hierarchy and
 evidence contribution database migrations before enabling the corresponding
 API changes.
+
+## Separate measures
+
+`GET /{id}/measures` reports direct-child lifecycle status counts, including
+archived children, without an average or weighted roll-up. It includes the
+existing, direct-only M6.6 criterion assessment and its criterion evidence
+coverage. Criteria have not been classified as execution or outcome, so that
+assessment is not an outcome measure. `outcome_achievement` and
+`demonstrated_impact` are currently null: neither child completion nor an
+assessment score establishes them. Existing per-evidence advisory impact
+assessments remain available from `GET /{id}/impact`; they are not aggregated
+or inferred from descendants.
