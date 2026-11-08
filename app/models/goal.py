@@ -12,6 +12,13 @@ class GoalScope(str, Enum):
     ORGANIZATION = "organization"
 
 
+class GoalLevel(str, Enum):
+    ANNUAL = "ANNUAL"
+    QUARTERLY = "QUARTERLY"
+    MONTHLY = "MONTHLY"
+    SPRINT = "SPRINT"
+
+
 class GoalStatus(str, Enum):
     DRAFT = "draft"
     APPROVED = "approved"
@@ -96,6 +103,7 @@ class Goal(BaseModel):
     title: str = Field(min_length=1)
     description: str | None = None
     scope: GoalScope = GoalScope.PERSONAL
+    goal_level: GoalLevel | None = None
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus = GoalStatus.DRAFT
@@ -113,6 +121,7 @@ class GoalCreate(BaseModel):
     title: str = Field(min_length=1)
     description: str | None = None
     scope: GoalScope = GoalScope.PERSONAL
+    goal_level: GoalLevel | None = None
     start_date: date | None = None
     end_date: date | None = None
     status: GoalStatus = GoalStatus.DRAFT

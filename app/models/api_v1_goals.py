@@ -3,7 +3,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.goal import GoalScope, GoalStatus, GoalStructuredFields, GoalSubStatus
+from app.models.goal import GoalLevel, GoalScope, GoalStatus, GoalStructuredFields, GoalSubStatus
 from app.models.goal_validation import GoalValidationFinding, GoalValidationStatus
 
 
@@ -13,6 +13,7 @@ class GoalCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     description: str | None = Field(default=None, max_length=5000)
     scope: GoalScope = GoalScope.PERSONAL
+    goal_level: GoalLevel | None = None
     start_date: date | None = None
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
@@ -32,6 +33,7 @@ class GoalUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
     description: str | None = Field(default=None, max_length=5000)
     scope: GoalScope | None = None
+    goal_level: GoalLevel | None = None
     start_date: date | None = None
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
@@ -80,6 +82,9 @@ class GoalResponse(BaseModel):
     title: str
     description: str | None = None
     scope: GoalScope = GoalScope.PERSONAL
+    goal_level: GoalLevel | None = None
+    parent_goal_id: str | None = None
+    relationship_revision: int = 0
     organization_id: str | None = None
     organization_name: str | None = None
     start_date: date | None = None

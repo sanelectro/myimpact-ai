@@ -71,6 +71,7 @@ def create_goal(
                 title=request.title,
                 description=request.description,
                 scope=request.scope,
+                goal_level=request.goal_level,
                 start_date=request.start_date,
                 end_date=request.end_date,
                 status=GoalStatus.DRAFT,

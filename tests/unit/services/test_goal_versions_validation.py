@@ -89,6 +89,37 @@ def _create_goal(session):
     )
 
 
+@pytest.mark.parametrize("level", ["ANNUAL", "QUARTERLY", "MONTHLY", "SPRINT", None])
+def test_goal_level_is_optional_and_versioned(level):
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        repository = GoalRepository(session)
+        assert goal.goal_level is None
+        assert goal.versions[0].content["goal_level"] is None
+
+        updated = repository.update(goal.id, {"goal_level": level}, changed_by_user_id="owner-1")
+        session.expire_all()
+        assert updated.goal_level == level
+        versions = session.query(app.db.models.GoalVersionDB).filter_by(goal_id=goal.id).order_by(
+            app.db.models.GoalVersionDB.version
+        ).all()
+        assert len(versions) == (1 if level is None else 2)
+        assert versions[-1].content["goal_level"] == level
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_goal_level_request_rejects_unknown_value():
+    from pydantic import ValidationError
+
+    from app.models.api_v1_goals import GoalCreateRequest
+
+    with pytest.raises(ValidationError):
+        GoalCreateRequest(title="Goal", goal_level="WEEKLY")
+
+
 def test_material_goal_edit_appends_immutable_version_and_status_edit_does_not():
     engine, session = _session()
     try:

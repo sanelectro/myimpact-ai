@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -15,6 +15,9 @@ class GoalDB(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     scope: Mapped[GoalScope] = mapped_column(Enum(GoalScope, name="goal_scope"), nullable=False, default=GoalScope.PERSONAL)
+    goal_level: Mapped[str | None] = mapped_column(String(16))
+    parent_goal_id: Mapped[str | None] = mapped_column(String(64))
+    relationship_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     organization_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("organizations.id")
     )
