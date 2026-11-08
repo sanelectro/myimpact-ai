@@ -19,6 +19,7 @@ from app.models.goal import (
 )
 from app.repositories.goal import GoalRepository
 from app.services.base import BaseService
+from app.services.goal_hierarchy import GoalHierarchyService
 
 ALLOWED_GOAL_TRANSITIONS = {
     GoalStatus.DRAFT: {GoalStatus.APPROVED, GoalStatus.ARCHIVED},
@@ -42,7 +43,7 @@ class GoalService(BaseService):
         super().__init__(session)
         self.repository = GoalRepository(session)
 
-    def create_goal(self, goal_data: GoalCreate) -> GoalDB:
+    def create_goal(self, goal_data: GoalCreate, *, parent_goal_id: str | None = None) -> GoalDB:
         if any(item.related_child_goal_id for item in goal_data.structured_fields.deferred_requirements):
             raise ValueError("A related child can only be selected after the goal is created")
         organization_id = None
@@ -71,6 +72,10 @@ class GoalService(BaseService):
             created_by_user_id=goal_data.user_id,
             **({"organization_id": organization_id} if organization_id else {}),
         )
+        if parent_goal_id is not None:
+            GoalHierarchyService(self.session).stage_initial_parent(
+                goal.id, goal_data.user_id, parent_goal_id
+            )
         self.commit()
         return goal
 

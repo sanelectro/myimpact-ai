@@ -44,6 +44,23 @@ class GoalHierarchyService:
         expected_revision: int,
         reason: str | None,
     ) -> GoalRelationshipSnapshot:
+        return self._set_parent(goal_id, user_id, parent_goal_id, expected_revision, reason, commit=True)
+
+    def stage_initial_parent(
+        self, goal_id: str, user_id: str, parent_goal_id: str
+    ) -> GoalRelationshipSnapshot:
+        return self._set_parent(goal_id, user_id, parent_goal_id, 0, None, commit=False)
+
+    def _set_parent(
+        self,
+        goal_id: str,
+        user_id: str,
+        parent_goal_id: str | None,
+        expected_revision: int,
+        reason: str | None,
+        *,
+        commit: bool,
+    ) -> GoalRelationshipSnapshot:
         try:
             self.session.execute(text("SELECT pg_advisory_xact_lock(1296650324, 1)"))
             goal = self.require_goal(goal_id, user_id)
@@ -51,7 +68,8 @@ class GoalHierarchyService:
                 raise GoalHierarchyConflict("Relationship revision is stale; reload the goal")
             if parent_goal_id == goal.parent_goal_id:
                 snapshot = GoalRelationshipSnapshot(goal.id, goal.parent_goal_id, goal.relationship_revision)
-                self.session.commit()
+                if commit:
+                    self.session.commit()
                 return snapshot
             if parent_goal_id is not None:
                 self.require_goal(parent_goal_id, user_id)
@@ -80,11 +98,12 @@ class GoalHierarchyService:
             self.session.flush()
             self.session.refresh(goal, ["parent_goal_id", "relationship_revision"])
             snapshot = GoalRelationshipSnapshot(goal.id, goal.parent_goal_id, goal.relationship_revision)
-            self.session.commit()
+            if commit:
+                self.session.commit()
             return snapshot
         except DBAPIError as exc:
+            self.session.rollback()
             if getattr(exc.orig, "sqlstate", None) in {"23503", "40001", "40P01"}:
-                self.session.rollback()
                 raise GoalHierarchyConflict(
                     "The hierarchy changed concurrently; reload and retry"
                 ) from exc

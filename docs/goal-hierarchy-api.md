@@ -5,6 +5,11 @@ All operations require the authenticated goal owner and the existing `user_id`
 query parameter. Parent and child must have the same owner. Goal Level does not
 determine the relationship and skipped levels are allowed.
 
+- `POST /api/v1/goals` optionally accepts `parent_goal_id`. Goal creation,
+  its initial definition version, and the first relationship event commit
+  together. An absent, null, or omitted parent creates a standalone goal;
+  a missing or unowned parent returns HTTP 404 without creating a goal.
+  The parent is a relationship, not part of the definition version.
 - `GET /{id}/hierarchy` returns the goal and its ancestors, nearest first.
   `limit` is between 1 and 100; `next_ancestor_id` identifies an ancestor
   omitted by the limit. The hierarchy read and all hierarchy writes use the

@@ -16,6 +16,7 @@ from app.models.api_v1_goals import (
 )
 from app.models.goal import GoalCreate, GoalStatus
 from app.services.goal import GoalDeferralConflict, GoalDeletionConflict, GoalService
+from app.services.goal_hierarchy import GoalHierarchyConflict, GoalHierarchyNotFound
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
 
@@ -68,21 +69,27 @@ def create_goal(
     service: Annotated[GoalService, Depends(get_goal_service)],
 ) -> GoalResponse:
     try:
-        goal = service.create_goal(
-            GoalCreate(
-                user_id=user_id,
-                title=request.title,
-                description=request.description,
-                scope=request.scope,
-                goal_level=request.goal_level,
-                start_date=request.start_date,
-                end_date=request.end_date,
-                status=GoalStatus.DRAFT,
-                source=request.source,
-                source_document_id=request.source_document_id,
-                structured_fields=request.structured_fields,
-            )
+        goal_data = GoalCreate(
+            user_id=user_id,
+            title=request.title,
+            description=request.description,
+            scope=request.scope,
+            goal_level=request.goal_level,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            status=GoalStatus.DRAFT,
+            source=request.source,
+            source_document_id=request.source_document_id,
+            structured_fields=request.structured_fields,
         )
+        goal = (
+            service.create_goal(goal_data, parent_goal_id=request.parent_goal_id)
+            if request.parent_goal_id is not None else service.create_goal(goal_data)
+        )
+    except GoalHierarchyNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except GoalHierarchyConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

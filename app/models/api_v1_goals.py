@@ -14,6 +14,7 @@ class GoalCreateRequest(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     scope: GoalScope = GoalScope.PERSONAL
     goal_level: GoalLevel | None = None
+    parent_goal_id: str | None = Field(default=None, min_length=1, max_length=64)
     start_date: date | None = None
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)

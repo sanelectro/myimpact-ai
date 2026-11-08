@@ -2,6 +2,7 @@ import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from threading import Event
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.goal import GoalCreate
 from app.services.goal import GoalService
+from app.services.goal_hierarchy import GoalHierarchyService
 
 
 @pytest.fixture
@@ -82,6 +84,91 @@ def hierarchy_stack():
         engine.dispose()
         if team_table is not None:
             Base.metadata.remove(team_table)
+
+
+@pytest.mark.integration
+def test_create_with_parent_is_atomic_and_audited(hierarchy_stack):
+    client, engine, owner, other, goals = hierarchy_stack
+    parent, _, _, _, _, private = goals
+    params = {"user_id": owner}
+    created = client.post(
+        "/api/v1/goals", params=params,
+        json={"title": "Created with parent", "goal_level": "SPRINT", "parent_goal_id": parent},
+    )
+    assert created.status_code == 201, created.text
+    goal = created.json()
+    assert goal["parent_goal_id"] == parent
+    assert goal["relationship_revision"] == 1
+    assert goal["goal_level"] == "SPRINT"
+    history = client.get(f"/api/v1/goals/{goal['id']}/relationship-history", params=params)
+    assert history.status_code == 200
+    assert len(history.json()) == 1
+    assert history.json()[0]["old_parent_goal_id"] is None
+    assert history.json()[0]["new_parent_goal_id"] == parent
+    assert history.json()[0]["actor_user_id"] == owner
+    assert history.json()[0]["relationship_revision"] == 1
+    with Session(engine) as db:
+        versions = db.scalars(select(GoalVersionDB).where(GoalVersionDB.goal_id == goal["id"])).all()
+        assert len(versions) == 1
+        assert versions[0].origin == "USER"
+        assert "parent_goal_id" not in versions[0].content
+
+    for parent_id in (private, "missing-parent"):
+        title = f"Must roll back {parent_id}"
+        failed = client.post(
+            "/api/v1/goals", params=params,
+            json={"title": title, "parent_goal_id": parent_id},
+        )
+        assert failed.status_code == 404, failed.text
+        with Session(engine) as db:
+            assert db.scalars(select(GoalDB).where(GoalDB.user_id == owner, GoalDB.title == title)).first() is None
+
+    standalone = client.post(
+        "/api/v1/goals", params=params, json={"title": "Standalone", "parent_goal_id": None},
+    )
+    assert standalone.status_code == 201, standalone.text
+    assert standalone.json()["parent_goal_id"] is None
+    assert standalone.json()["relationship_revision"] == 0
+    assert client.get(
+        f"/api/v1/goals/{standalone.json()['id']}/relationship-history", params=params,
+    ).json() == []
+    assert client.post(
+        "/api/v1/goals", params=params, json={"title": "Invalid", "parent_goal_id": ""},
+    ).status_code == 422
+
+
+@pytest.mark.integration
+def test_parent_deleted_during_create_rolls_back_goal(hierarchy_stack, monkeypatch):
+    client, engine, owner, _, goals = hierarchy_stack
+    parent = goals[3]
+    entered, resume = Event(), Event()
+    original = GoalHierarchyService.stage_initial_parent
+
+    def wait_before_link(service, goal_id, user_id, parent_goal_id):
+        entered.set()
+        if not resume.wait(10):
+            raise RuntimeError("Timed out waiting for concurrent parent deletion")
+        return original(service, goal_id, user_id, parent_goal_id)
+
+    monkeypatch.setattr(GoalHierarchyService, "stage_initial_parent", wait_before_link)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(
+            client.post, "/api/v1/goals",
+            params={"user_id": owner}, json={"title": "Concurrent child", "parent_goal_id": parent},
+        )
+        try:
+            assert entered.wait(10)
+            with Session(engine) as db:
+                db.execute(text("DELETE FROM goals WHERE id = :id"), {"id": parent})
+                db.commit()
+        finally:
+            resume.set()
+        response = future.result(timeout=15)
+    assert response.status_code == 404, response.text
+    with Session(engine) as db:
+        assert db.scalars(select(GoalDB).where(
+            GoalDB.user_id == owner, GoalDB.title == "Concurrent child"
+        )).first() is None
 
 
 @pytest.mark.integration
