@@ -26,6 +26,11 @@ class EvidenceMappingDB(Base):
     relevance: Mapped[EvidenceRelevance] = mapped_column(Enum(EvidenceRelevance, name="evidence_relevance"), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    mapping_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="PRIMARY", server_default="PRIMARY")
+    contribution_description: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

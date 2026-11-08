@@ -13,6 +13,7 @@ from app.api.v1.goal_criteria import router as goal_criteria_router
 from app.api.v1.goal_import import router as goal_import_router
 from app.api.v1.goals import router as goals_router
 from app.api.v1.goal_hierarchy import router as goal_hierarchy_router
+from app.api.v1.goal_evidence_context import router as goal_evidence_context_router
 from app.api.v1.impact import router as impact_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.role_catalog import router as role_catalog_router
@@ -44,6 +45,7 @@ router.include_router(knowledge_router)
 router.include_router(expectations_router)
 router.include_router(goals_router)
 router.include_router(goal_hierarchy_router)
+router.include_router(goal_evidence_context_router)
 router.include_router(goal_assessment_router)
 router.include_router(goal_criteria_router)
 router.include_router(evidence_router)

@@ -7,7 +7,7 @@ from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.models.evidence_approval import EvidenceApprovalStatus
 from app.exceptions import EvidenceMappingAlreadyExistsError
-from app.models.evidence_mapping import EvidenceRelevance
+from app.models.evidence_mapping import EvidenceMappingKind, EvidenceRelevance
 from app.repositories.evidence_mapping import EvidenceMappingRepository
 from app.services.evidence_mapping import EvidenceMappingService
 
@@ -46,6 +46,9 @@ def test_create_mapping():
         relevance=EvidenceRelevance.HIGH,
         confidence=0.95,
         reason="Directly supports the goal.",
+        mapping_kind=EvidenceMappingKind.PRIMARY,
+        contribution_description=None,
+        created_by_user_id=None,
     )
     session.commit.assert_called_once()
 

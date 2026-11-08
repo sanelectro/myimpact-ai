@@ -1,12 +1,13 @@
 from uuid import uuid4
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.exceptions import EvidenceMappingAlreadyExistsError
 from app.models.evidence_approval import EvidenceApprovalStatus
-from app.models.evidence_mapping import EvidenceRelevance
+from app.models.evidence_mapping import EvidenceMappingKind, EvidenceRelevance
 from app.repositories.evidence_mapping import EvidenceMappingRepository
 from app.services.base import BaseService
 
@@ -25,6 +26,9 @@ class EvidenceMappingService(BaseService):
         confidence: float,
         reason: str | None = None,
         milestone_id: str | None = None,
+        mapping_kind: EvidenceMappingKind = EvidenceMappingKind.PRIMARY,
+        contribution_description: str | None = None,
+        created_by_user_id: str | None = None,
     ) -> EvidenceMappingDB:
         existing = self.repository.get_by_evidence_and_goal(
             evidence_id,
@@ -36,24 +40,35 @@ class EvidenceMappingService(BaseService):
                 "Evidence is already mapped to this goal."
             )
 
-        mapping = self.repository.create(
-            mapping_id=str(uuid4()),
-            evidence_id=evidence_id,
-            goal_id=goal_id,
-            milestone_id=milestone_id,
-            relevance=relevance,
-            confidence=confidence,
-            reason=reason,
-        )
-        self.session.add(
-            EvidenceApprovalDB(
-                id=mapping.id,
-                mapping_id=mapping.id,
-                status=EvidenceApprovalStatus.PENDING,
-                created_at=mapping.created_at,
+        try:
+            mapping = self.repository.create(
+                mapping_id=str(uuid4()),
+                evidence_id=evidence_id,
+                goal_id=goal_id,
+                milestone_id=milestone_id,
+                relevance=relevance,
+                confidence=confidence,
+                reason=reason,
+                mapping_kind=mapping_kind,
+                contribution_description=contribution_description,
+                created_by_user_id=created_by_user_id,
             )
-        )
-        self.commit()
+            self.session.add(
+                EvidenceApprovalDB(
+                    id=mapping.id,
+                    mapping_id=mapping.id,
+                    status=EvidenceApprovalStatus.PENDING,
+                    created_at=mapping.created_at,
+                )
+            )
+            self.commit()
+        except IntegrityError as exc:
+            self.rollback()
+            if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == "uq_evidence_goal_mapping":
+                raise EvidenceMappingAlreadyExistsError(
+                    "Evidence is already mapped to this goal."
+                ) from exc
+            raise
         return mapping
 
     def get_mapping_by_id(

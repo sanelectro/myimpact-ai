@@ -10,6 +10,11 @@ class EvidenceRelevance(str, Enum):
     HIGH = "high"
 
 
+class EvidenceMappingKind(str, Enum):
+    PRIMARY = "PRIMARY"
+    CONTRIBUTION = "CONTRIBUTION"
+
+
 class EvidenceMapping(BaseModel):
     id: str
     evidence_id: str

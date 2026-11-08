@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from app.db.models.evidence_mapping import EvidenceMappingDB
-from app.models.evidence_mapping import EvidenceRelevance
+from app.models.evidence_mapping import EvidenceMappingKind, EvidenceRelevance
 from app.repositories.base import BaseRepository
 
 
@@ -59,6 +59,9 @@ class EvidenceMappingRepository(BaseRepository):
         confidence: float,
         reason: str | None = None,
         milestone_id: str | None = None,
+        mapping_kind: EvidenceMappingKind = EvidenceMappingKind.PRIMARY,
+        contribution_description: str | None = None,
+        created_by_user_id: str | None = None,
     ) -> EvidenceMappingDB:
         now = datetime.now(UTC)
 
@@ -70,6 +73,9 @@ class EvidenceMappingRepository(BaseRepository):
             relevance=relevance,
             reason=reason,
             confidence=confidence,
+            mapping_kind=mapping_kind.value,
+            contribution_description=contribution_description,
+            created_by_user_id=created_by_user_id,
             created_at=now,
             updated_at=now,
         )

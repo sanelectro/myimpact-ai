@@ -25,6 +25,25 @@ referenced parents or goals with relationship history; the v1 goal delete
 endpoint returns HTTP 409 for these restrictions.
 
 Relationship changes do not create a goal-definition version or change goal
-level, ownership, approval, lifecycle, evidence, or deferrals. The API does
-not yet expose inherited evidence or aggregate child outcomes or impact.
-Deploy the hierarchy database migration before enabling these routes.
+level, ownership, approval, lifecycle, evidence, or deferrals.
+
+## Evidence context
+
+- `POST /{id}/evidence-links` links an existing, active, owner-owned evidence
+  record to an eligible goal. It accepts `evidence_id`, `relevance`,
+  `mapping_kind` (`PRIMARY` by default or `CONTRIBUTION`), and an optional
+  `contribution_description` for contribution mappings. The mapping gets
+  a pending approval; duplicate links return HTTP 409.
+- `GET /{id}/evidence-context` is an opt-in view of active evidence linked
+  directly or to descendants. Results are deduplicated by evidence, with each
+  real mapping exposed as an origin including its source goal, path, mapping
+  kind, and approval status. `limit` (1-100) and `offset` paginate evidence;
+  `max_depth` (0-100, default 20) limits descendant traversal. The traversal
+  also visits at most 1,000 goals. `hierarchy_truncated` indicates that either
+  limit omitted goals, so consumers must not treat a truncated view as complete.
+
+The existing direct evidence endpoint and assessment behavior remain direct
+only; inherited evidence does not create parent mappings or approvals. These
+endpoints do not aggregate child outcomes or impact. Deploy the hierarchy and
+evidence contribution database migrations before enabling the corresponding
+API changes.
