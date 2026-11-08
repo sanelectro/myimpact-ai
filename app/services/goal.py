@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
@@ -25,6 +26,10 @@ ALLOWED_GOAL_TRANSITIONS = {
     GoalStatus.COMPLETED: {GoalStatus.ACTIVE, GoalStatus.ARCHIVED},
     GoalStatus.ARCHIVED: set(),
 }
+
+
+class GoalDeletionConflict(ValueError):
+    pass
 
 
 class GoalService(BaseService):
@@ -401,6 +406,14 @@ class GoalService(BaseService):
             raise ValueError("Goal not found")
         if goal.status != GoalStatus.ARCHIVED:
             raise ValueError("Only archived goals can be deleted")
-        if not self.repository.delete(goal_id):
-            raise ValueError("Goal not found")
-        self.commit()
+        try:
+            if not self.repository.delete(goal_id):
+                raise ValueError("Goal not found")
+            self.commit()
+        except IntegrityError as exc:
+            self.rollback()
+            if getattr(exc.orig, "sqlstate", None) == "23503":
+                raise GoalDeletionConflict(
+                    "The goal cannot be deleted while referenced by related records"
+                ) from exc
+            raise

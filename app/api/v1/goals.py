@@ -15,7 +15,7 @@ from app.models.api_v1_goals import (
     GoalValidationRunResponse,
 )
 from app.models.goal import GoalCreate, GoalStatus
-from app.services.goal import GoalService
+from app.services.goal import GoalDeletionConflict, GoalService
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
 
@@ -308,4 +308,7 @@ def delete_goal(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only archived goals can be deleted",
         )
-    service.delete_goal(goal_id)
+    try:
+        service.delete_goal(goal_id)
+    except GoalDeletionConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
