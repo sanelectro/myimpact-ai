@@ -15,6 +15,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
+class AIModelDB(Base):
+    __tablename__ = "mst_ai_models"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_identifier: Mapped[str] = mapped_column(
+        String(200), nullable=False, unique=True
+    )
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class ReliabilityExperimentDB(Base):
     __tablename__ = "reliability_experiments"
 
@@ -25,6 +38,9 @@ class ReliabilityExperimentDB(Base):
     case_selection: Mapped[list] = mapped_column(JSON, nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(200), nullable=False)
     model_identifier: Mapped[str] = mapped_column(String(200), nullable=False)
+    ai_model_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("mst_ai_models.id", ondelete="RESTRICT")
+    )
     model_configuration: Mapped[dict] = mapped_column(JSON, nullable=False)
     retrieval_configuration_version: Mapped[str] = mapped_column(
         String(200), nullable=False
@@ -86,6 +102,9 @@ class ReliabilityAttemptDB(Base):
     dataset_version: Mapped[str] = mapped_column(String(200), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(200), nullable=False)
     model_identifier: Mapped[str] = mapped_column(String(200), nullable=False)
+    ai_model_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("mst_ai_models.id", ondelete="RESTRICT")
+    )
     retrieval_configuration_version: Mapped[str] = mapped_column(
         String(200), nullable=False
     )

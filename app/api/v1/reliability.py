@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+import hashlib
 import logging
 from typing import Annotated
 from uuid import uuid4
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import AuthenticatedUser, get_current_user
 from app.db.models.reliability import (
+    AIModelDB,
     ReliabilityAttemptDB,
     ReliabilityComparisonDB,
     ReliabilityExperimentDB,
@@ -115,6 +117,26 @@ def _require_evaluation_access(user: AuthenticatedUser) -> None:
         )
 
 
+def _get_or_create_ai_model(db: Session, model_identifier: str) -> AIModelDB:
+    model = db.scalar(
+        select(AIModelDB).where(AIModelDB.model_identifier == model_identifier)
+    )
+    if model is not None:
+        return model
+    provider = model_identifier.split("/", 1)[0].split(":", 1)[0]
+    model = AIModelDB(
+        id=f"model-{hashlib.sha256(model_identifier.encode('utf-8')).hexdigest()[:48]}",
+        model_identifier=model_identifier,
+        display_name=model_identifier,
+        provider=provider,
+        is_active=True,
+        created_at=datetime.now(UTC),
+    )
+    db.add(model)
+    db.flush()
+    return model
+
+
 def _config_from_experiment(
     experiment: ReliabilityExperimentDB,
 ) -> ReliabilityExperimentConfig:
@@ -208,6 +230,7 @@ def create_experiment(
     if errors:
         raise HTTPException(status_code=422, detail=list(errors))
     now = datetime.now(UTC)
+    ai_model = _get_or_create_ai_model(db, request.model_identifier)
     experiment = ReliabilityExperimentDB(
         id=str(uuid4()),
         name=request.name.strip(),
@@ -216,6 +239,7 @@ def create_experiment(
         case_selection=list(case_selection),
         prompt_version=request.prompt_version,
         model_identifier=request.model_identifier,
+        ai_model_id=ai_model.id,
         model_configuration=request.model_configuration,
         retrieval_configuration_version=request.retrieval_configuration_version,
         source_snapshot_id=request.source_snapshot_id,
@@ -334,6 +358,7 @@ async def start_experiment(
                 dataset_version=config.dataset_version,
                 prompt_version=config.prompt_version,
                 model_identifier=attempt.model_identifier or config.model_identifier,
+                ai_model_id=experiment.ai_model_id,
                 retrieval_configuration_version=config.retrieval_configuration_version,
                 source_snapshot_id=attempt.source_snapshot_id,
                 input_fingerprint=attempt.input_fingerprint or "",

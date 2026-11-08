@@ -1,5 +1,6 @@
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 from openai import OpenAIError
@@ -119,6 +120,55 @@ def test_loads_optimized_benchmark_with_paired_and_challenge_cases():
     assert case_13["labels"]["expected_result"] == "NEEDS_REVIEW"
     assert any(case.get("pair_id") == "r36-role-pair" for case in dataset["cases"])
     assert any(case["case_id"] == "h53-instruction-like-evidence-content" for case in dataset["cases"])
+
+
+def test_all_52_active_review_cases_have_goal_titles_and_export_matches():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v3", "m66-intelligence-comparison-v3"
+    )
+    exported = json.loads(
+        (Path(__file__).resolve().parents[3] / "evaluation" / "m66_52_case_details.json")
+        .read_text(encoding="utf-8")
+    )
+    assert len(dataset["cases"]) == len(exported["cases"]) == 52
+    assert all(case["goal"]["id"] and case["goal"]["title"].strip() for case in dataset["cases"])
+    assert {case["case_id"]: case["goal"] for case in dataset["cases"]} == {
+        case["case_id"]: case["goal"] for case in exported["cases"]
+    }
+    goals = {case["case_id"]: case["goal"]["title"] for case in dataset["cases"]}
+    assert goals["g18-partial-smart"] == "Improve API performance substantially soon."
+    assert goals["g16-missing-deadline"] == "Reduce checkout API p95 latency from 800 ms to 500 ms."
+    assert goals["b35-insufficient-context"] == "Improve platform quality."
+    assert dataset["label_status"] == "DRAFT_UNREVIEWED"
+    assert dataset["threshold_approval"]["status"] == "NOT_APPROVED"
+
+
+def test_loads_draft_v4_catalogue_without_approving_provisional_labels():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v4",
+        "m66-intelligence-comparison-v4",
+    )
+
+    assert len(dataset["cases"]) == 52
+    assert dataset["label_status"] == "DRAFT_UNREVIEWED"
+    assert dataset["evaluation_record"]["approved_dataset_version"] is None
+    assert dataset["threshold_approval"]["status"] == "NOT_APPROVED"
+    assert dataset["human_review"]["status"] == "PENDING"
+    assert all(case["labels"]["provisional"] for case in dataset["cases"])
+
+
+def test_loads_draft_v4_catalogue_without_approving_provisional_labels():
+    dataset = load_dataset_by_id(
+        "m66-intelligence-comparison-v4",
+        "m66-intelligence-comparison-v4",
+    )
+
+    assert len(dataset["cases"]) == 52
+    assert dataset["label_status"] == "DRAFT_UNREVIEWED"
+    assert dataset["evaluation_record"]["approved_dataset_version"] is None
+    assert dataset["threshold_approval"]["status"] == "NOT_APPROVED"
+    assert dataset["human_review"]["status"] == "PENDING"
+    assert all(case["labels"]["provisional"] for case in dataset["cases"])
 
 
 class LabelledFixtureLLM:

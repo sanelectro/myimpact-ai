@@ -1,0 +1,3334 @@
+{
+  "dataset": {
+    "dataset_id": "goal-validation-v1",
+    "dataset_name": "Goal Validation Benchmark Dataset",
+    "dataset_version": "1.0.0",
+    "domain": "GOAL_VALIDATION",
+    "description": "Benchmark dataset for evaluating goal clarity, ownership, delivery and impact distinction, measurability, feasibility, role alignment, and conflicting or incomplete information.",
+    "case_count": 30,
+    "review_status": "DRAFT_UNREVIEWED",
+    "ground_truth_status": "NOT_APPROVED",
+    "created_at": null,
+    "updated_at": null
+  },
+  "evaluation_configuration": {
+    "validation_rubric_version": "goal-validation-rubric-v1",
+    "supported_labels": [
+      "READY",
+      "NEEDS_IMPROVEMENT",
+      "NEEDS_REVIEW",
+      "INVALID"
+    ],
+    "review_mode": "DUAL_ADJUDICATED",
+    "blind_human_review": true,
+    "ai_suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED",
+    "label_semantics": {
+      "READY": "The goal is sufficiently clear and assessable to proceed to the applicable approval workflow.",
+      "NEEDS_IMPROVEMENT": "The goal can likely be improved through specific clarification or refinement.",
+      "NEEDS_REVIEW": "A human or authoritative contextual decision is needed before a reliable validation decision can be made.",
+      "INVALID": "The goal violates an explicit policy or contains a fundamental issue that cannot be resolved through ordinary clarification."
+    }
+  },
+  "cases": [
+    {
+      "case_id": "gv-01",
+      "case_version": 1,
+      "case_name": "Improve platform quality",
+      "category": "CLARITY_AND_STRUCTURE",
+      "primary_dimension": "GOAL_CLARITY",
+      "secondary_dimensions": [
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "NEGATIVE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve platform quality",
+        "description": "Make the platform better for everyone.",
+        "goal_type": "NOT_SPECIFIED",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The goal expresses a broad aspiration but does not identify what platform quality means, which users or areas are in scope, or how improvement will be demonstrated.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define the platform area and user group in scope."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Specify the quality attributes to improve, such as reliability, usability or performance."
+          }
+        ],
+        "missing_information": [
+          "Define the platform area and user group in scope.",
+          "Specify the quality attributes to improve, such as reliability, usability or performance.",
+          "Add observable success criteria and a timeframe."
+        ],
+        "suggested_questions": [
+          "Which platform area and users are in scope?",
+          "What specific quality improvement is expected?",
+          "How will success be measured?"
+        ],
+        "suggested_improvements": [
+          "Define the platform area and user group in scope.",
+          "Specify the quality attributes to improve, such as reliability, usability or performance.",
+          "Add observable success criteria and a timeframe."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-02",
+      "case_version": 1,
+      "case_name": "Deliver customer insights",
+      "category": "CLARITY_AND_STRUCTURE",
+      "primary_dimension": "GOAL_CLARITY",
+      "secondary_dimensions": [
+        "SUCCESS_CRITERIA",
+        "DELIVERABLE_DEFINITION"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Deliver customer insights",
+        "description": "Analyze customer feedback and recommend product changes.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The analysis and recommendation activities are identifiable, but the expected analysis scope, deliverable format and acceptance criteria are not defined. Recommending changes does not imply ownership of implementing them.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define the feedback sources, period and scope of analysis."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Specify the expected insight or recommendation deliverable."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Define acceptance criteria and clarify whether implementation is in scope."
+          }
+        ],
+        "missing_information": [
+          "Define the feedback sources, period and scope of analysis.",
+          "Specify the expected insight or recommendation deliverable.",
+          "Define acceptance criteria and clarify whether implementation is in scope."
+        ],
+        "suggested_questions": [
+          "Which customer feedback sources and period should be analyzed?",
+          "What deliverable will demonstrate completion?",
+          "Is the employee responsible for implementing the recommended changes?"
+        ],
+        "suggested_improvements": [
+          "Define the feedback sources, period and scope of analysis.",
+          "Specify the expected insight or recommendation deliverable.",
+          "Define acceptance criteria and clarify whether implementation is in scope."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-03",
+      "case_version": 1,
+      "case_name": "Improve onboarding",
+      "category": "CLARITY_AND_STRUCTURE",
+      "primary_dimension": "GOAL_CLARITY",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve onboarding",
+        "description": "Improve onboarding for new users by simplifying the first-use flow.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The intended user group and improvement direction are clear, but 'simplifying' is not operationally defined and there is no success measure, baseline or timeframe.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Identify the first-use steps or friction points to simplify."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Define how onboarding improvement will be assessed."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Add a timeframe and, where appropriate, a baseline and target."
+          }
+        ],
+        "missing_information": [
+          "Identify the first-use steps or friction points to simplify.",
+          "Define how onboarding improvement will be assessed.",
+          "Add a timeframe and, where appropriate, a baseline and target."
+        ],
+        "suggested_questions": [
+          "Which first-use steps should be simplified?",
+          "What measure will indicate improved onboarding?",
+          "By when should the improvement be delivered?"
+        ],
+        "suggested_improvements": [
+          "Identify the first-use steps or friction points to simplify.",
+          "Define how onboarding improvement will be assessed.",
+          "Add a timeframe and, where appropriate, a baseline and target."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-04",
+      "case_version": 1,
+      "case_name": "Build internal knowledge hub",
+      "category": "CLARITY_AND_STRUCTURE",
+      "primary_dimension": "GOAL_CLARITY",
+      "secondary_dimensions": [
+        "DELIVERABLE_DEFINITION",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Build internal knowledge hub",
+        "description": "Create a searchable internal knowledge hub for support procedures.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The deliverable and its purpose are recognizable, but the content scope, search expectations and acceptance criteria are missing. A delivery goal does not necessarily require a business-impact target.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define which support procedures and teams are in scope."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Specify minimum search and content capabilities."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Define acceptance criteria for the knowledge hub."
+          }
+        ],
+        "missing_information": [
+          "Define which support procedures and teams are in scope.",
+          "Specify minimum search and content capabilities.",
+          "Define acceptance criteria for the knowledge hub."
+        ],
+        "suggested_questions": [
+          "Which support procedures must be included?",
+          "What does searchable mean for the expected user experience?",
+          "What criteria will establish that the hub is complete?"
+        ],
+        "suggested_improvements": [
+          "Define which support procedures and teams are in scope.",
+          "Specify minimum search and content capabilities.",
+          "Define acceptance criteria for the knowledge hub."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-05",
+      "case_version": 1,
+      "case_name": "Modernize customer experience",
+      "category": "CLARITY_AND_STRUCTURE",
+      "primary_dimension": "GOAL_CLARITY",
+      "secondary_dimensions": [
+        "ACCOUNTABILITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "NEGATIVE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Modernize customer experience",
+        "description": "Use technology and collaboration to transform customer experience and work better together.",
+        "goal_type": "NOT_SPECIFIED",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The statement is aspirational and combines broad themes without a concrete deliverable, accountable contribution, defined customer experience change or success criteria.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Identify the specific customer experience problem or opportunity."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Define the employee's contribution and concrete deliverable."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Specify observable success criteria and timeframe."
+          }
+        ],
+        "missing_information": [
+          "Identify the specific customer experience problem or opportunity.",
+          "Define the employee's contribution and concrete deliverable.",
+          "Specify observable success criteria and timeframe."
+        ],
+        "suggested_questions": [
+          "What customer experience problem will be addressed?",
+          "What specific work is the employee accountable for?",
+          "How will the change be evaluated?"
+        ],
+        "suggested_improvements": [
+          "Identify the specific customer experience problem or opportunity.",
+          "Define the employee's contribution and concrete deliverable.",
+          "Specify observable success criteria and timeframe."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-06",
+      "case_version": 1,
+      "case_name": "Reduce deployment failures",
+      "category": "OWNERSHIP_AND_ACCOUNTABILITY",
+      "primary_dimension": "ACCOUNTABILITY",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "SCOPE"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Reduce deployment failures",
+        "description": "Reduce deployment failures across the product group by 30%.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The group-level impact target is stated, but individual ownership and contribution are not. The baseline, measurement window and source of the 30% target are also absent. Missing contribution details should be clarified rather than treated as evidence of failure.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "HIGH",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Specify the employee's accountable contribution to the group target."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Provide the baseline, measurement window and authoritative metric source."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Clarify dependencies and decision-making authority."
+          }
+        ],
+        "missing_information": [
+          "Specify the employee's accountable contribution to the group target.",
+          "Provide the baseline, measurement window and authoritative metric source.",
+          "Clarify dependencies and decision-making authority."
+        ],
+        "suggested_questions": [
+          "What specific initiative or work is the employee accountable for?",
+          "Is the employee accountable for the overall 30% result or a defined contribution?",
+          "What baseline and measurement period apply?"
+        ],
+        "suggested_improvements": [
+          "Specify the employee's accountable contribution to the group target.",
+          "Provide the baseline, measurement window and authoritative metric source.",
+          "Clarify dependencies and decision-making authority."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-07",
+      "case_version": 1,
+      "case_name": "Migrate billing service",
+      "category": "OWNERSHIP_AND_ACCOUNTABILITY",
+      "primary_dimension": "ACCOUNTABILITY",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Migrate billing service",
+        "description": "I will lead the billing service migration.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The employee's leadership accountability is explicit, but the migration scope, expected deliverables, completion criteria and timeframe are unspecified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Define the services, components or systems included in the migration."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Specify the employee's leadership responsibilities and expected deliverables."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Add completion and acceptance criteria and a timeframe."
+          }
+        ],
+        "missing_information": [
+          "Define the services, components or systems included in the migration.",
+          "Specify the employee's leadership responsibilities and expected deliverables.",
+          "Add completion and acceptance criteria and a timeframe."
+        ],
+        "suggested_questions": [
+          "What is included in the billing service migration?",
+          "What deliverables demonstrate successful completion?",
+          "What is the target completion date?"
+        ],
+        "suggested_improvements": [
+          "Define the services, components or systems included in the migration.",
+          "Specify the employee's leadership responsibilities and expected deliverables.",
+          "Add completion and acceptance criteria and a timeframe."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-08",
+      "case_version": 1,
+      "case_name": "Improve incident response",
+      "category": "OWNERSHIP_AND_ACCOUNTABILITY",
+      "primary_dimension": "ACCOUNTABILITY",
+      "secondary_dimensions": [
+        "DELIVERABLE_DEFINITION",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve incident response",
+        "description": "The team will improve incident response and publish a new runbook.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The goal assigns work to the team but does not identify this employee's own responsibility or contribution. The runbook is a concrete deliverable, while 'improve incident response' is not defined.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "HIGH",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Identify the employee's specific contribution and ownership within the team effort."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Define the runbook scope and acceptance criteria."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Clarify whether response improvement is an individual or shared outcome."
+          }
+        ],
+        "missing_information": [
+          "Identify the employee's specific contribution and ownership within the team effort.",
+          "Define the runbook scope and acceptance criteria.",
+          "Clarify whether response improvement is an individual or shared outcome."
+        ],
+        "suggested_questions": [
+          "Which part of the work is this employee accountable for?",
+          "What must the runbook contain?",
+          "How will incident-response improvement be assessed?"
+        ],
+        "suggested_improvements": [
+          "Identify the employee's specific contribution and ownership within the team effort.",
+          "Define the runbook scope and acceptance criteria.",
+          "Clarify whether response improvement is an individual or shared outcome."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-09",
+      "case_version": 1,
+      "case_name": "Support accessibility rollout",
+      "category": "OWNERSHIP_AND_ACCOUNTABILITY",
+      "primary_dimension": "ACCOUNTABILITY",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Support accessibility rollout",
+        "description": "Coordinate accessibility reviews and resolve findings in my assigned components.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The employee's responsibility and component boundary are partly clear, but the assigned components, review standard, finding resolution expectations and completion criteria are not specified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Identify the assigned components and applicable accessibility standard."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define how reviews and findings will be tracked."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Specify the acceptance criteria for resolving findings."
+          }
+        ],
+        "missing_information": [
+          "Identify the assigned components and applicable accessibility standard.",
+          "Define how reviews and findings will be tracked.",
+          "Specify the acceptance criteria for resolving findings."
+        ],
+        "suggested_questions": [
+          "Which components are assigned to the employee?",
+          "Which accessibility standard or checklist applies?",
+          "What qualifies as a resolved finding?"
+        ],
+        "suggested_improvements": [
+          "Identify the assigned components and applicable accessibility standard.",
+          "Define how reviews and findings will be tracked.",
+          "Specify the acceptance criteria for resolving findings."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-10",
+      "case_version": 1,
+      "case_name": "Increase renewal rate",
+      "category": "OWNERSHIP_AND_ACCOUNTABILITY",
+      "primary_dimension": "ACCOUNTABILITY",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "SCOPE"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Increase renewal rate",
+        "description": "Increase renewal rate for the enterprise segment by 10%.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The target and segment are stated, but the employee's influence, accountability and contribution are unclear. The baseline, period and metric definition are also missing.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "HIGH",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify the employee's direct contribution and level of control over renewals."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Define the baseline, renewal metric and measurement period."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Identify dependencies on sales, customer success or other teams."
+          }
+        ],
+        "missing_information": [
+          "Clarify the employee's direct contribution and level of control over renewals.",
+          "Define the baseline, renewal metric and measurement period.",
+          "Identify dependencies on sales, customer success or other teams."
+        ],
+        "suggested_questions": [
+          "What specific actions or deliverables is the employee accountable for?",
+          "Is the 10% increase relative or absolute?",
+          "What baseline and period define the target?"
+        ],
+        "suggested_improvements": [
+          "Clarify the employee's direct contribution and level of control over renewals.",
+          "Define the baseline, renewal metric and measurement period.",
+          "Identify dependencies on sales, customer success or other teams."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-11",
+      "case_version": 1,
+      "case_name": "Automate reporting",
+      "category": "DELIVERY_OUTCOME_IMPACT",
+      "primary_dimension": "OUTCOME_VS_IMPACT",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "ACCOUNTABILITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Automate reporting",
+        "description": "Deliver an automated reporting feature to reduce support effort.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The delivery commitment is identifiable, but the feature scope and acceptance criteria are not defined. Reduced support effort is an intended benefit and is not automatically an employee-owned obligation; clarify whether accountability includes adoption and impact.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "OUTCOME_VS_IMPACT",
+            "severity": "MEDIUM",
+            "description": "The relationship between deliverables and intended outcomes or impact needs clarification.",
+            "recommendation": "Specify the reporting capability and delivery acceptance criteria."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Separate the employee's delivery commitment from the intended business benefit."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify whether adoption and support-effort reduction are within the employee's accountability."
+          }
+        ],
+        "missing_information": [
+          "Specify the reporting capability and delivery acceptance criteria.",
+          "Separate the employee's delivery commitment from the intended business benefit.",
+          "Clarify whether adoption and support-effort reduction are within the employee's accountability."
+        ],
+        "suggested_questions": [
+          "What reporting capability must be delivered?",
+          "Is the employee accountable for delivery only, or also adoption and reduced support effort?"
+        ],
+        "suggested_improvements": [
+          "Specify the reporting capability and delivery acceptance criteria.",
+          "Separate the employee's delivery commitment from the intended business benefit.",
+          "Clarify whether adoption and support-effort reduction are within the employee's accountability."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-12",
+      "case_version": 1,
+      "case_name": "Launch self-service analytics",
+      "category": "DELIVERY_OUTCOME_IMPACT",
+      "primary_dimension": "OUTCOME_VS_IMPACT",
+      "secondary_dimensions": [
+        "ACCOUNTABILITY",
+        "MEASURABILITY",
+        "DEPENDENCIES"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Launch self-service analytics",
+        "description": "Launch a self-service analytics dashboard and achieve 70% adoption among operations users within two quarters.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The deliverable, adoption target, audience and timeframe are present, but the adoption denominator, measurement source, baseline and employee's control over adoption are not specified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "OUTCOME_VS_IMPACT",
+            "severity": "MEDIUM",
+            "description": "The relationship between deliverables and intended outcomes or impact needs clarification.",
+            "recommendation": "Define the eligible operations-user population and adoption calculation."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Specify the telemetry or reporting source and baseline."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Clarify shared responsibilities for enablement, rollout and adoption."
+          }
+        ],
+        "missing_information": [
+          "Define the eligible operations-user population and adoption calculation.",
+          "Specify the telemetry or reporting source and baseline.",
+          "Clarify shared responsibilities for enablement, rollout and adoption."
+        ],
+        "suggested_questions": [
+          "How is 70% adoption calculated and measured?",
+          "Which operations users are included?",
+          "What adoption activities are within the employee's control?"
+        ],
+        "suggested_improvements": [
+          "Define the eligible operations-user population and adoption calculation.",
+          "Specify the telemetry or reporting source and baseline.",
+          "Clarify shared responsibilities for enablement, rollout and adoption."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-13",
+      "case_version": 1,
+      "case_name": "Reduce support effort",
+      "category": "DELIVERY_OUTCOME_IMPACT",
+      "primary_dimension": "OUTCOME_VS_IMPACT",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "ACCOUNTABILITY",
+        "TIMEFRAME"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Reduce support effort",
+        "description": "Reduce monthly support effort by 20% after launch of the new workflow.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The impact target is measurable in principle, but no baseline, measurement window, workflow ownership or attribution approach is provided. The launch timing is also unspecified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "OUTCOME_VS_IMPACT",
+            "severity": "MEDIUM",
+            "description": "The relationship between deliverables and intended outcomes or impact needs clarification.",
+            "recommendation": "Define the baseline and how monthly support effort is calculated."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Specify the workflow and the employee's contribution or accountability."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Set the measurement period after launch and account for other contributing factors."
+          }
+        ],
+        "missing_information": [
+          "Define the baseline and how monthly support effort is calculated.",
+          "Specify the workflow and the employee's contribution or accountability.",
+          "Set the measurement period after launch and account for other contributing factors."
+        ],
+        "suggested_questions": [
+          "What is the current monthly support-effort baseline?",
+          "What workflow is being launched and what is the employee's role?",
+          "How long after launch will the 20% reduction be measured?"
+        ],
+        "suggested_improvements": [
+          "Define the baseline and how monthly support effort is calculated.",
+          "Specify the workflow and the employee's contribution or accountability.",
+          "Set the measurement period after launch and account for other contributing factors."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-14",
+      "case_version": 1,
+      "case_name": "Publish migration guide",
+      "category": "DELIVERY_OUTCOME_IMPACT",
+      "primary_dimension": "DELIVERABLE_DEFINITION",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Publish migration guide",
+        "description": "Publish a migration guide that helps customers move to the new API.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The deliverable and intended audience are clear, but API/version scope, required content, publication location and acceptance criteria are missing. Customer migration success need not be an individual target unless assigned.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Identify the API version and migration scenarios covered."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define required guide content, review and publication criteria."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Clarify whether customer migration support is also part of the commitment."
+          }
+        ],
+        "missing_information": [
+          "Identify the API version and migration scenarios covered.",
+          "Define required guide content, review and publication criteria.",
+          "Clarify whether customer migration support is also part of the commitment."
+        ],
+        "suggested_questions": [
+          "Which API version and migration scenarios are in scope?",
+          "What content and review criteria must the guide satisfy?",
+          "Is the employee responsible only for the guide or also for customer migration outcomes?"
+        ],
+        "suggested_improvements": [
+          "Identify the API version and migration scenarios covered.",
+          "Define required guide content, review and publication criteria.",
+          "Clarify whether customer migration support is also part of the commitment."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-15",
+      "case_version": 1,
+      "case_name": "Improve service reliability",
+      "category": "DELIVERY_OUTCOME_IMPACT",
+      "primary_dimension": "OUTCOME_VS_IMPACT",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "ACCOUNTABILITY",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve service reliability",
+        "description": "Deliver retry handling and reduce service errors for all customers.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "Retry handling is a concrete deliverable, but 'reduce service errors' has no defined error measure, baseline or target. The statement also does not clarify whether the employee owns the customer-wide reliability outcome.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "OUTCOME_VS_IMPACT",
+            "severity": "MEDIUM",
+            "description": "The relationship between deliverables and intended outcomes or impact needs clarification.",
+            "recommendation": "Define retry-handling scope and acceptance criteria."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Specify the error metric, baseline and expected change if reliability improvement is an accountable outcome."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify the employee's responsibility for delivery versus broader service reliability."
+          }
+        ],
+        "missing_information": [
+          "Define retry-handling scope and acceptance criteria.",
+          "Specify the error metric, baseline and expected change if reliability improvement is an accountable outcome.",
+          "Clarify the employee's responsibility for delivery versus broader service reliability."
+        ],
+        "suggested_questions": [
+          "Which failure scenarios must retry handling cover?",
+          "Which service-error metric should improve, and from what baseline?",
+          "Is the employee accountable for implementation only or also the reliability outcome?"
+        ],
+        "suggested_improvements": [
+          "Define retry-handling scope and acceptance criteria.",
+          "Specify the error metric, baseline and expected change if reliability improvement is an accountable outcome.",
+          "Clarify the employee's responsibility for delivery versus broader service reliability."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-16",
+      "case_version": 1,
+      "case_name": "Reduce API latency",
+      "category": "SMART_AND_MEASURABILITY",
+      "primary_dimension": "MEASURABILITY",
+      "secondary_dimensions": [
+        "TIMEFRAME",
+        "ACCOUNTABILITY",
+        "MEASUREMENT_METHOD"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Reduce API latency",
+        "description": "Reduce checkout API p95 latency from 800 ms to 500 ms by the end of Q3.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The metric, percentile, baseline, target and deadline are stated. However, the measurement environment/window, source of truth and employee accountability or contribution are not supplied.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Specify the measurement environment, observation window and authoritative telemetry source."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Clarify the employee's accountable work or contribution toward the target."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Confirm the applicable year and Q3 deadline."
+          }
+        ],
+        "missing_information": [
+          "Specify the measurement environment, observation window and authoritative telemetry source.",
+          "Clarify the employee's accountable work or contribution toward the target.",
+          "Confirm the applicable year and Q3 deadline."
+        ],
+        "suggested_questions": [
+          "Which environment and measurement window determine p95 latency?",
+          "What work is the employee accountable for?",
+          "Which year does the Q3 deadline refer to?"
+        ],
+        "suggested_improvements": [
+          "Specify the measurement environment, observation window and authoritative telemetry source.",
+          "Clarify the employee's accountable work or contribution toward the target.",
+          "Confirm the applicable year and Q3 deadline."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-17",
+      "case_version": 1,
+      "case_name": "Improve code quality",
+      "category": "SMART_AND_MEASURABILITY",
+      "primary_dimension": "MEASURABILITY",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "TIMEFRAME",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "NEGATIVE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve code quality",
+        "description": "Improve code quality substantially soon.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The goal uses subjective wording and an undefined timeframe. It does not identify the code-quality dimension, baseline, target or evidence of success.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Identify the code-quality dimension, such as maintainability, defects or static-analysis findings."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Define a measurable baseline and target where appropriate."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Replace 'soon' with a specific timeframe and identify accountable work."
+          }
+        ],
+        "missing_information": [
+          "Identify the code-quality dimension, such as maintainability, defects or static-analysis findings.",
+          "Define a measurable baseline and target where appropriate.",
+          "Replace 'soon' with a specific timeframe and identify accountable work."
+        ],
+        "suggested_questions": [
+          "Which aspect of code quality should improve?",
+          "What measure and target will demonstrate improvement?",
+          "What is the deadline?"
+        ],
+        "suggested_improvements": [
+          "Identify the code-quality dimension, such as maintainability, defects or static-analysis findings.",
+          "Define a measurable baseline and target where appropriate.",
+          "Replace 'soon' with a specific timeframe and identify accountable work."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-18",
+      "case_version": 1,
+      "case_name": "Complete security training",
+      "category": "SMART_AND_MEASURABILITY",
+      "primary_dimension": "SUCCESS_CRITERIA",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "TIMEFRAME",
+        "CONTEXT_DEPENDENCY"
+      ],
+      "case_polarity": "POSITIVE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Complete security training",
+        "description": "Complete the required annual security training.",
+        "goal_type": "DEVELOPMENT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "READY",
+        "rationale": "The required training and completion outcome are sufficiently identifiable for a straightforward compliance or development goal, provided the organization has assigned the training and its applicable due date. Those assignment details should be available from organizational context.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Confirm the assigned training module and due date from the organization's training system."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Confirm the assigned training module and due date from the organization's training system."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Confirm the assigned training module and due date from the organization's training system."
+          }
+        ],
+        "missing_information": [
+          "Confirm the assigned training module and due date from the organization's training system."
+        ],
+        "suggested_questions": [
+          "Which assigned annual training module and due date apply?"
+        ],
+        "suggested_improvements": [
+          "Confirm the assigned training module and due date from the organization's training system."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-19",
+      "case_version": 1,
+      "case_name": "Increase automation",
+      "category": "SMART_AND_MEASURABILITY",
+      "primary_dimension": "MEASURABILITY",
+      "secondary_dimensions": [
+        "SCOPE",
+        "MEASUREMENT_METHOD",
+        "ACCOUNTABILITY"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Increase automation",
+        "description": "Increase automated test coverage from 60% to 80% by September 30.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "A baseline, target and deadline are present, but the coverage scope, measurement method, source of truth and employee's contribution are not defined.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Define the repositories, components or test types included in coverage."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Specify the coverage tool and measurement point."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "MEASUREMENT_METHOD",
+            "severity": "MEDIUM",
+            "description": "Additional clarification is required.",
+            "recommendation": "Clarify the employee's accountable contribution and confirm the year."
+          }
+        ],
+        "missing_information": [
+          "Define the repositories, components or test types included in coverage.",
+          "Specify the coverage tool and measurement point.",
+          "Clarify the employee's accountable contribution and confirm the year."
+        ],
+        "suggested_questions": [
+          "Which codebase and test types are included?",
+          "Which tool or report is the source of truth?",
+          "What work is the employee accountable for to reach 80%?"
+        ],
+        "suggested_improvements": [
+          "Define the repositories, components or test types included in coverage.",
+          "Specify the coverage tool and measurement point.",
+          "Clarify the employee's accountable contribution and confirm the year."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-20",
+      "case_version": 1,
+      "case_name": "Improve customer satisfaction",
+      "category": "SMART_AND_MEASURABILITY",
+      "primary_dimension": "MEASURABILITY",
+      "secondary_dimensions": [
+        "SCOPE",
+        "ACCOUNTABILITY",
+        "TIMEFRAME"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve customer satisfaction",
+        "description": "Raise customer satisfaction to 90% by year end.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The target and broad deadline are stated, but the satisfaction metric, baseline, customer population, measurement source and employee's influence are unspecified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Name the satisfaction measure and define its calculation."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Specify the customer population, baseline and survey or data source."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "MEDIUM",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify the employee's contribution and the applicable year-end date."
+          }
+        ],
+        "missing_information": [
+          "Name the satisfaction measure and define its calculation.",
+          "Specify the customer population, baseline and survey or data source.",
+          "Clarify the employee's contribution and the applicable year-end date."
+        ],
+        "suggested_questions": [
+          "Does 90% refer to CSAT, a survey score or another measure?",
+          "Which customer population and baseline apply?",
+          "What contribution is the employee accountable for?"
+        ],
+        "suggested_improvements": [
+          "Name the satisfaction measure and define its calculation.",
+          "Specify the customer population, baseline and survey or data source.",
+          "Clarify the employee's contribution and the applicable year-end date."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-21",
+      "case_version": 1,
+      "case_name": "Ship audit export",
+      "category": "FEASIBILITY_AND_ROLE_ALIGNMENT",
+      "primary_dimension": "DELIVERABLE_DEFINITION",
+      "secondary_dimensions": [
+        "SUCCESS_CRITERIA",
+        "TIMEFRAME",
+        "SCOPE"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Ship audit export",
+        "description": "Ship an audit export endpoint this quarter.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The deliverable and broad timeframe are identifiable, but endpoint behavior, data scope, security requirements and acceptance criteria are not defined. A business-impact target is not inherently required for this delivery goal.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Define the endpoint behavior, supported data and authorization requirements."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Specify testing and acceptance criteria."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Replace 'this quarter' with the applicable quarter or date."
+          }
+        ],
+        "missing_information": [
+          "Define the endpoint behavior, supported data and authorization requirements.",
+          "Specify testing and acceptance criteria.",
+          "Replace 'this quarter' with the applicable quarter or date."
+        ],
+        "suggested_questions": [
+          "Which audit data and export formats are required?",
+          "What security and acceptance criteria apply?",
+          "Which quarter is intended?"
+        ],
+        "suggested_improvements": [
+          "Define the endpoint behavior, supported data and authorization requirements.",
+          "Specify testing and acceptance criteria.",
+          "Replace 'this quarter' with the applicable quarter or date."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-22",
+      "case_version": 1,
+      "case_name": "Own global sales expansion",
+      "category": "FEASIBILITY_AND_ROLE_ALIGNMENT",
+      "primary_dimension": "FEASIBILITY",
+      "secondary_dimensions": [
+        "ACCOUNTABILITY",
+        "SCOPE",
+        "MEASURABILITY"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Own global sales expansion",
+        "description": "Personally deliver 40% revenue growth in every region this year.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The target spans every region and a broad business result, but the employee's role, authority, baseline, regional definitions and dependencies are unknown. Feasibility cannot be judged reliably without organizational context.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "FEASIBILITY",
+            "severity": "HIGH",
+            "description": "Feasibility requires role, capacity, scope or planning context.",
+            "recommendation": "Check the employee's role, decision authority and assigned regional scope."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "HIGH",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify whether 40% is relative growth and establish regional baselines."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Separate directly owned contributions from shared commercial outcomes."
+          }
+        ],
+        "missing_information": [
+          "Check the employee's role, decision authority and assigned regional scope.",
+          "Clarify whether 40% is relative growth and establish regional baselines.",
+          "Separate directly owned contributions from shared commercial outcomes."
+        ],
+        "suggested_questions": [
+          "What role and authority does the employee have across regions?",
+          "What baseline and revenue definition apply in each region?",
+          "Which parts of the result are directly within the employee's control?"
+        ],
+        "suggested_improvements": [
+          "Check the employee's role, decision authority and assigned regional scope.",
+          "Clarify whether 40% is relative growth and establish regional baselines.",
+          "Separate directly owned contributions from shared commercial outcomes."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-23",
+      "case_version": 1,
+      "case_name": "Complete service certification",
+      "category": "FEASIBILITY_AND_ROLE_ALIGNMENT",
+      "primary_dimension": "ROLE_ALIGNMENT",
+      "secondary_dimensions": [
+        "SUCCESS_CRITERIA",
+        "TIMEFRAME",
+        "CONTEXT_DEPENDENCY"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Complete service certification",
+        "description": "Complete the assigned cloud service certification by November 30.",
+        "goal_type": "DEVELOPMENT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The goal is clear if the certification is actually assigned and relevant to the employee's role. The certification name, assignment context and applicable year are not supplied.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ROLE_ALIGNMENT",
+            "severity": "MEDIUM",
+            "description": "Role expectations or assigned responsibilities need confirmation.",
+            "recommendation": "Identify the exact certification and confirm it is assigned or agreed."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Confirm role relevance and the applicable November 30 deadline."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Confirm role relevance and the applicable November 30 deadline."
+          }
+        ],
+        "missing_information": [
+          "Identify the exact certification and confirm it is assigned or agreed.",
+          "Confirm role relevance and the applicable November 30 deadline."
+        ],
+        "suggested_questions": [
+          "Which cloud service certification is required?",
+          "Where is the assignment or role expectation recorded?",
+          "Which year does November 30 refer to?"
+        ],
+        "suggested_improvements": [
+          "Identify the exact certification and confirm it is assigned or agreed.",
+          "Confirm role relevance and the applicable November 30 deadline."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-24",
+      "case_version": 1,
+      "case_name": "Replace all legacy systems",
+      "category": "FEASIBILITY_AND_ROLE_ALIGNMENT",
+      "primary_dimension": "FEASIBILITY",
+      "secondary_dimensions": [
+        "SCOPE",
+        "ACCOUNTABILITY",
+        "TIMEFRAME"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Replace all legacy systems",
+        "description": "Replace every company legacy system in two weeks.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The scope is extremely broad and the timeframe is short, but the organization size, definition of legacy systems, team capacity and existing plan are unknown. The goal warrants contextual review rather than an unsupported declaration that it is impossible.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "FEASIBILITY",
+            "severity": "HIGH",
+            "description": "Feasibility requires role, capacity, scope or planning context.",
+            "recommendation": "Define the systems included and the meaning of legacy."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "SCOPE",
+            "severity": "MEDIUM",
+            "description": "The population, system or work scope needs clarification.",
+            "recommendation": "Check the approved roadmap, dependencies, resources and authority."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "ACCOUNTABILITY",
+            "severity": "HIGH",
+            "description": "Individual ownership or contribution needs clarification.",
+            "recommendation": "Clarify whether the two-week commitment concerns a phased deliverable rather than every system."
+          }
+        ],
+        "missing_information": [
+          "Define the systems included and the meaning of legacy.",
+          "Check the approved roadmap, dependencies, resources and authority.",
+          "Clarify whether the two-week commitment concerns a phased deliverable rather than every system."
+        ],
+        "suggested_questions": [
+          "Which systems are in scope?",
+          "What approved plan and resources support the two-week timeframe?",
+          "Is the employee accountable for the entire replacement or a defined phase?"
+        ],
+        "suggested_improvements": [
+          "Define the systems included and the meaning of legacy.",
+          "Check the approved roadmap, dependencies, resources and authority.",
+          "Clarify whether the two-week commitment concerns a phased deliverable rather than every system."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-25",
+      "case_version": 1,
+      "case_name": "Improve analyst documentation",
+      "category": "FEASIBILITY_AND_ROLE_ALIGNMENT",
+      "primary_dimension": "ROLE_ALIGNMENT",
+      "secondary_dimensions": [
+        "DELIVERABLE_DEFINITION",
+        "SUCCESS_CRITERIA",
+        "SCOPE"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve analyst documentation",
+        "description": "Document the data pipeline and review it with the analytics team.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The activity and review audience are clear, but the pipeline boundary, documentation content, review acceptance criteria and timeframe are missing.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "ROLE_ALIGNMENT",
+            "severity": "MEDIUM",
+            "description": "Role expectations or assigned responsibilities need confirmation.",
+            "recommendation": "Identify the data pipeline components and interfaces in scope."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Specify required documentation content and review completion criteria."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Add a target date or milestone."
+          }
+        ],
+        "missing_information": [
+          "Identify the data pipeline components and interfaces in scope.",
+          "Specify required documentation content and review completion criteria.",
+          "Add a target date or milestone."
+        ],
+        "suggested_questions": [
+          "Which pipeline components must be documented?",
+          "What content must the documentation include?",
+          "What constitutes completion of the analytics-team review?"
+        ],
+        "suggested_improvements": [
+          "Identify the data pipeline components and interfaces in scope.",
+          "Specify required documentation content and review completion criteria.",
+          "Add a target date or milestone."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-26",
+      "case_version": 1,
+      "case_name": "Complete rollout",
+      "category": "CONFLICTING_AND_INCOMPLETE",
+      "primary_dimension": "CONFLICTING_INFORMATION",
+      "secondary_dimensions": [
+        "TIMEFRAME",
+        "SOURCE_AUTHORITY"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Complete rollout",
+        "description": "Complete rollout by June 30. The implementation plan says the rollout finishes August 15.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The goal deadline conflicts with the implementation plan. The authoritative source and whether the plan supersedes the goal are not established.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "CONFLICTING_INFORMATION",
+            "severity": "HIGH",
+            "description": "Conflicting information or source authority needs resolution.",
+            "recommendation": "Identify the authoritative schedule and resolve the June 30 versus August 15 conflict."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Record the agreed deadline and source of approval."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SOURCE_AUTHORITY",
+            "severity": "MEDIUM",
+            "description": "Additional clarification is required.",
+            "recommendation": "Revalidate the goal after the conflict is resolved."
+          }
+        ],
+        "missing_information": [
+          "Identify the authoritative schedule and resolve the June 30 versus August 15 conflict.",
+          "Record the agreed deadline and source of approval.",
+          "Revalidate the goal after the conflict is resolved."
+        ],
+        "suggested_questions": [
+          "Which date is approved and authoritative?",
+          "Has the implementation plan formally changed the goal deadline?"
+        ],
+        "suggested_improvements": [
+          "Identify the authoritative schedule and resolve the June 30 versus August 15 conflict.",
+          "Record the agreed deadline and source of approval.",
+          "Revalidate the goal after the conflict is resolved."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-27",
+      "case_version": 1,
+      "case_name": "Publish quarterly report",
+      "category": "CONFLICTING_AND_INCOMPLETE",
+      "primary_dimension": "CONTEXT_DEPENDENCY",
+      "secondary_dimensions": [
+        "DELIVERABLE_DEFINITION",
+        "TIMEFRAME",
+        "SUCCESS_CRITERIA"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Publish quarterly report",
+        "description": "Publish the quarterly report on October 10.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The publication action and date are stated, but the report, quarter, year, audience and publication acceptance criteria are not identified. Context may supply these details.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "CONTEXT_DEPENDENCY",
+            "severity": "MEDIUM",
+            "description": "Relevant organizational context is required.",
+            "recommendation": "Identify the report and quarter/year."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Specify the expected content, audience and publication location."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Confirm the date and acceptance criteria from the reporting calendar."
+          }
+        ],
+        "missing_information": [
+          "Identify the report and quarter/year.",
+          "Specify the expected content, audience and publication location.",
+          "Confirm the date and acceptance criteria from the reporting calendar."
+        ],
+        "suggested_questions": [
+          "Which quarterly report and reporting period are intended?",
+          "Where must it be published and what review is required?",
+          "Which year does October 10 refer to?"
+        ],
+        "suggested_improvements": [
+          "Identify the report and quarter/year.",
+          "Specify the expected content, audience and publication location.",
+          "Confirm the date and acceptance criteria from the reporting calendar."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-28",
+      "case_version": 1,
+      "case_name": "Reduce cloud spend",
+      "category": "CONFLICTING_AND_INCOMPLETE",
+      "primary_dimension": "CONFLICTING_INFORMATION",
+      "secondary_dimensions": [
+        "MEASURABILITY",
+        "SOURCE_AUTHORITY",
+        "ACCOUNTABILITY"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Reduce cloud spend",
+        "description": "Reduce cloud spend by 15%. Current planning notes say 10%.",
+        "goal_type": "IMPACT",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The target conflicts with planning notes. The authoritative target, baseline, scope of cloud spend, measurement period and employee accountability are not specified.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "CONFLICTING_INFORMATION",
+            "severity": "HIGH",
+            "description": "Conflicting information or source authority needs resolution.",
+            "recommendation": "Resolve whether 15% or 10% is the approved target using the authoritative source."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Define spend scope, baseline and measurement period."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SOURCE_AUTHORITY",
+            "severity": "MEDIUM",
+            "description": "Additional clarification is required.",
+            "recommendation": "Clarify the employee's contribution and authority over the spend."
+          }
+        ],
+        "missing_information": [
+          "Resolve whether 15% or 10% is the approved target using the authoritative source.",
+          "Define spend scope, baseline and measurement period.",
+          "Clarify the employee's contribution and authority over the spend."
+        ],
+        "suggested_questions": [
+          "Which target has been approved: 15% or 10%?",
+          "What services, accounts and period define cloud spend?",
+          "What part of the reduction is the employee accountable for?"
+        ],
+        "suggested_improvements": [
+          "Resolve whether 15% or 10% is the approved target using the authoritative source.",
+          "Define spend scope, baseline and measurement period.",
+          "Clarify the employee's contribution and authority over the spend."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-29",
+      "case_version": 1,
+      "case_name": "Improve data retention",
+      "category": "CONFLICTING_AND_INCOMPLETE",
+      "primary_dimension": "MEASURABILITY",
+      "secondary_dimensions": [
+        "GOAL_CLARITY",
+        "SUCCESS_CRITERIA",
+        "TIMEFRAME"
+      ],
+      "case_polarity": "NEGATIVE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Improve data retention",
+        "description": "Improve retention and reduce churn, with no deadline or measure agreed.",
+        "goal_type": "OUTCOME",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_IMPROVEMENT",
+        "rationale": "The goal combines retention and churn outcomes without defining the population, metric, baseline, target or timeframe. The intended work and employee accountability are also unclear.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "MEASURABILITY",
+            "severity": "MEDIUM",
+            "description": "The metric, baseline, target or measurement method needs clarification.",
+            "recommendation": "Define whether retention refers to customer, user, data or another form of retention."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "GOAL_CLARITY",
+            "severity": "MEDIUM",
+            "description": "The goal statement or scope needs clarification.",
+            "recommendation": "Specify the churn metric, population, baseline and target if both outcomes are intended."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "SUCCESS_CRITERIA",
+            "severity": "MEDIUM",
+            "description": "Completion or acceptance criteria are not sufficiently defined.",
+            "recommendation": "Agree a timeframe and identify the employee's accountable contribution."
+          }
+        ],
+        "missing_information": [
+          "Define whether retention refers to customer, user, data or another form of retention.",
+          "Specify the churn metric, population, baseline and target if both outcomes are intended.",
+          "Agree a timeframe and identify the employee's accountable contribution."
+        ],
+        "suggested_questions": [
+          "What kind of retention is intended?",
+          "How are retention and churn calculated?",
+          "What baseline, target and deadline should apply?"
+        ],
+        "suggested_improvements": [
+          "Define whether retention refers to customer, user, data or another form of retention.",
+          "Specify the churn metric, population, baseline and target if both outcomes are intended.",
+          "Agree a timeframe and identify the employee's accountable contribution."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    },
+    {
+      "case_id": "gv-30",
+      "case_version": 1,
+      "case_name": "Deliver privacy review",
+      "category": "CONFLICTING_AND_INCOMPLETE",
+      "primary_dimension": "CONTEXT_DEPENDENCY",
+      "secondary_dimensions": [
+        "TIMEFRAME",
+        "DELIVERABLE_DEFINITION",
+        "DEPENDENCIES"
+      ],
+      "case_polarity": "BORDERLINE",
+      "case_snapshot_ref": null,
+      "goal": {
+        "title": "Deliver privacy review",
+        "description": "Complete the privacy review before launch. The launch date has not been set.",
+        "goal_type": "DELIVERY",
+        "scope": null,
+        "owner_role": null,
+        "accountability": null,
+        "success_criteria": [],
+        "deliverable": null,
+        "expected_outcome": null,
+        "expected_impact": null,
+        "baseline": null,
+        "target": null,
+        "measurement_method": null,
+        "timeframe": null,
+        "dependencies": [],
+        "role_alignment": null
+      },
+      "context": {
+        "employee_role": null,
+        "role_expectations": [],
+        "organizational_context": [],
+        "source_references": [],
+        "additional_information": []
+      },
+      "ai_suggestion": {
+        "suggested_label": "NEEDS_REVIEW",
+        "rationale": "The deliverable is identifiable and its dependency on launch is explicit, but there is no launch date or defined review scope and acceptance criteria. A fixed calendar deadline may not be necessary if the launch milestone is governed elsewhere.",
+        "identified_findings": [
+          {
+            "finding_id": "F1",
+            "dimension": "CONTEXT_DEPENDENCY",
+            "severity": "MEDIUM",
+            "description": "Relevant organizational context is required.",
+            "recommendation": "Define the review scope, required approvals and completion evidence."
+          },
+          {
+            "finding_id": "F2",
+            "dimension": "TIMEFRAME",
+            "severity": "MEDIUM",
+            "description": "The timeframe or deadline needs clarification.",
+            "recommendation": "Link the goal to the authoritative launch milestone or planning schedule."
+          },
+          {
+            "finding_id": "F3",
+            "dimension": "DELIVERABLE_DEFINITION",
+            "severity": "MEDIUM",
+            "description": "The expected deliverable or its boundary needs clarification.",
+            "recommendation": "Clarify dependencies and who confirms review completion."
+          }
+        ],
+        "missing_information": [
+          "Define the review scope, required approvals and completion evidence.",
+          "Link the goal to the authoritative launch milestone or planning schedule.",
+          "Clarify dependencies and who confirms review completion."
+        ],
+        "suggested_questions": [
+          "What product or change is the privacy review for?",
+          "What approvals and evidence constitute completion?",
+          "Where will the authoritative launch date be maintained?"
+        ],
+        "suggested_improvements": [
+          "Define the review scope, required approvals and completion evidence.",
+          "Link the goal to the authoritative launch milestone or planning schedule.",
+          "Clarify dependencies and who confirms review completion."
+        ],
+        "model_reference": null,
+        "prompt_version": null,
+        "rubric_version": "goal-validation-rubric-v1",
+        "evaluation_run_id": null,
+        "generated_at": null,
+        "suggestion_status": "PROPOSED_NOT_HUMAN_APPROVED"
+      },
+      "human_review": {
+        "review_status": "NOT_STARTED",
+        "review_assignments": [],
+        "reviews": [],
+        "comparison": null,
+        "resolution": null
+      },
+      "reference": {
+        "reference_label": null,
+        "reference_rationale": null,
+        "reference_findings": [],
+        "reference_missing_information": [],
+        "reference_questions": [],
+        "reference_improvements": [],
+        "approval_status": "NOT_APPROVED",
+        "approved_by": null,
+        "approved_at": null
+      },
+      "metadata": {
+        "tags": [],
+        "source": "goal_validation_v1.json",
+        "created_at": null,
+        "updated_at": null
+      }
+    }
+  ]
+}

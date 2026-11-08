@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import AuthenticatedUser, get_current_user
 from app.db.models.human_review import (
+    BenchmarkReviewProposalDB,
     ReviewAssignmentDB,
     ReviewAuditEventDB,
     ReviewBatchDB,
@@ -15,12 +16,25 @@ from app.db.models.human_review import (
 )
 from app.db.models.reliability import ReliabilityAttemptDB, ReliabilityExperimentDB
 from app.db.session import get_db
-from app.evaluation.assessment_evaluation import DATASET_PATHS, load_dataset_by_id
+from app.evaluation.review_datasets import (
+    PROPOSAL_DATASET_ID,
+    PROPOSAL_DATASET_VERSION,
+)
+from app.evaluation.review_datasets import (
+    REVIEW_DATASET_PATHS as DATASET_PATHS,
+)
+from app.evaluation.review_datasets import (
+    load_review_dataset_by_id as load_dataset_by_id,
+)
 from app.models.human_review import M66CaseReviewStatus, M66DatasetReviewStatus
 from app.services.human_review import (
+    PRIMARY_REVIEW_STAGES,
     M66ReviewError,
     create_review_batch,
+    finalize_batch_reviews,
+    get_batch_review_preview,
     get_case_for_reviewer,
+    register_benchmark_dataset,
     submit_adjudication,
     submit_review,
 )
@@ -43,6 +57,14 @@ class ReviewSubmissionRequest(BaseModel):
 
     label: str = Field(min_length=1, max_length=64)
     rationale: str = Field(min_length=1, max_length=10000)
+    review_stage: str = Field(
+        default="BLIND", pattern="^(BLIND|POST_AI|PROPOSAL_ASSISTED)$"
+    )
+    ai_attempt_id: str | None = Field(default=None, max_length=64)
+    reference_proposal_id: str | None = Field(default=None, max_length=64)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    context_notes: str | None = Field(default=None, max_length=10000)
+    evidence_findings: list[dict[str, object]] | None = None
 
 
 class AdjudicationSubmissionRequest(BaseModel):
@@ -50,6 +72,12 @@ class AdjudicationSubmissionRequest(BaseModel):
 
     final_label: str = Field(min_length=1, max_length=64)
     rationale: str = Field(min_length=1, max_length=10000)
+
+
+class BatchFinalSubmissionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    preview_token: str = Field(pattern="^[a-f0-9]{64}$")
 
 
 class ReviewBatchResponse(BaseModel):
@@ -68,6 +96,9 @@ class ReviewCaseSummary(BaseModel):
     category: str | None = None
     status: M66CaseReviewStatus
     submitted_by_current_user: bool
+    has_draft: bool = False
+    assigned_at: str | None = None
+    last_reviewed_at: str | None = None
 
 
 class ReviewResponse(BaseModel):
@@ -77,6 +108,14 @@ class ReviewResponse(BaseModel):
     label: str
     rationale: str
     submitted_at: str
+    updated_at: str | None = None
+    is_final: bool = False
+    review_stage: str = "BLIND"
+    ai_attempt_id: str | None = None
+    reference_proposal_id: str | None = None
+    confidence: float | None = None
+    context_notes: str | None = None
+    evidence_findings: list[dict[str, object]] | None = None
 
 
 class ReviewProgressResponse(BaseModel):
@@ -90,6 +129,17 @@ class ReviewProgressResponse(BaseModel):
     adjudicated: int
     category_progress: list[dict]
     evaluation: dict
+
+
+class ReviewReferenceProposalResponse(BaseModel):
+    id: str
+    source_document: str
+    proposed_label: str
+    rationale: str
+    confidence: str | None
+    review_flags: list[str]
+    requires_owner_attention: bool
+    status: str
 
 
 def _require_platform_admin(current_user: AuthenticatedUser) -> None:
@@ -168,6 +218,44 @@ def _latest_ai_assessment(
     }
 
 
+def _reference_proposal_for_case(
+    db: Session, case_record: ReviewCaseDB
+) -> BenchmarkReviewProposalDB | None:
+    if case_record.case_version_id is None:
+        return None
+    return db.scalar(
+        select(BenchmarkReviewProposalDB)
+        .where(
+            BenchmarkReviewProposalDB.case_version_id == case_record.case_version_id,
+            BenchmarkReviewProposalDB.source_dataset_id == case_record.batch.dataset_id,
+            BenchmarkReviewProposalDB.source_dataset_version
+            == case_record.batch.dataset_version,
+            BenchmarkReviewProposalDB.status != "REJECTED",
+        )
+        .order_by(
+            BenchmarkReviewProposalDB.created_at.desc(),
+            BenchmarkReviewProposalDB.id,
+        )
+    )
+
+
+def _proposal_response(
+    proposal: BenchmarkReviewProposalDB | None,
+) -> ReviewReferenceProposalResponse | None:
+    if proposal is None:
+        return None
+    return ReviewReferenceProposalResponse(
+        id=proposal.id,
+        source_document=proposal.source_document,
+        proposed_label=proposal.proposed_label,
+        rationale=proposal.rationale,
+        confidence=proposal.confidence,
+        review_flags=proposal.review_flags,
+        requires_owner_attention=proposal.requires_owner_attention,
+        status=proposal.status,
+    )
+
+
 @router.post(
     "/batches",
     response_model=ReviewBatchResponse,
@@ -189,6 +277,13 @@ def create_batch(
     if not set(request.case_ids) <= available_case_ids:
         raise HTTPException(status_code=422, detail="A requested case is not in the dataset.")
     try:
+        register_benchmark_dataset(
+            db,
+            dataset=dataset,
+            dataset_id=request.dataset_id,
+            dataset_version=request.dataset_version,
+            actor_user_id=current_user.user_id,
+        )
         batch = create_review_batch(
             db,
             dataset_id=request.dataset_id,
@@ -247,15 +342,99 @@ def reviewer_queue(
     return [
         ReviewCaseSummary(
             case_id=case.case_id,
-            category=categories.get(case.case_id),
             status=case.status,
-            submitted_by_current_user=any(
+            submitted_by_current_user=bool(
+                [
+                    review
+                    for review in case.reviews
+                    if review.reviewer_user_id == current_user.user_id
+                    and review.review_stage in PRIMARY_REVIEW_STAGES
+                    and review.is_final
+                ]
+            ),
+            has_draft=any(
                 review.reviewer_user_id == current_user.user_id
+                and review.review_stage in PRIMARY_REVIEW_STAGES
+                and not review.is_final
                 for review in case.reviews
+            ),
+            category=categories.get(case.case_id, case.category),
+            assigned_at=next(
+                (
+                    assignment.assigned_at.isoformat()
+                    for assignment in case.assignments
+                    if assignment.reviewer_user_id == current_user.user_id
+                ),
+                None,
+            ),
+            last_reviewed_at=(
+                max(
+                    (review.updated_at or review.submitted_at).isoformat()
+                    for review in case.reviews
+                    if review.reviewer_user_id == current_user.user_id
+                    and review.review_stage in PRIMARY_REVIEW_STAGES
+                )
+                if any(
+                    review.reviewer_user_id == current_user.user_id
+                    and review.review_stage in PRIMARY_REVIEW_STAGES
+                    for review in case.reviews
+                ) else None
             ),
         )
         for case in cases
     ]
+
+
+@router.get("/batches/{batch_id}/reviews/preview")
+def preview_batch_reviews(
+    batch_id: str,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, object]:
+    _require_reviewer_or_admin(current_user)
+    batch = _get_batch(db, batch_id)
+    try:
+        preview = get_batch_review_preview(
+            db, batch_id=batch_id, reviewer_user_id=current_user.user_id
+        )
+    except M66ReviewError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    dataset = load_dataset_by_id(batch.dataset_id, batch.dataset_version)
+    contexts = {case["case_id"]: case for case in dataset.get("cases", [])}
+    return {
+        "batch": _batch_response(batch),
+        "total_cases": len(preview.cases),
+        "saved_cases": len(preview.reviews),
+        "can_finalize": preview.can_finalize,
+        "is_final": preview.is_final,
+        "preview_token": preview.preview_token,
+        "reviews": [
+            {"case": contexts.get(review.case_id), "review": _review_response(review)}
+            for review in preview.reviews
+        ],
+    }
+
+
+@router.post("/batches/{batch_id}/reviews/final")
+def submit_final_batch_review(
+    batch_id: str,
+    request: BatchFinalSubmissionRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, object]:
+    _require_reviewer_or_admin(current_user)
+    _get_batch(db, batch_id)
+    try:
+        preview = finalize_batch_reviews(
+            db,
+            batch_id=batch_id,
+            reviewer_user_id=current_user.user_id,
+            preview_token=request.preview_token,
+        )
+    except M66ReviewError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"is_final": preview.is_final, "finalized_cases": len(preview.reviews)}
 
 
 @router.get("/batches/{batch_id}/cases/{case_id}")
@@ -280,17 +459,55 @@ def get_review_case(
             batch_id=batch_id,
             case_id=case_id,
             reviewer_user_id=current_user.user_id,
+            review_stages={"BLIND", "PROPOSAL_ASSISTED"},
         )
     except M66ReviewError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+    proposal_assisted_goal = (
+        batch.dataset_id == PROPOSAL_DATASET_ID
+        and batch.dataset_version == PROPOSAL_DATASET_VERSION
+    )
+    if proposal_assisted_goal:
+        case_context = {
+            **case_context,
+            "scenario": (
+                "Assess goal readiness and critically review the AI proposal. Include "
+                "dimensions, missing information, and clarification questions in your rationale."
+            ),
+            "reference_visibility": "PROPOSAL_ASSISTED",
+        }
+    reference_proposal = None
+    own_review = view["own_review"]
+    if (
+        proposal_assisted_goal
+        or case_context.get("review_kind") != "GOAL_VALIDATION"
+        or (own_review is not None and own_review.is_final)
+    ):
+        reference_proposal = _reference_proposal_for_case(db, view["case"])
     ai_assessment = None
-    if view["own_review"] is not None:
+    if view["own_review"] is not None and view["own_review"].is_final:
         ai_assessment = _latest_ai_assessment(
             db,
             dataset_id=view["case"].batch.dataset_id,
             dataset_version=view["case"].batch.dataset_version,
             case_id=view["case"].case_id,
         )
+    post_ai_review = db.scalar(
+        select(ReviewDB).where(
+            ReviewDB.case_record_id == view["case"].id,
+            ReviewDB.reviewer_user_id == current_user.user_id,
+            ReviewDB.review_stage == "POST_AI",
+            ReviewDB.is_final.is_(True),
+        )
+    )
+    post_ai_draft = db.scalar(
+        select(ReviewDB).where(
+            ReviewDB.case_record_id == view["case"].id,
+            ReviewDB.reviewer_user_id == current_user.user_id,
+            ReviewDB.review_stage == "POST_AI",
+            ReviewDB.is_final.is_(False),
+        )
+    )
     return {
         "case": case_context,
         "status": view["case"].status,
@@ -298,7 +515,10 @@ def get_review_case(
         "reviews": [
             _review_response(review) for review in view["reviews"]
         ],
+        "post_ai_review": _review_response(post_ai_review) if post_ai_review else None,
+        "post_ai_draft": _review_response(post_ai_draft) if post_ai_draft else None,
         "ai_assessment": ai_assessment,
+        "reference_proposal": _proposal_response(reference_proposal),
     }
 
 
@@ -321,6 +541,34 @@ def submit_case_review(
         case_context = next(
             case for case in dataset.get("cases", []) if case["case_id"] == case_id
         )
+        case_record = db.scalar(
+            select(ReviewCaseDB).where(
+                ReviewCaseDB.batch_id == batch_id,
+                ReviewCaseDB.case_id == case_id,
+            )
+        )
+        if case_record is None:
+            raise HTTPException(status_code=404, detail="Evaluation case was not found.")
+        proposal = (
+            None
+            if case_context.get("review_kind") == "GOAL_VALIDATION"
+            and batch.dataset_id != PROPOSAL_DATASET_ID
+            else _reference_proposal_for_case(db, case_record)
+        )
+        review_stage = request.review_stage
+        if review_stage != "POST_AI":
+            if proposal is not None:
+                if request.reference_proposal_id != proposal.id:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Submit this case as a proposal-assisted review using the displayed proposal.",
+                    )
+                review_stage = "PROPOSAL_ASSISTED"
+            elif request.reference_proposal_id is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The reference proposal does not belong to this case.",
+                )
         review = submit_review(
             db,
             batch_id=batch_id,
@@ -328,11 +576,93 @@ def submit_case_review(
             reviewer_user_id=current_user.user_id,
             label=request.label,
             rationale=request.rationale,
+            review_stage=review_stage,
+            ai_attempt_id=request.ai_attempt_id,
+            reference_proposal_id=request.reference_proposal_id,
+            confidence=request.confidence,
+            context_notes=request.context_notes,
+            evidence_findings=request.evidence_findings,
             allowed_labels={
                 str(label).strip().upper()
                 for label in case_context.get("review_label_options", [])
             }
             or None,
+            is_final=review_stage == "POST_AI",
+        )
+    except StopIteration as exc:
+        raise HTTPException(status_code=404, detail="Evaluation case was not found.") from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=409, detail="Dataset version is not available.") from exc
+    except M66ReviewError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _review_response(review)
+
+
+@router.put(
+    "/batches/{batch_id}/cases/{case_id}/reviews/draft",
+    response_model=ReviewResponse,
+)
+def save_case_review_draft(
+    batch_id: str,
+    case_id: str,
+    request: ReviewSubmissionRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ReviewResponse:
+    _require_reviewer_or_admin(current_user)
+    try:
+        batch = _get_batch(db, batch_id)
+        dataset = load_dataset_by_id(batch.dataset_id, batch.dataset_version)
+        case_context = next(
+            case for case in dataset.get("cases", []) if case["case_id"] == case_id
+        )
+        case_record = db.scalar(
+            select(ReviewCaseDB).where(
+                ReviewCaseDB.batch_id == batch_id,
+                ReviewCaseDB.case_id == case_id,
+            )
+        )
+        if case_record is None:
+            raise HTTPException(status_code=404, detail="Evaluation case was not found.")
+        proposal = (
+            None
+            if case_context.get("review_kind") == "GOAL_VALIDATION"
+            and batch.dataset_id != PROPOSAL_DATASET_ID
+            else _reference_proposal_for_case(db, case_record)
+        )
+        review_stage = request.review_stage
+        if review_stage != "POST_AI":
+            if proposal is not None:
+                if request.reference_proposal_id != proposal.id:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Save this case as a proposal-assisted draft using the displayed proposal.",
+                    )
+                review_stage = "PROPOSAL_ASSISTED"
+            elif request.reference_proposal_id is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The reference proposal does not belong to this case.",
+                )
+        review = submit_review(
+            db,
+            batch_id=batch_id,
+            case_id=case_id,
+            reviewer_user_id=current_user.user_id,
+            label=request.label,
+            rationale=request.rationale,
+            review_stage=review_stage,
+            ai_attempt_id=request.ai_attempt_id,
+            reference_proposal_id=request.reference_proposal_id,
+            confidence=request.confidence,
+            context_notes=request.context_notes,
+            evidence_findings=request.evidence_findings,
+            allowed_labels={
+                str(label).strip().upper()
+                for label in case_context.get("review_label_options", [])
+            }
+            or None,
+            is_final=False,
         )
     except StopIteration as exc:
         raise HTTPException(status_code=404, detail="Evaluation case was not found.") from exc
@@ -363,7 +693,11 @@ def adjudication_queue(
         {
             "case": cases_by_id.get(case.case_id),
             "status": case.status,
-            "reviews": [_review_response(review) for review in case.reviews],
+            "reviews": [
+                _review_response(review)
+                for review in case.reviews
+                if review.review_stage in PRIMARY_REVIEW_STAGES and review.is_final
+            ],
         }
         for case in cases
     ]
@@ -441,11 +775,16 @@ def review_progress(
         "adjudicated": 0,
     }
     for case in cases:
-        if len(case.reviews) == 0:
+        blind_reviews = [
+            review
+            for review in case.reviews
+            if review.review_stage in PRIMARY_REVIEW_STAGES
+        ]
+        if len(blind_reviews) == 0:
             counts["awaiting_first_review"] += 1
         elif batch.review_mode == "SINGLE_REVIEWER" and case.status == M66CaseReviewStatus.REVIEWED:
             counts["reviewed"] += 1
-        elif len(case.reviews) == 1:
+        elif len(blind_reviews) == 1:
             counts["awaiting_second_review"] += 1
         elif case.status == M66CaseReviewStatus.AGREED:
             counts["agreed"] += 1
@@ -471,10 +810,15 @@ def review_progress(
             },
         )
         summary["total_cases"] = int(summary["total_cases"]) + 1
-        if review_case.reviews:
+        blind_reviews = [
+            review
+            for review in review_case.reviews
+            if review.review_stage in PRIMARY_REVIEW_STAGES and review.is_final
+        ]
+        if blind_reviews:
             summary["reviewed_cases"] = int(summary["reviewed_cases"]) + 1
             latest_review = max(
-                review_case.reviews,
+                blind_reviews,
                 key=lambda review: review.submitted_at,
             )
             latest_review_at = latest_review.submitted_at.isoformat()
@@ -578,4 +922,12 @@ def _review_response(review: ReviewDB | None) -> ReviewResponse:
         label=review.label,
         rationale=review.rationale,
         submitted_at=review.submitted_at.isoformat(),
+        updated_at=review.updated_at.isoformat() if review.updated_at else None,
+        is_final=review.is_final,
+        review_stage=review.review_stage,
+        ai_attempt_id=review.ai_attempt_id,
+        reference_proposal_id=review.reference_proposal_id,
+        confidence=review.confidence,
+        context_notes=review.context_notes,
+        evidence_findings=review.evidence_findings,
     )

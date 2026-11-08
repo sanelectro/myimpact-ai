@@ -46,13 +46,18 @@ OPTIMIZED_INTELLIGENCE_COMPARISON_DATASET_PATH = (
     / "evaluation"
     / "m66_intelligence_comparison_v3.json"
 )
+DRAFT_V4_DATASET_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "evaluation"
+    / "m66_intelligence_comparison_v4.json"
+)
 DATASET_PATHS = {
     "m66-criterion-assessment-v1": DATASET_PATH,
     "m66-intelligence-comparison-v1": INTELLIGENCE_COMPARISON_DATASET_PATH,
     "m66-intelligence-comparison-v2": EXPANDED_INTELLIGENCE_COMPARISON_DATASET_PATH,
     "m66-intelligence-comparison-v3": OPTIMIZED_INTELLIGENCE_COMPARISON_DATASET_PATH,
+    "m66-intelligence-comparison-v4": DRAFT_V4_DATASET_PATH,
 }
-
 
 def load_dataset(path: Path = DATASET_PATH) -> dict[str, Any]:
     with path.open(encoding="utf-8") as dataset_file:

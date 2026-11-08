@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.auth import AuthenticatedUser, get_current_user
 from app.db.base import Base
 from app.db.models.reliability import (
+    AIModelDB,
     ReliabilityAttemptDB,
     ReliabilityComparisonDB,
     ReliabilityExperimentDB,
@@ -28,6 +29,7 @@ def test_admin_can_create_validate_and_list_reliability_experiment():
         poolclass=StaticPool,
     )
     tables = [
+        AIModelDB.__table__,
         ReliabilityExperimentDB.__table__,
         ReliabilityAttemptDB.__table__,
         ReliabilityComparisonDB.__table__,
@@ -122,6 +124,7 @@ def test_admin_can_start_experiment_and_retrieve_persisted_report(monkeypatch):
         poolclass=StaticPool,
     )
     tables = [
+        AIModelDB.__table__,
         ReliabilityExperimentDB.__table__,
         ReliabilityAttemptDB.__table__,
         ReliabilityComparisonDB.__table__,

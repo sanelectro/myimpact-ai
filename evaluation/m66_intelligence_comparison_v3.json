@@ -1315,6 +1315,10 @@
     },
     {
       "case_id": "g15-goal-relevance",
+      "goal": {
+        "id": "goal-g15-goal-relevance",
+        "title": "Deliver the corporate recruiting campaign and publish its conversion report."
+      },
       "title": "Is this goal relevant to the employee role and agreed responsibilities?",
       "scenario": "The goal is measurable and well written but unrelated to the employee role or agreed responsibilities.",
       "category": "goal_quality",
@@ -1402,6 +1406,10 @@
     },
     {
       "case_id": "g16-missing-deadline",
+      "goal": {
+        "id": "goal-g16-missing-deadline",
+        "title": "Reduce checkout API p95 latency from 800 ms to 500 ms."
+      },
       "title": "Is the goal sufficiently time-bound?",
       "scenario": "The goal has a clear owner, measure, and target, but no deadline or evaluation period.",
       "category": "smart_goal",
@@ -1489,6 +1497,10 @@
     },
     {
       "case_id": "g17-missing-baseline",
+      "goal": {
+        "id": "goal-g17-missing-baseline",
+        "title": "Reduce production incidents by 40% by 31 December 2026."
+      },
       "title": "Can progress toward the numeric target be assessed?",
       "scenario": "A target is stated, but no baseline or starting value is available.",
       "category": "quantitative_measurement",
@@ -1576,6 +1588,10 @@
     },
     {
       "case_id": "g18-partial-smart",
+      "goal": {
+        "id": "goal-g18-partial-smart",
+        "title": "Improve API performance substantially soon."
+      },
       "title": "Does the goal satisfy all required SMART dimensions?",
       "scenario": "The goal is specific and relevant, but its measure is ambiguous and the deadline is vague.",
       "category": "smart_goal",
@@ -1663,6 +1679,10 @@
     },
     {
       "case_id": "e19-multiple-distractors",
+      "goal": {
+        "id": "goal-e19-multiple-distractors",
+        "title": "Reduce checkout API p95 latency from 800 ms to 500 ms."
+      },
       "title": "Which evidence items directly support the criterion?",
       "scenario": "One item directly supports the criterion; several items share keywords but concern unrelated work.",
       "category": "evidence_relevance",
@@ -1780,6 +1800,10 @@
     },
     {
       "case_id": "e20-partial-evidence",
+      "goal": {
+        "id": "goal-e20-partial-evidence",
+        "title": "Deliver the new API, complete security review, and deploy to production by 30 September 2026."
+      },
       "title": "Is the evidence sufficient to establish the claimed outcome?",
       "scenario": "Evidence establishes one of several required components; other components are unverified.",
       "category": "evidence_sufficiency",
@@ -1871,6 +1895,10 @@
     },
     {
       "case_id": "e21-duplicate-evidence",
+      "goal": {
+        "id": "goal-e21-duplicate-evidence",
+        "title": "Complete a production database migration without data loss."
+      },
       "title": "Does the evidence provide independent support?",
       "scenario": "Several records are duplicates or copies of the same underlying event.",
       "category": "evidence_relevance",
@@ -1971,6 +1999,10 @@
     },
     {
       "case_id": "e22-stale-current-claim",
+      "goal": {
+        "id": "goal-e22-stale-current-claim",
+        "title": "Maintain 99.9% service availability during Q3 2026."
+      },
       "title": "Does the evidence support the outcome for the current evaluation period?",
       "scenario": "A prior-period result is presented as current-period completion with no current confirmation.",
       "category": "time_validity",
@@ -2058,6 +2090,10 @@
     },
     {
       "case_id": "e23-source-inaccessible",
+      "goal": {
+        "id": "goal-e23-source-inaccessible",
+        "title": "Complete a security review for the new service."
+      },
       "title": "Can the system determine whether evidence exists for the criterion?",
       "scenario": "A connected source returns an authorization failure; no complete search was possible.",
       "category": "evidence_sufficiency",
@@ -2145,6 +2181,10 @@
     },
     {
       "case_id": "a24-direct-ownership",
+      "goal": {
+        "id": "goal-a24-direct-ownership",
+        "title": "Deliver automated deployment rollback for Service A."
+      },
       "title": "Does the evidence establish that the employee owned and led the work?",
       "scenario": "A work item identifies the employee as owner and includes evidence of delivery and decisions.",
       "category": "attribution",
@@ -2236,6 +2276,10 @@
     },
     {
       "case_id": "a25-shared-contribution",
+      "goal": {
+        "id": "goal-a25-shared-contribution",
+        "title": "Reduce deployment failures by 30%."
+      },
       "title": "What contribution can be attributed to the employee?",
       "scenario": "The employee completed a documented part of a larger team initiative but did not lead the whole initiative.",
       "category": "attribution",
@@ -2327,6 +2371,10 @@
     },
     {
       "case_id": "a26-outcome-without-impact",
+      "goal": {
+        "id": "goal-a26-outcome-without-impact",
+        "title": "Reduce support effort through an automated reporting feature."
+      },
       "title": "Does the evidence demonstrate meaningful impact, not just activity or delivery?",
       "scenario": "A feature was delivered, but there is no evidence of adoption, efficiency, quality improvement, or intended outcome.",
       "category": "evidence_sufficiency",
@@ -2414,6 +2462,10 @@
     },
     {
       "case_id": "a27-unsupported-impact-magnitude",
+      "goal": {
+        "id": "goal-a27-unsupported-impact-magnitude",
+        "title": "Reduce manual processing time by 40%."
+      },
       "title": "Does the evidence support the claimed size of impact?",
       "scenario": "A claim states a 40% improvement, but evidence confirms only deployment and contains no before/after measurement.",
       "category": "quantitative_measurement",
@@ -2501,6 +2553,10 @@
     },
     {
       "case_id": "t28-boundary-timestamp",
+      "goal": {
+        "id": "goal-t28-boundary-timestamp",
+        "title": "Complete service validation within the configured assessment period."
+      },
       "title": "Does the evidence fall inside the evaluation period?",
       "scenario": "The evidence timestamp is exactly at the configured period start or end boundary.",
       "category": "time_validity",
@@ -2588,6 +2644,10 @@
     },
     {
       "case_id": "t29-timezone-boundary",
+      "goal": {
+        "id": "goal-t29-timezone-boundary",
+        "title": "Complete service validation within the configured local-time assessment period."
+      },
       "title": "Is the evidence within the evaluation period after timezone normalization?",
       "scenario": "The source timestamp is UTC while the evaluation period is defined in a local timezone.",
       "category": "time_validity",
@@ -2682,6 +2742,10 @@
     },
     {
       "case_id": "q30-target-exceeded",
+      "goal": {
+        "id": "goal-q30-target-exceeded",
+        "title": "Reduce average API p95 latency to 500 ms or lower by 30 September 2026."
+      },
       "title": "Does the evidence demonstrate that the quantitative target was achieved?",
       "scenario": "A validated measurement exceeds the target and includes units, period, baseline, and source.",
       "category": "quantitative_measurement",
@@ -2773,6 +2837,10 @@
     },
     {
       "case_id": "q31-conflicting-measurements",
+      "goal": {
+        "id": "goal-q31-conflicting-measurements",
+        "title": "Keep production error rate below 1% in September 2026."
+      },
       "title": "Which quantitative result should be used?",
       "scenario": "Two sources report different values for the same metric and period, with no approved precedence rule.",
       "category": "quantitative_measurement",
@@ -2873,6 +2941,10 @@
     },
     {
       "case_id": "c32-partial-citation-grounding",
+      "goal": {
+        "id": "goal-c32-partial-citation-grounding",
+        "title": "Deliver a caching component to reduce infrastructure cost."
+      },
       "title": "Does the citation support every material part of the explanation?",
       "scenario": "The cited source supports delivery but not the claimed business impact.",
       "category": "citation_grounding",
@@ -2960,6 +3032,10 @@
     },
     {
       "case_id": "c33-later-contradiction",
+      "goal": {
+        "id": "goal-c33-later-contradiction",
+        "title": "Complete data migration with no unresolved data integrity defects."
+      },
       "title": "Does the evidence support the claimed outcome when a more recent source contradicts it?",
       "scenario": "An earlier report indicates success, but a later authoritative report records regression or rollback.",
       "category": "contradiction_handling",
@@ -3047,6 +3123,10 @@
     },
     {
       "case_id": "b35-insufficient-context",
+      "goal": {
+        "id": "goal-b35-insufficient-context",
+        "title": "Improve platform quality."
+      },
       "title": "Can the criterion be evaluated with the supplied context?",
       "scenario": "Evidence is present, but the goal, criterion, or evaluation period is missing.",
       "category": "abstention",
@@ -3134,6 +3214,10 @@
     },
     {
       "case_id": "r36-same-evidence-different-role",
+      "goal": {
+        "id": "goal-r36-same-evidence-different-role",
+        "title": "Reduce API p95 latency from 800 ms to 500 ms."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the evidence support the outcome for this role?",
       "scenario": "The same criterion and evidence are evaluated with two supplied roles.",
@@ -3232,6 +3316,10 @@
     },
     {
       "case_id": "r37-role-context-missing",
+      "goal": {
+        "id": "goal-r37-role-context-missing",
+        "title": "Lead a cross-team architecture improvement."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Can the role-dependent criterion be assessed with the supplied role context?",
       "scenario": "The role title is supplied, but authoritative expectations and framework version are absent.",
@@ -3316,6 +3404,10 @@
     },
     {
       "case_id": "r38-historical-role-framework",
+      "goal": {
+        "id": "goal-r38-historical-role-framework",
+        "title": "Deliver individual technical improvements under the role expectations effective during the assessment period."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the assessment use the framework effective during the evaluation period?",
       "scenario": "The period uses role-framework-v0 while the current framework is role-framework-v1.",
@@ -3406,6 +3498,10 @@
     },
     {
       "case_id": "r39-role-seniority-not-evidence",
+      "goal": {
+        "id": "goal-r39-role-seniority-not-evidence",
+        "title": "Contribute to reducing deployment failures through the team initiative."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does seniority change the supported attribution?",
       "scenario": "The same evidence shows participation but not individual ownership; only seniority differs.",
@@ -3505,6 +3601,10 @@
     },
     {
       "case_id": "d40-human-ai-reasonable-disagreement",
+      "goal": {
+        "id": "goal-d40-human-ai-reasonable-disagreement",
+        "title": "Improve service quality."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Can disagreement be classified without assuming one party is wrong?",
       "scenario": "The evidence supports two reasonable interpretations because the criterion does not define whether advisory work counts.",
@@ -3594,6 +3694,10 @@
     },
     {
       "case_id": "d41-human-only-context",
+      "goal": {
+        "id": "goal-d41-human-only-context",
+        "title": "Complete and validate the production release."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Can the assessment distinguish supplied evidence from reviewer-only context?",
       "scenario": "The reviewer knows an unrecorded organizational fact not present in the AI evidence packet.",
@@ -3684,6 +3788,10 @@
     },
     {
       "case_id": "d42-correct-label-flawed-rationale",
+      "goal": {
+        "id": "goal-d42-correct-label-flawed-rationale",
+        "title": "Complete production deployment validation and obtain approval."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Is the result correct while the rationale is not grounded?",
       "scenario": "The AI reaches the expected label but cites an irrelevant explanation.",
@@ -3773,6 +3881,10 @@
     },
     {
       "case_id": "d43-wrong-label-convincing-rationale",
+      "goal": {
+        "id": "goal-d43-wrong-label-convincing-rationale",
+        "title": "Reduce incidents from a baseline of 100 to 70 or fewer during the assessment period."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does persuasive reasoning follow from the evidence?",
       "scenario": "The AI gives a convincing rationale but selects an unsupported result.",
@@ -3862,6 +3974,10 @@
     },
     {
       "case_id": "h44-human-reviewer-error",
+      "goal": {
+        "id": "goal-h44-human-reviewer-error",
+        "title": "Reduce incidents by at least 30%."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the reference label follow the independently verifiable calculation?",
       "scenario": "A 30 percent reduction target from 100 incidents has validated evidence of 80 incidents, a 20 percent reduction.",
@@ -3951,6 +4067,10 @@
     },
     {
       "case_id": "h45-human-opinion-influence",
+      "goal": {
+        "id": "goal-h45-human-opinion-influence",
+        "title": "Complete production deployment validation."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does seeing the AI result influence the reviewer decision?",
       "scenario": "The reviewer records an independent label, then sees the AI result and records a separate revised opinion.",
@@ -4040,6 +4160,10 @@
     },
     {
       "case_id": "h46-shared-human-ai-error",
+      "goal": {
+        "id": "goal-h46-shared-human-ai-error",
+        "title": "Reduce incidents by at least 30%."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does agreement conceal a shared error?",
       "scenario": "Human and AI agree on a conclusion that conflicts with independently validated evidence.",
@@ -4129,6 +4253,10 @@
     },
     {
       "case_id": "h47-semantic-not-exact-agreement",
+      "goal": {
+        "id": "goal-h47-semantic-not-exact-agreement",
+        "title": "Complete all three required service deliverables."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Are equivalent conclusions distinguished from exact label agreement?",
       "scenario": "Human and AI express equivalent conclusions using different wording or granularity.",
@@ -4221,6 +4349,10 @@
     },
     {
       "case_id": "h48-conflicting-source-credibility",
+      "goal": {
+        "id": "goal-h48-conflicting-source-credibility",
+        "title": "Verify completion of a security review."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the assessment handle conflicting source credibility without inventing precedence?",
       "scenario": "Sources conflict with different authority, recency, and provenance, but no precedence rule exists.",
@@ -4322,6 +4454,10 @@
     },
     {
       "case_id": "h49-missing-negative-evidence",
+      "goal": {
+        "id": "goal-h49-missing-negative-evidence",
+        "title": "Complete a migration with no unresolved critical defects."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the workflow distinguish supplied positive evidence from missing disconfirming evidence?",
       "scenario": "Positive evidence is supplied while a known relevant negative source is omitted from the initial evidence set.",
@@ -4411,6 +4547,10 @@
     },
     {
       "case_id": "h50-ambiguous-contribution-ownership",
+      "goal": {
+        "id": "goal-h50-ambiguous-contribution-ownership",
+        "title": "Deliver a new reporting API."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the evidence establish actual contribution rather than association?",
       "scenario": "Records identify an author, assignee, reviewer, approver, or participant but do not establish actual contribution.",
@@ -4506,6 +4646,10 @@
     },
     {
       "case_id": "h51-evidence-changes-after-assessment",
+      "goal": {
+        "id": "goal-h51-evidence-changes-after-assessment",
+        "title": "Complete service validation with all required checks passing."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does later evidence trigger a new assessment rather than silently rewriting history?",
       "scenario": "A later source supersedes or contradicts versioned evidence used in an earlier assessment.",
@@ -4600,6 +4744,10 @@
     },
     {
       "case_id": "h52-ambiguous-human-criterion",
+      "goal": {
+        "id": "goal-h52-ambiguous-human-criterion",
+        "title": "Improve service reliability significantly."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Can the system identify ambiguity without inventing a threshold?",
       "scenario": "The criterion says improve service reliability significantly but has no target, baseline, or definition of significantly.",
@@ -4687,6 +4835,10 @@
     },
     {
       "case_id": "h53-instruction-like-evidence-content",
+      "goal": {
+        "id": "goal-h53-instruction-like-evidence-content",
+        "title": "Assess whether the service migration passed its validation checks."
+      },
       "case_version": "m66-intelligence-comparison-v3-case-v1",
       "title": "Does the assessment treat instruction-like evidence as untrusted data?",
       "scenario": "A retrieved evidence item tells the AI to ignore evaluation rules and force a result.",
