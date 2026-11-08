@@ -15,10 +15,36 @@ from app.services.goal_validation import (
     GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION,
     GoalSemanticValidationError,
     GoalSemanticValidationService,
+    evaluate_goal_requirements,
 )
 from app.services.llm.interface import ILLMService
 
 logger = logging.getLogger(__name__)
+
+
+def _validation_input(content: dict) -> GoalValidationInput:
+    structured_fields = dict(content.get("structured_fields") or {})
+    criterion_versions = content.get("criterion_versions") or []
+    if criterion_versions:
+        success_criteria = list(structured_fields.get("success_criteria") or [])
+        for item in criterion_versions:
+            definition = item["definition"]
+            if definition not in success_criteria:
+                success_criteria.append(definition)
+        structured_fields["success_criteria"] = success_criteria
+    return GoalValidationInput(
+        title=content.get("title"),
+        description=content.get("description"),
+        scope=content.get("scope"),
+        goal_level=content.get("goal_level"),
+        timeframe=GoalValidationTimeframe(
+            start_date=content.get("start_date"),
+            end_date=content.get("end_date"),
+        ),
+        source=content.get("source"),
+        source_document_id=content.get("source_document_id"),
+        **structured_fields,
+    )
 
 
 class GoalValidationRunService(BaseService):
@@ -46,31 +72,11 @@ class GoalValidationRunService(BaseService):
                 "Legacy goal versions cannot be validated; edit the goal to create a user-managed version"
             )
 
-        content = version.content
-        structured_fields = dict(content.get("structured_fields") or {})
-        criterion_versions = content.get("criterion_versions") or []
-        if criterion_versions:
-            success_criteria = list(structured_fields.get("success_criteria") or [])
-            for item in criterion_versions:
-                definition = item["definition"]
-                if definition not in success_criteria:
-                    success_criteria.append(definition)
-            structured_fields["success_criteria"] = success_criteria
-        validation_input = GoalValidationInput(
-            title=content.get("title"),
-            description=content.get("description"),
-            scope=content.get("scope"),
-            timeframe=GoalValidationTimeframe(
-                start_date=content.get("start_date"),
-                end_date=content.get("end_date"),
-            ),
-            source=content.get("source"),
-            source_document_id=content.get("source_document_id"),
-            **structured_fields,
-        )
+        validation_input = _validation_input(version.content)
+        evaluated_on = datetime.now(UTC).date()
         try:
             result, model_version, model_provider = await self.validator.validate_with_metadata(
-                validation_input
+                validation_input, as_of=evaluated_on
             )
         except GoalSemanticValidationError:
             logger.warning(
@@ -92,6 +98,14 @@ class GoalValidationRunService(BaseService):
             findings=[
                 finding.model_dump(mode="json") for finding in result.findings
             ],
+            input_context=validation_input.model_dump(mode="json"),
+            result_context={
+                "evaluated_on": evaluated_on.isoformat(),
+                "requirements": [
+                    item.model_dump(mode="json")
+                    for item in evaluate_goal_requirements(validation_input, as_of=evaluated_on)
+                ],
+            },
             rule_set_version=GOAL_RULE_SET_VERSION,
             prompt_version=GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION,
             model_provider=model_provider,
@@ -138,3 +152,16 @@ class GoalValidationRunService(BaseService):
 
     def get_history(self, goal_id: str) -> list[GoalValidationRunDB]:
         return self.repository.list_for_goal(goal_id)
+
+    def get_requirements(self, goal_id: str) -> dict:
+        version = self.goal_repository.get_latest_version(goal_id)
+        if version is None:
+            raise ValueError("Goal version not found")
+        goal = _validation_input(version.content)
+        evaluated_on = datetime.now(UTC).date()
+        return {
+            "goal_version": version.version,
+            "evaluated_on": evaluated_on,
+            "requirements": evaluate_goal_requirements(goal, as_of=evaluated_on),
+            "deferred_requirements": goal.deferred_requirements,
+        }

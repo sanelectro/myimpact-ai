@@ -42,6 +42,15 @@ class GoalRepository(BaseRepository):
     def get_by_id(self, goal_id: str) -> GoalDB | None:
         return self.session.get(GoalDB, goal_id)
 
+    def get_by_id_for_update(self, goal_id: str) -> GoalDB | None:
+        return (
+            self.session.query(GoalDB)
+            .filter(GoalDB.id == goal_id)
+            .populate_existing()
+            .with_for_update()
+            .one_or_none()
+        )
+
     def get_by_user_id(self, user_id: str) -> list[GoalDB]:
         return (
             self.session.query(GoalDB)

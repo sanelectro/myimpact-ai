@@ -39,6 +39,7 @@ def test_create_goal():
         status=GoalStatus.ACTIVE,
         sub_status=GoalSubStatus.ON_TRACK,
         scope=GoalScope.TEAM,
+        goal_level=None,
         source=None,
         source_document_id=None,
         structured_fields={
@@ -53,6 +54,7 @@ def test_create_goal():
             "target": None,
             "dependencies": [],
             "role_alignment": None,
+            "deferred_requirements": [],
         },
         created_by_user_id="user-1",
     )

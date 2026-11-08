@@ -13,6 +13,7 @@ from app.models.goal import (
     GoalCreate,
     GoalScope,
     GoalStatus,
+    GoalStructuredFields,
 )
 from app.repositories.goal import GoalRepository
 from app.services.base import BaseService
@@ -32,6 +33,8 @@ class GoalService(BaseService):
         self.repository = GoalRepository(session)
 
     def create_goal(self, goal_data: GoalCreate) -> GoalDB:
+        if any(item.related_child_goal_id for item in goal_data.structured_fields.deferred_requirements):
+            raise ValueError("A related child can only be selected after the goal is created")
         organization_id = None
         if goal_data.scope == GoalScope.ORGANIZATION:
             user = self.session.get(UserDB, goal_data.user_id)
@@ -260,7 +263,11 @@ class GoalService(BaseService):
         *,
         changed_by_user_id: str | None = None,
     ) -> GoalDB:
-        existing = self.repository.get_by_id(goal_id)
+        existing = (
+            self.repository.get_by_id_for_update(goal_id)
+            if "structured_fields" in values
+            else self.repository.get_by_id(goal_id)
+        )
         if existing is None:
             raise ValueError("Goal not found")
 
@@ -272,6 +279,22 @@ class GoalService(BaseService):
                 if hasattr(updates["structured_fields"], "model_dump")
                 else updates["structured_fields"] or {}
             )
+            previous_fields = existing.structured_fields or {}
+            if "deferred_requirements" not in updates["structured_fields"]:
+                if "deferred_requirements" in previous_fields:
+                    updates["structured_fields"]["deferred_requirements"] = previous_fields["deferred_requirements"]
+            else:
+                previous = {
+                    item["requirement"]: item.get("related_child_goal_id")
+                    for item in previous_fields.get("deferred_requirements", [])
+                }
+                for item in updates["structured_fields"]["deferred_requirements"]:
+                    child_id = item.get("related_child_goal_id")
+                    if child_id and previous.get(item["requirement"]) != child_id:
+                        child = self.repository.get_by_id(child_id)
+                        if child is None or child.user_id != existing.user_id or child.parent_goal_id != goal_id:
+                            raise ValueError("The related goal must be an owned child of this goal")
+            GoalStructuredFields.model_validate(updates["structured_fields"])
         target_scope = updates.get("scope", existing.scope)
         if target_scope != existing.scope or (
             target_scope == GoalScope.ORGANIZATION and not existing.organization_id

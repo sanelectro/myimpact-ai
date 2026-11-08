@@ -12,10 +12,12 @@ from app.db.base import Base
 from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.user import UserDB
 from app.models.goal import GoalScope, GoalStatus
+from app.models.api_v1_goals import GoalUpdateRequest
 from app.models.goal_criteria import GoalCriterionDefinition, GoalCriterionType
 from app.repositories.goal import GoalRepository
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
+from app.services.goal import GoalService
 
 
 class _StructuredLLM:
@@ -120,6 +122,89 @@ def test_goal_level_request_rejects_unknown_value():
         GoalCreateRequest(title="Goal", goal_level="WEEKLY")
 
 
+def test_old_structured_fields_writer_preserves_deferrals_and_versions_them():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        service = GoalService(session)
+        initial = dict(goal.structured_fields)
+        initial["deferred_requirements"] = [{
+            "requirement": "target",
+            "reason": "Await measurement",
+            "due_date": "2026-12-01",
+            "state": "OPEN",
+        }]
+        service.update_goal(goal.id, {"structured_fields": initial}, changed_by_user_id="owner-1")
+
+        old_fields = dict(initial)
+        old_fields.pop("deferred_requirements")
+        old_fields["outcome"] = "Improved onboarding"
+        request = GoalUpdateRequest(structured_fields=old_fields)
+        service.update_goal(
+            goal.id,
+            {"structured_fields": request.structured_fields.model_dump(mode="json", exclude_unset=True)},
+            changed_by_user_id="owner-1",
+        )
+        session.expire_all()
+        updated = session.get(app.db.models.GoalDB, goal.id)
+        assert updated.structured_fields["deferred_requirements"] == initial["deferred_requirements"]
+        assert updated.structured_fields["outcome"] == "Improved onboarding"
+        assert GoalRepository(session).get_latest_version(goal.id).content["structured_fields"]["deferred_requirements"] == initial["deferred_requirements"]
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_validation_snapshots_deferrals_and_requirement_context():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        fields = dict(goal.structured_fields)
+        fields["deferred_requirements"] = [{
+            "requirement": "target", "reason": "Await decision", "resolution_stage": "Planning"
+        }]
+        GoalService(session).update_goal(goal.id, {"structured_fields": fields}, changed_by_user_id="owner-1")
+        service = GoalValidationRunService(session, _StructuredLLM())
+        run = asyncio.run(service.validate_latest(goal.id, "owner-1"))
+        assert run.status == "READY"
+        assert run.input_context["deferred_requirements"][0]["reason"] == "Await decision"
+        assert next(item for item in run.result_context["requirements"] if item["requirement"] == "target")["state"] == "DEFERRED"
+        assert service.get_requirements(goal.id)["goal_version"] == run.goal_version.version
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_related_deferral_goal_must_be_owned_child_and_survives_disconnect():
+    engine, session = _session()
+    try:
+        parent = _create_goal(session)
+        repository = GoalRepository(session)
+        child = repository.create(goal_id="child-1", user_id="owner-1", title="Child")
+        service = GoalService(session)
+        fields = dict(parent.structured_fields)
+        fields["deferred_requirements"] = [{
+            "requirement": "target",
+            "reason": "Child will investigate",
+            "resolution_stage": "Planning",
+            "related_child_goal_id": child.id,
+        }]
+        with pytest.raises(ValueError, match="owned child"):
+            service.update_goal(parent.id, {"structured_fields": fields}, changed_by_user_id="owner-1")
+        child.parent_goal_id = parent.id
+        session.flush()
+        service.update_goal(parent.id, {"structured_fields": fields}, changed_by_user_id="owner-1")
+        child.parent_goal_id = None
+        session.flush()
+        old_fields = dict(fields)
+        old_fields.pop("deferred_requirements")
+        service.update_goal(parent.id, {"structured_fields": old_fields}, changed_by_user_id="owner-1")
+        assert parent.structured_fields["deferred_requirements"][0]["related_child_goal_id"] == child.id
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def test_material_goal_edit_appends_immutable_version_and_status_edit_does_not():
     engine, session = _session()
     try:
@@ -173,8 +258,8 @@ def test_validation_runs_reference_exact_versions_and_retain_history():
         assert first.goal_version.version == 1
         assert second.goal_version.version == 2
         assert first.status == second.status == "READY"
-        assert first.rule_set_version == "goal-rules-v1"
-        assert first.prompt_version == "goal-semantic-validation-v2"
+        assert first.rule_set_version == "goal-rules-v2"
+        assert first.prompt_version == "goal-semantic-validation-v3"
         assert first.model_provider == "test-provider"
         assert first.model_version == "test-model"
         assert first.actor_user_id == "owner-1"
@@ -275,7 +360,7 @@ def test_validation_logs_metadata_without_goal_content(caplog):
         assert record.validation_run_id == run.id
         assert record.goal_version_id == run.goal_version_id
         assert record.duration_ms >= 0
-        assert record.prompt_version == "goal-semantic-validation-v2"
+        assert record.prompt_version == "goal-semantic-validation-v3"
         assert "onboarding" not in str(record.__dict__)
     finally:
         session.close()

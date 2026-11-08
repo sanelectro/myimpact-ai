@@ -26,6 +26,8 @@ class GoalValidationRunDB(Base):
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     findings: Mapped[list] = mapped_column(JSON, nullable=False)
+    input_context: Mapped[dict | None] = mapped_column(JSON)
+    result_context: Mapped[dict | None] = mapped_column(JSON)
     rule_set_version: Mapped[str] = mapped_column(String(100), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
     model_provider: Mapped[str | None] = mapped_column(String(100))

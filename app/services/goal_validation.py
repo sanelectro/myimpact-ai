@@ -1,13 +1,18 @@
 import json
+from datetime import UTC, date, datetime
 from importlib.resources import files
 
 from pydantic import ValidationError
 
+from app.models.goal import DeferredRequirementState
 from app.models.goal_validation import (
     GoalSemanticAnalysis,
     GoalSemanticIssue,
     GoalSemanticIssueCode,
     GoalSemanticSourceField,
+    GoalRequirementAssessment,
+    GoalRequirementClassification,
+    GoalRequirementState,
     GoalValidationDimension,
     GoalValidationFinding,
     GoalValidationFindingCode,
@@ -20,8 +25,8 @@ from app.models.llm import LLMRequest
 from app.services.llm.factory import create_llm_service
 from app.services.llm.interface import ILLMService
 
-GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION = "goal-semantic-validation-v2"
-GOAL_RULE_SET_VERSION = "goal-rules-v1"
+GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION = "goal-semantic-validation-v3"
+GOAL_RULE_SET_VERSION = "goal-rules-v2"
 
 
 class GoalSemanticValidationError(RuntimeError):
@@ -29,7 +34,7 @@ class GoalSemanticValidationError(RuntimeError):
 
 
 def _semantic_prompt() -> str:
-    return files("app.prompts").joinpath("goal_semantic_validation_v2.md").read_text(
+    return files("app.prompts").joinpath("goal_semantic_validation_v3.md").read_text(
         encoding="utf-8"
     )
 
@@ -168,7 +173,64 @@ def _finding_from_semantic_issue(issue: GoalSemanticIssue) -> GoalValidationFind
     )
 
 
-def validate_goal(goal: GoalValidationInput) -> GoalValidationResult:
+def evaluate_goal_requirements(
+    goal: GoalValidationInput, *, as_of: date
+) -> list[GoalRequirementAssessment]:
+    required = [
+        ("accountability", bool(goal.accountability)),
+        ("success_criteria", bool(goal.success_criteria)),
+    ]
+    results = [
+        GoalRequirementAssessment(
+            requirement=name,
+            classification=GoalRequirementClassification.REQUIRED_NOW,
+            state=GoalRequirementState.PRESENT if present else GoalRequirementState.MISSING,
+        )
+        for name, present in required
+    ]
+    is_delivery = bool(goal.goal_type and goal.goal_type.casefold() == "delivery")
+    results.append(
+        GoalRequirementAssessment(
+            requirement="deliverables",
+            classification=(
+                GoalRequirementClassification.REQUIRED_NOW
+                if is_delivery else GoalRequirementClassification.NOT_APPLICABLE
+            ),
+            state=(
+                GoalRequirementState.NOT_APPLICABLE if not is_delivery
+                else GoalRequirementState.PRESENT if goal.deliverables
+                else GoalRequirementState.MISSING
+            ),
+        )
+    )
+    deferred = {item.requirement.value: item for item in goal.deferred_requirements}
+    for name in ("baseline", "target"):
+        item = deferred.get(name)
+        if item and item.state is DeferredRequirementState.NOT_APPLICABLE:
+            state = GoalRequirementState.NOT_APPLICABLE
+        elif item and item.state is DeferredRequirementState.OPEN:
+            state = (
+                GoalRequirementState.OVERDUE
+                if item.due_date is not None and item.due_date < as_of
+                else GoalRequirementState.DEFERRED
+            )
+        else:
+            state = GoalRequirementState.PRESENT if getattr(goal, name) else GoalRequirementState.MISSING
+        results.append(
+            GoalRequirementAssessment(
+                requirement=name,
+                classification=(
+                    GoalRequirementClassification.NOT_APPLICABLE
+                    if state is GoalRequirementState.NOT_APPLICABLE
+                    else GoalRequirementClassification.DEFERRED_ALLOWED
+                ),
+                state=state,
+            )
+        )
+    return results
+
+
+def validate_goal(goal: GoalValidationInput, *, as_of: date | None = None) -> GoalValidationResult:
     """Run deterministic completeness and structural checks without generating content."""
     findings: list[GoalValidationFinding] = []
 
@@ -267,6 +329,25 @@ def validate_goal(goal: GoalValidationInput) -> GoalValidationResult:
             )
         )
 
+    for requirement in evaluate_goal_requirements(
+        goal, as_of=as_of or datetime.now(UTC).date()
+    ):
+        if requirement.state is GoalRequirementState.OVERDUE:
+            findings.append(
+                GoalValidationFinding(
+                    dimension=GoalValidationDimension.MEASUREMENT,
+                    finding_code=GoalValidationFindingCode.OVERDUE_DEFERRED_REQUIREMENT,
+                    severity=GoalValidationSeverity.WARNING,
+                    validation_status=GoalValidationStatus.NEEDS_DISCUSSION,
+                    explanation=f"The deferred {requirement.requirement} is past its due date.",
+                    missing_info=[requirement.requirement],
+                    clarification_questions=[
+                        f"How should the deferred {requirement.requirement} be resolved?"
+                    ],
+                    human_intervention_required=True,
+                )
+            )
+
     return GoalValidationResult.from_findings(findings)
 
 
@@ -281,9 +362,9 @@ class GoalSemanticValidationService:
         return result
 
     async def validate_with_metadata(
-        self, goal: GoalValidationInput
+        self, goal: GoalValidationInput, *, as_of: date | None = None
     ) -> tuple[GoalValidationResult, str | None, str | None]:
-        deterministic_result = validate_goal(goal)
+        deterministic_result = validate_goal(goal, as_of=as_of)
         try:
             llm_service = self.llm_service or create_llm_service()
             response = await llm_service.generate(

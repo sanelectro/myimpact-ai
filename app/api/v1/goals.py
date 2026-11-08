@@ -8,6 +8,7 @@ from app.models.api_v1_goals import (
     GoalCreateRequest,
     GoalDeactivateRequest,
     GoalReopenRequest,
+    GoalRequirementsResponse,
     GoalResponse,
     GoalStatusHistoryResponse,
     GoalUpdateRequest,
@@ -43,6 +44,8 @@ def _validation_to_response(run) -> GoalValidationRunResponse:
         goal_version=run.goal_version.version,
         status=run.status,
         findings=run.findings,
+        input_context=getattr(run, "input_context", None),
+        result_context=getattr(run, "result_context", None),
         rule_set_version=run.rule_set_version,
         prompt_version=run.prompt_version,
         model_provider=run.model_provider,
@@ -114,9 +117,14 @@ def update_goal(
 ) -> GoalResponse:
     _require_goal(service.get_goal_by_id(goal_id), user_id)
     try:
+        updates = request.model_dump(exclude_unset=True)
+        if request.structured_fields is not None:
+            updates["structured_fields"] = request.structured_fields.model_dump(
+                mode="json", exclude_unset=True
+            )
         goal = service.update_goal(
             goal_id,
-            request.model_dump(exclude_unset=True),
+            updates,
             changed_by_user_id=user_id,
         )
     except ValueError as exc:
@@ -248,6 +256,20 @@ def get_goal_validation_history(
         _validation_to_response(run)
         for run in validation_service.get_history(goal_id)
     ]
+
+
+@router.get("/{goal_id}/requirements", response_model=GoalRequirementsResponse)
+def get_goal_requirements(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
+    validation_service: Annotated[GoalValidationRunService, Depends(get_goal_validation_service)],
+) -> GoalRequirementsResponse:
+    _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    try:
+        return GoalRequirementsResponse.model_validate(validation_service.get_requirements(goal_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.post("/{goal_id}/deactivate", response_model=GoalResponse)

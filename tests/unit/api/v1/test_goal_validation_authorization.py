@@ -13,6 +13,7 @@ from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 OPERATIONS = (
     ("POST", "validate"),
     ("GET", "validation-history"),
+    ("GET", "requirements"),
     ("GET", "evidence-eligibility"),
     ("POST", "evidence"),
 )
@@ -62,6 +63,16 @@ def authorized_routes():
     validation_service = MagicMock()
     validation_service.validate_latest = AsyncMock(return_value=run)
     validation_service.get_history.return_value = [run]
+    validation_service.get_requirements.return_value = {
+        "goal_version": 1,
+        "evaluated_on": "2026-11-08",
+        "requirements": [
+            {"requirement": "target", "classification": "DEFERRED_ALLOWED", "state": "DEFERRED"}
+        ],
+        "deferred_requirements": [
+            {"requirement": "target", "reason": "Await agreement", "resolution_stage": "Planning"}
+        ],
+    }
     evidence_service = MagicMock()
     evidence_service.create_evidence.return_value = SimpleNamespace(
         id="evidence-1",
@@ -129,6 +140,9 @@ def test_authenticated_owner_can_use_validation_and_evidence_routes(
     if operation == "validate":
         validation_service.validate_latest.assert_awaited_once_with("goal-1", "owner-1")
         assert response.json()["actor_user_id"] == "owner-1"
+    elif operation == "requirements":
+        validation_service.get_requirements.assert_called_once_with("goal-1")
+        assert response.json()["requirements"][0]["state"] == "DEFERRED"
     elif operation == "evidence":
         assert evidence_service.create_evidence.call_args.args[0].user_id == "owner-1"
 
@@ -146,6 +160,7 @@ def test_spoofed_owner_is_rejected_before_services_run(
     goal_service.get_goal_by_id.assert_not_called()
     validation_service.validate_latest.assert_not_called()
     validation_service.get_history.assert_not_called()
+    validation_service.get_requirements.assert_not_called()
     evidence_service.create_evidence.assert_not_called()
 
 
@@ -159,6 +174,7 @@ def test_authenticated_user_cannot_access_goal_owned_by_someone_else(
     assert response.status_code == 404
     validation_service.validate_latest.assert_not_called()
     validation_service.get_history.assert_not_called()
+    validation_service.get_requirements.assert_not_called()
     evidence_service.create_evidence.assert_not_called()
 
 

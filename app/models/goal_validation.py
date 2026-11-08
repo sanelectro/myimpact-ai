@@ -3,7 +3,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.goal import GoalScope, GoalStructuredFields
+from app.models.goal import GoalLevel, GoalScope, GoalStructuredFields
 
 
 class GoalValidationStatus(str, Enum):
@@ -56,6 +56,27 @@ class GoalValidationFindingCode(str, Enum):
     MIXED_ACCOUNTABILITY = "mixed_accountability"
     FEASIBILITY_NEEDS_CONTEXT = "feasibility_needs_context"
     ROLE_ALIGNMENT_NEEDS_CONTEXT = "role_alignment_needs_context"
+    OVERDUE_DEFERRED_REQUIREMENT = "overdue_deferred_requirement"
+
+
+class GoalRequirementClassification(str, Enum):
+    REQUIRED_NOW = "REQUIRED_NOW"
+    DEFERRED_ALLOWED = "DEFERRED_ALLOWED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class GoalRequirementState(str, Enum):
+    PRESENT = "PRESENT"
+    MISSING = "MISSING"
+    DEFERRED = "DEFERRED"
+    OVERDUE = "OVERDUE"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class GoalRequirementAssessment(BaseModel):
+    requirement: str
+    classification: GoalRequirementClassification
+    state: GoalRequirementState
 
 
 class GoalSemanticIssueCode(str, Enum):
@@ -132,6 +153,7 @@ class GoalValidationInput(GoalStructuredFields):
     title: str | None = None
     description: str | None = None
     scope: GoalScope | None = None
+    goal_level: GoalLevel | None = None
     timeframe: GoalValidationTimeframe | None = None
     source: str | None = None
     source_document_id: str | None = None

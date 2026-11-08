@@ -59,3 +59,31 @@ version and always enables validation and approval checks, regardless of the
 legacy setting. Operators can first deploy with the default compatibility
 setting, then enable strict legacy enforcement after choosing an appropriate
 migration and validation rollout.
+# Progressive requirements and deferrals
+
+The existing validator classifies accountability and success criteria as
+required now; deliverables are required for delivery goals. Baseline and
+target may be deferred without creating or approving a measurable criterion.
+An open deferral needs a human-supplied reason and a due date or resolution
+stage. Resolution requires an actual value and a resolution reason;
+retirement as not applicable also requires a reason. A related goal must be
+an owned child when it is first selected. Reparenting does not silently change
+an existing reference.
+
+`GET /api/v1/goals/{id}/requirements?user_id=...` returns the current goal
+version, UTC evaluation date, classifications, current states and deferrals.
+An open deferral is overdue after its due date; a stage-only deferral is not
+automatically considered due because planning-stage transitions are not yet
+defined. A new validation run reports an overdue deferral as NEEDS_DISCUSSION.
+The existing eligibility gate continues to use the latest persisted validation
+run; the passage of time alone does not rewrite a historical run or silently
+alter the gate.
+
+New validation runs retain their input and requirement-result snapshots.
+Historical runs keep null snapshots and their original rule/prompt versions.
+An older client that omits `deferred_requirements` when submitting
+`structured_fields` preserves the stored deferrals. Sending the field
+explicitly edits it and creates a normal goal-definition version.
+
+Deploy the additive database migration before the new backend version. No
+automated reminder, automatic deferral approval, or stage transition is added.

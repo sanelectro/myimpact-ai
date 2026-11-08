@@ -55,6 +55,50 @@ VALID_SUB_STATUSES_BY_GOAL_STATUS = {
 }
 
 
+class DeferredRequirementKind(str, Enum):
+    BASELINE = "baseline"
+    TARGET = "target"
+
+
+class DeferredRequirementState(str, Enum):
+    OPEN = "OPEN"
+    RESOLVED = "RESOLVED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+class GoalDeferredRequirement(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    requirement: DeferredRequirementKind
+    reason: str = Field(min_length=1, max_length=1000)
+    due_date: date | None = None
+    resolution_stage: str | None = Field(default=None, max_length=200)
+    state: DeferredRequirementState = DeferredRequirementState.OPEN
+    resolution_reason: str | None = Field(default=None, max_length=1000)
+    related_child_goal_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+    @field_validator("reason", "resolution_stage", "resolution_reason")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("Text cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_deferral(self):
+        if self.state is DeferredRequirementState.OPEN:
+            if self.due_date is None and self.resolution_stage is None:
+                raise ValueError("An open deferral needs a due date or resolution stage")
+            if self.resolution_reason is not None:
+                raise ValueError("An open deferral cannot have a resolution reason")
+        elif self.resolution_reason is None:
+            raise ValueError("A resolved or retired deferral needs a resolution reason")
+        return self
+
+
 class GoalStructuredFields(BaseModel):
     """Optional typed goal definition details, separate from lifecycle state."""
 
@@ -71,6 +115,7 @@ class GoalStructuredFields(BaseModel):
     target: str | None = Field(default=None, max_length=1000)
     dependencies: list[str] = Field(default_factory=list)
     role_alignment: str | None = Field(default=None, max_length=2000)
+    deferred_requirements: list[GoalDeferredRequirement] = Field(default_factory=list, max_length=2)
 
     @field_validator(
         "goal_type",
@@ -95,6 +140,18 @@ class GoalStructuredFields(BaseModel):
         if any(not value for value in normalized):
             raise ValueError("List entries cannot be blank")
         return normalized
+
+    @model_validator(mode="after")
+    def validate_deferred_requirements(self):
+        requirements = [item.requirement for item in self.deferred_requirements]
+        if len(requirements) != len(set(requirements)):
+            raise ValueError("Only one deferral is allowed per requirement")
+        for item in self.deferred_requirements:
+            if item.state is DeferredRequirementState.RESOLVED and not getattr(
+                self, item.requirement.value
+            ):
+                raise ValueError(f"A resolved {item.requirement.value} requires a value")
+        return self
 
 
 class Goal(BaseModel):

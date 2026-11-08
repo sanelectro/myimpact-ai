@@ -3,8 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.goal import GoalLevel, GoalScope, GoalStatus, GoalStructuredFields, GoalSubStatus
-from app.models.goal_validation import GoalValidationFinding, GoalValidationStatus
+from app.models.goal import GoalDeferredRequirement, GoalLevel, GoalScope, GoalStatus, GoalStructuredFields, GoalSubStatus
+from app.models.goal_validation import GoalRequirementAssessment, GoalValidationFinding, GoalValidationStatus
 
 
 class GoalCreateRequest(BaseModel):
@@ -116,12 +116,21 @@ class GoalValidationRunResponse(BaseModel):
     goal_version: int
     status: GoalValidationStatus
     findings: list[GoalValidationFinding]
+    input_context: dict | None = None
+    result_context: dict | None = None
     rule_set_version: str
     prompt_version: str
     model_provider: str | None = None
     model_version: str | None = None
     actor_user_id: str | None = None
     created_at: datetime
+
+
+class GoalRequirementsResponse(BaseModel):
+    goal_version: int
+    evaluated_on: date
+    requirements: list[GoalRequirementAssessment]
+    deferred_requirements: list[GoalDeferredRequirement]
 
 
 class GoalExpectationStatus(str, Enum):
