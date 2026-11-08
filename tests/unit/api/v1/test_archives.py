@@ -32,6 +32,8 @@ def _goal(status: GoalStatus = GoalStatus.ARCHIVED) -> GoalDB:
         status=status,
         sub_status=GoalSubStatus.NONE if status == GoalStatus.ARCHIVED else GoalSubStatus.ON_TRACK,
         deactivation_reason="Priorities changed",
+        relationship_revision=0,
+        structured_fields={},
         created_at=now,
         updated_at=now,
     )

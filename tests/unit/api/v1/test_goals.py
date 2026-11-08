@@ -17,7 +17,8 @@ def _goal(user_id="user-1", status=GoalStatus.ACTIVE, deactivation_reason=None):
     return GoalDB(
         id="goal-1", user_id=user_id, title="Improve reliability",
         scope=GoalScope.PERSONAL, status=status, sub_status=GoalSubStatus.ON_TRACK,
-        deactivation_reason=deactivation_reason, created_at=now, updated_at=now,
+        deactivation_reason=deactivation_reason, relationship_revision=0,
+        structured_fields={}, created_at=now, updated_at=now,
     )
 
 
@@ -42,6 +43,7 @@ def test_create_goal_returns_product_safe_contract():
         app.dependency_overrides.clear()
     assert response.status_code == 201
     assert response.json()["id"] == "goal-1"
+    assert response.json()["relationship_revision"] == 0
     assert "user_id" not in response.json()
 
 
