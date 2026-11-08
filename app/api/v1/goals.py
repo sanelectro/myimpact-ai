@@ -15,7 +15,7 @@ from app.models.api_v1_goals import (
     GoalValidationRunResponse,
 )
 from app.models.goal import GoalCreate, GoalStatus
-from app.services.goal import GoalDeletionConflict, GoalService
+from app.services.goal import GoalDeferralConflict, GoalDeletionConflict, GoalService
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
 
@@ -118,15 +118,15 @@ def update_goal(
     _require_goal(service.get_goal_by_id(goal_id), user_id)
     try:
         updates = request.model_dump(exclude_unset=True)
+        expected_deferrals = updates.pop("expected_deferred_requirements", None)
         if request.structured_fields is not None:
             updates["structured_fields"] = request.structured_fields.model_dump(
                 mode="json", exclude_unset=True
             )
-        goal = service.update_goal(
-            goal_id,
-            updates,
-            changed_by_user_id=user_id,
-        )
+        kwargs = {"expected_deferred_requirements": expected_deferrals} if expected_deferrals is not None else {}
+        goal = service.update_goal(goal_id, updates, changed_by_user_id=user_id, **kwargs)
+    except GoalDeferralConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

@@ -48,12 +48,20 @@ endpoints do not aggregate child outcomes or impact. Deploy the hierarchy and
 evidence contribution database migrations before enabling the corresponding
 API changes.
 
+Goal definition updates may include `expected_deferred_requirements` alongside
+an explicit `structured_fields.deferred_requirements` update. The server
+compares it with the stored deferrals under the goal row lock and returns HTTP
+409 if they changed. Clients that omit the optional expectation retain their
+existing behavior, including preservation when deferrals are omitted.
+
 ## Separate measures
 
 `GET /{id}/measures` reports direct-child lifecycle status counts, including
 archived children, without an average or weighted roll-up. It includes the
 existing, direct-only M6.6 criterion assessment and its criterion evidence
-coverage. Criteria have not been classified as execution or outcome, so that
+coverage. Clients already loading that assessment can pass
+`include_assessment=false` to omit the duplicate assessment read; the field
+is then null. Criteria have not been classified as execution or outcome, so that
 assessment is not an outcome measure. `outcome_achievement` and
 `demonstrated_impact` are currently null: neither child completion nor an
 assessment score establishes them. Existing per-evidence advisory impact

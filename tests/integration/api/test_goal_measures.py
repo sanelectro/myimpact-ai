@@ -29,6 +29,12 @@ def test_child_completion_does_not_infer_parent_outcome_or_impact(hierarchy_stac
     assert data["own_criterion_assessment"]["evidence_coverage_percentage"] is None
     assert data["outcome_achievement"] is None
     assert data["demonstrated_impact"] is None
+    counts_only = client.get(
+        f"/api/v1/goals/{parent}/measures", params={"user_id": owner, "include_assessment": "false"}
+    )
+    assert counts_only.status_code == 200
+    assert counts_only.json()["child_execution"] == data["child_execution"]
+    assert counts_only.json()["own_criterion_assessment"] is None
     detached = client.request(
         "DELETE", f"/api/v1/goals/{child}/parent", params={"user_id": owner},
         json={"expected_revision": 1},

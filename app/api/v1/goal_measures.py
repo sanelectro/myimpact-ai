@@ -25,7 +25,7 @@ class ChildExecutionCounts(BaseModel):
 class GoalMeasuresResponse(BaseModel):
     goal_id: str
     child_execution: ChildExecutionCounts
-    own_criterion_assessment: GoalAssessmentSummaryResponse
+    own_criterion_assessment: GoalAssessmentSummaryResponse | None
     outcome_achievement: None = None
     demonstrated_impact: None = None
 
@@ -37,6 +37,7 @@ def get_goal_measures(
     goal_service: Annotated[GoalService, Depends(get_goal_service)],
     assessment_service: Annotated[GoalAssessmentService, Depends(get_assessment_service)],
     db: Annotated[Session, Depends(get_db)],
+    include_assessment: bool = True,
 ) -> GoalMeasuresResponse:
     _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
     rows = db.execute(
@@ -48,5 +49,5 @@ def get_goal_measures(
     return GoalMeasuresResponse(
         goal_id=goal_id,
         child_execution=ChildExecutionCounts(total=sum(counts.values()), by_status=counts),
-        own_criterion_assessment=assessment_service.get_summary(goal_id),
+        own_criterion_assessment=assessment_service.get_summary(goal_id) if include_assessment else None,
     )

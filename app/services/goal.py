@@ -12,6 +12,7 @@ from app.models.goal import (
     DEFAULT_SUB_STATUS_BY_GOAL_STATUS,
     VALID_SUB_STATUSES_BY_GOAL_STATUS,
     GoalCreate,
+    GoalDeferredRequirement,
     GoalScope,
     GoalStatus,
     GoalStructuredFields,
@@ -29,6 +30,10 @@ ALLOWED_GOAL_TRANSITIONS = {
 
 
 class GoalDeletionConflict(ValueError):
+    pass
+
+
+class GoalDeferralConflict(ValueError):
     pass
 
 
@@ -267,6 +272,7 @@ class GoalService(BaseService):
         values: dict,
         *,
         changed_by_user_id: str | None = None,
+        expected_deferred_requirements: list[dict] | None = None,
     ) -> GoalDB:
         existing = (
             self.repository.get_by_id_for_update(goal_id)
@@ -285,6 +291,17 @@ class GoalService(BaseService):
                 else updates["structured_fields"] or {}
             )
             previous_fields = existing.structured_fields or {}
+            if expected_deferred_requirements is not None:
+                def normalized_deferrals(items):
+                    return sorted(
+                        (GoalDeferredRequirement.model_validate(item).model_dump(mode="json") for item in items),
+                        key=lambda item: item["requirement"],
+                    )
+
+                if normalized_deferrals(previous_fields.get("deferred_requirements", [])) != normalized_deferrals(
+                    expected_deferred_requirements
+                ):
+                    raise GoalDeferralConflict("Deferrals changed; reload the goal before saving")
             if "deferred_requirements" not in updates["structured_fields"]:
                 if "deferred_requirements" in previous_fields:
                     updates["structured_fields"]["deferred_requirements"] = previous_fields["deferred_requirements"]

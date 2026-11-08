@@ -39,11 +39,17 @@ class GoalUpdateRequest(BaseModel):
     source: str | None = Field(default=None, max_length=100)
     source_document_id: str | None = None
     structured_fields: GoalStructuredFields | None = None
+    expected_deferred_requirements: list[GoalDeferredRequirement] | None = Field(default=None, max_length=2)
 
     @model_validator(mode="after")
     def require_update_field_and_validate_dates(self):
-        if not self.model_fields_set:
+        if not self.model_fields_set - {"expected_deferred_requirements"}:
             raise ValueError("At least one goal field must be provided")
+        if self.expected_deferred_requirements is not None and (
+            self.structured_fields is None
+            or "deferred_requirements" not in self.structured_fields.model_fields_set
+        ):
+            raise ValueError("Expected deferrals require an explicit deferral update")
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValueError("Target date cannot be before start date")
         return self
