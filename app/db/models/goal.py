@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -25,6 +25,7 @@ class GoalDB(Base):
     deactivation_reason: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str | None] = mapped_column(String(100))
     source_document_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("documents.id", ondelete="SET NULL"), nullable=True)
+    structured_fields: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -46,6 +47,18 @@ class GoalDB(Base):
         "GoalCriterionDB",
         back_populates="goal",
         cascade="all, delete-orphan",
+    )
+    versions = relationship(
+        "GoalVersionDB",
+        back_populates="goal",
+        passive_deletes="all",
+        order_by="GoalVersionDB.version",
+    )
+    validation_runs = relationship(
+        "GoalValidationRunDB",
+        back_populates="goal",
+        passive_deletes="all",
+        order_by="GoalValidationRunDB.created_at",
     )
 
     @property

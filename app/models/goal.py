@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.models.goal_criteria import GoalCriterionDefinition
 
 
 class GoalScope(str, Enum):
@@ -46,6 +48,48 @@ VALID_SUB_STATUSES_BY_GOAL_STATUS = {
 }
 
 
+class GoalStructuredFields(BaseModel):
+    """Optional typed goal definition details, separate from lifecycle state."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    goal_type: str | None = Field(default=None, max_length=100)
+    accountability: str | None = Field(default=None, max_length=1000)
+    success_criteria: list[GoalCriterionDefinition] = Field(default_factory=list)
+    deliverables: list[str] = Field(default_factory=list)
+    outcome: str | None = Field(default=None, max_length=4000)
+    impact: str | None = Field(default=None, max_length=4000)
+    measurement: str | None = Field(default=None, max_length=1000)
+    baseline: str | None = Field(default=None, max_length=1000)
+    target: str | None = Field(default=None, max_length=1000)
+    dependencies: list[str] = Field(default_factory=list)
+    role_alignment: str | None = Field(default=None, max_length=2000)
+
+    @field_validator(
+        "goal_type",
+        "accountability",
+        "outcome",
+        "impact",
+        "measurement",
+        "baseline",
+        "target",
+        "role_alignment",
+    )
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip() or None
+
+    @field_validator("deliverables", "dependencies")
+    @classmethod
+    def normalize_text_lists(cls, values: list[str]) -> list[str]:
+        normalized = [value.strip() for value in values]
+        if any(not value for value in normalized):
+            raise ValueError("List entries cannot be blank")
+        return normalized
+
+
 class Goal(BaseModel):
     id: str
     user_id: str
@@ -59,6 +103,7 @@ class Goal(BaseModel):
     deactivation_reason: str | None = None
     source: str | None = None
     source_document_id: str | None = None
+    structured_fields: GoalStructuredFields = Field(default_factory=GoalStructuredFields)
     created_at: datetime
     updated_at: datetime
 
@@ -74,6 +119,7 @@ class GoalCreate(BaseModel):
     sub_status: GoalSubStatus | None = None
     source: str | None = None
     source_document_id: str | None = None
+    structured_fields: GoalStructuredFields = Field(default_factory=GoalStructuredFields)
 
     @model_validator(mode="after")
     def validate_lifecycle_pair(self):

@@ -11,9 +11,12 @@ from app.models.api_v1_goals import (
     GoalResponse,
     GoalStatusHistoryResponse,
     GoalUpdateRequest,
+    GoalValidationRunResponse,
 )
 from app.models.goal import GoalCreate, GoalStatus
 from app.services.goal import GoalService
+from app.services.goal_validation import GoalSemanticValidationError
+from app.services.goal_validation_runs import GoalValidationRunService
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -22,8 +25,31 @@ def get_goal_service(db: Annotated[Session, Depends(get_db)]) -> GoalService:
     return GoalService(db)
 
 
+def get_goal_validation_service(
+    db: Annotated[Session, Depends(get_db)],
+) -> GoalValidationRunService:
+    return GoalValidationRunService(db)
+
+
 def _to_response(goal) -> GoalResponse:
     return GoalResponse.model_validate(goal, from_attributes=True)
+
+
+def _validation_to_response(run) -> GoalValidationRunResponse:
+    return GoalValidationRunResponse(
+        id=run.id,
+        goal_id=run.goal_id,
+        goal_version_id=run.goal_version_id,
+        goal_version=run.goal_version.version,
+        status=run.status,
+        findings=run.findings,
+        rule_set_version=run.rule_set_version,
+        prompt_version=run.prompt_version,
+        model_provider=run.model_provider,
+        model_version=run.model_version,
+        actor_user_id=run.actor_user_id,
+        created_at=run.created_at,
+    )
 
 
 def _require_goal(goal, user_id: str):
@@ -50,6 +76,7 @@ def create_goal(
                 status=GoalStatus.DRAFT,
                 source=request.source,
                 source_document_id=request.source_document_id,
+                structured_fields=request.structured_fields,
             )
         )
     except ValueError as exc:
@@ -86,7 +113,11 @@ def update_goal(
 ) -> GoalResponse:
     _require_goal(service.get_goal_by_id(goal_id), user_id)
     try:
-        goal = service.update_goal(goal_id, request.model_dump(exclude_unset=True))
+        goal = service.update_goal(
+            goal_id,
+            request.model_dump(exclude_unset=True),
+            changed_by_user_id=user_id,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -165,6 +196,56 @@ def get_goal_status_history(
     return [
         GoalStatusHistoryResponse.model_validate(item, from_attributes=True)
         for item in service.get_status_history(goal_id)
+    ]
+
+
+@router.post(
+    "/{goal_id}/validate",
+    response_model=GoalValidationRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def validate_goal(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
+    validation_service: Annotated[
+        GoalValidationRunService,
+        Depends(get_goal_validation_service),
+    ],
+) -> GoalValidationRunResponse:
+    _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    try:
+        run = await validation_service.validate_latest(goal_id, user_id)
+    except GoalSemanticValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    return _validation_to_response(run)
+
+
+@router.get(
+    "/{goal_id}/validation-history",
+    response_model=list[GoalValidationRunResponse],
+)
+def get_goal_validation_history(
+    goal_id: str,
+    user_id: Annotated[str, Query(min_length=1)],
+    goal_service: Annotated[GoalService, Depends(get_goal_service)],
+    validation_service: Annotated[
+        GoalValidationRunService,
+        Depends(get_goal_validation_service),
+    ],
+) -> list[GoalValidationRunResponse]:
+    _require_goal(goal_service.get_goal_by_id(goal_id), user_id)
+    return [
+        _validation_to_response(run)
+        for run in validation_service.get_history(goal_id)
     ]
 
 

@@ -7,19 +7,19 @@ from sqlalchemy.orm import Session
 from app.db.models.goal import GoalDB
 from app.db.models.goal_criterion import GoalCriterionAssessmentDB
 from app.exceptions import GoalCriteriaGenerationError
-from app.models.goal import Goal
 from app.models.goal_criteria import (
     GoalAssessmentLifecycle,
     GoalCriteriaGenerationResult,
     GoalCriterionApprovalStatus,
     GoalCriterionCreateRequest,
-    GoalCriterionDefinition,
-    GoalCriterionResponse,
-    GoalCriterionType,
     GoalCriterionUpdateRequest,
 )
 from app.models.llm import LLMRequest
-from app.repositories.goal_criterion import GoalAssessmentRepository, GoalCriterionRepository
+from app.repositories.goal import GoalRepository
+from app.repositories.goal_criterion import (
+    GoalAssessmentRepository,
+    GoalCriterionRepository,
+)
 from app.services.base import BaseService
 from app.services.llm.interface import ILLMService
 
@@ -47,6 +47,7 @@ class GoalCriteriaService(BaseService):
         super().__init__(session)
         self.repository = GoalCriterionRepository(session)
         self.assessment_repository = GoalAssessmentRepository(session)
+        self.goal_repository = GoalRepository(session)
         self.llm_service = llm_service
 
     def list_for_goal(self, goal_id: str) -> list:
@@ -70,6 +71,7 @@ class GoalCriteriaService(BaseService):
             definition=request.definition.model_dump(mode="json"),
             created_by_user_id=user_id,
         )
+        self._record_goal_version(goal_id, user_id)
         self.commit()
         return self.repository.get_by_id(criterion.id)
 
@@ -92,6 +94,7 @@ class GoalCriteriaService(BaseService):
         )
         if criterion.current_version is not None:
             self._obsolete_assessments(criterion.id, "Criterion definition edited")
+        self._record_goal_version(goal_id, user_id)
         self.commit()
         return self.repository.get_by_id(criterion.id), version
 
@@ -114,10 +117,16 @@ class GoalCriteriaService(BaseService):
         self.repository.approve_version(criterion, version, user_id)
         if previous_version is not None and previous_version != version.version:
             self._obsolete_assessments(criterion.id, "Criterion version approved")
+        self._record_goal_version(goal_id, user_id)
         self.commit()
         return self.repository.get_by_id(criterion.id)
 
-    def retire(self, goal_id: str, criterion_id: str) -> None:
+    def retire(
+        self,
+        goal_id: str,
+        criterion_id: str,
+        changed_by_user_id: str | None = None,
+    ) -> None:
         criterion = self.repository.get_by_id_and_goal(criterion_id, goal_id)
         if criterion is None:
             raise ValueError("Criterion not found")
@@ -125,6 +134,7 @@ class GoalCriteriaService(BaseService):
             return
         self.repository.retire(criterion)
         self._obsolete_assessments(criterion.id, "Criterion retired")
+        self._record_goal_version(goal_id, changed_by_user_id)
         self.commit()
 
     async def generate(
@@ -186,6 +196,7 @@ class GoalCriteriaService(BaseService):
                     model_version=response.model,
                 )
                 created_ids.append(criterion.id)
+            self._record_goal_version(goal.id, user_id)
             self.commit()
         except Exception:
             self.session.rollback()
@@ -195,6 +206,15 @@ class GoalCriteriaService(BaseService):
             for criterion_id in created_ids
             if (criterion := self.repository.get_by_id(criterion_id)) is not None
         ]
+
+    def _record_goal_version(
+        self,
+        goal_id: str,
+        user_id: str | None,
+    ) -> None:
+        goal = self.session.get(GoalDB, goal_id)
+        if isinstance(goal, GoalDB):
+            self.goal_repository.add_version(goal, user_id)
 
     def _obsolete_assessments(self, criterion_id: str, reason: str) -> None:
         assessments = (

@@ -44,4 +44,5 @@ class AzureAIService(ILLMService):
         return LLMResponse(
             content=response.choices[0].message.content or "",
             model=self.model,
+            provider="azure",
         )

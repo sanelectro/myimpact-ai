@@ -8,6 +8,9 @@ from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.db.models.expectation import DocumentExpectationDB
 from app.db.models.goal import GoalDB
+from app.db.models.goal_version import GoalVersionDB
+from app.db.models.goal_validation_run import GoalValidationRunDB
+from app.db.models.goal_version_approval import GoalVersionApprovalDB
 from app.db.models.goal_source_retrieval import GoalSourceRetrievalDB
 from app.db.models.goal_source_fetch_state import GoalSourceFetchStateDB
 from app.db.models.goal_status_history import GoalStatusHistoryDB
@@ -68,6 +71,9 @@ __all__ = [
     "EvidenceMappingDB",
     "EvidenceVersionDB",
     "GoalDB",
+    "GoalVersionDB",
+    "GoalValidationRunDB",
+    "GoalVersionApprovalDB",
     "GoalSourceRetrievalDB",
     "GoalSourceFetchStateDB",
     "GoalAssessmentRunDB",

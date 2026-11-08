@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     app_name: str = "MyImpact AI"
     app_version: str = "0.1.0"
     app_env: str = "development"
+    require_validation_for_legacy_goal_evidence: bool = False
 
     ai_service_host: str = "127.0.0.1"
     ai_service_port: int = 8000

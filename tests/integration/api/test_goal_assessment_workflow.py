@@ -7,29 +7,32 @@ from sqlalchemy import Column, String, Table, create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.db.base import Base
 import app.db.models
+from app.db.base import Base
 from app.db.models.evidence import EvidenceDB
 from app.db.models.evidence_approval import EvidenceApprovalDB
 from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.db.models.goal import GoalDB
-from app.db.models.goal_source_fetch_state import GoalSourceFetchStateDB
-from app.db.models.goal_source_retrieval import GoalSourceRetrievalDB
 from app.db.models.goal_criterion import (
     GoalAssessmentRunDB,
     GoalCriterionAssessmentDB,
-    GoalCriterionAssessmentEvidenceDB,
     GoalCriterionAssessmentEventDB,
+    GoalCriterionAssessmentEvidenceDB,
     GoalCriterionDB,
     GoalCriterionVersionDB,
 )
+from app.db.models.goal_source_fetch_state import GoalSourceFetchStateDB
+from app.db.models.goal_source_retrieval import GoalSourceRetrievalDB
+from app.db.models.goal_validation_run import GoalValidationRunDB
+from app.db.models.goal_version import GoalVersionDB
+from app.db.models.goal_version_approval import GoalVersionApprovalDB
 from app.db.models.user import UserDB
 from app.db.session import get_db
 from app.main import app
 from app.models.evidence import EvidenceSourceType, EvidenceStatus
-from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.evidence_mapping import EvidenceRelevance
+from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
     GoalAssessmentLifecycle,
     GoalAssessmentRunStatus,
@@ -38,8 +41,8 @@ from app.models.goal_criteria import (
     GoalCriterionResult,
     GoalCriterionType,
 )
-from app.services.goal_assessment import GoalAssessmentService
 from app.services import goal_assessment as goal_assessment_module
+from app.services.goal_assessment import GoalAssessmentService
 from app.services.source_connections import SourceConnectionError
 
 
@@ -60,6 +63,9 @@ def test_feedback_and_criterion_revision_preserve_assessment_history():
         teams,
         UserDB.__table__,
         GoalDB.__table__,
+        GoalVersionDB.__table__,
+        GoalValidationRunDB.__table__,
+        GoalVersionApprovalDB.__table__,
         EvidenceDB.__table__,
         EvidenceVersionDB.__table__,
         EvidenceMappingDB.__table__,

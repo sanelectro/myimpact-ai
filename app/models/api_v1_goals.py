@@ -3,7 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
+from app.models.goal import GoalScope, GoalStatus, GoalStructuredFields, GoalSubStatus
+from app.models.goal_validation import GoalValidationFinding, GoalValidationStatus
 
 
 class GoalCreateRequest(BaseModel):
@@ -16,6 +17,7 @@ class GoalCreateRequest(BaseModel):
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
     source_document_id: str | None = None
+    structured_fields: GoalStructuredFields = Field(default_factory=GoalStructuredFields)
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -34,6 +36,7 @@ class GoalUpdateRequest(BaseModel):
     end_date: date | None = None
     source: str | None = Field(default=None, max_length=100)
     source_document_id: str | None = None
+    structured_fields: GoalStructuredFields | None = None
 
     @model_validator(mode="after")
     def require_update_field_and_validate_dates(self):
@@ -88,6 +91,7 @@ class GoalResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     source_document_id: str | None = None
+    structured_fields: GoalStructuredFields | None = None
 
 
 class GoalStatusHistoryResponse(BaseModel):
@@ -97,6 +101,21 @@ class GoalStatusHistoryResponse(BaseModel):
     to_status: GoalStatus
     reason: str | None = None
     changed_by_user_id: str | None = None
+    created_at: datetime
+
+
+class GoalValidationRunResponse(BaseModel):
+    id: str
+    goal_id: str
+    goal_version_id: str
+    goal_version: int
+    status: GoalValidationStatus
+    findings: list[GoalValidationFinding]
+    rule_set_version: str
+    prompt_version: str
+    model_provider: str | None = None
+    model_version: str | None = None
+    actor_user_id: str | None = None
     created_at: datetime
 
 

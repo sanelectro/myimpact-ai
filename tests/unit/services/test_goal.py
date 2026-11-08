@@ -41,6 +41,20 @@ def test_create_goal():
         scope=GoalScope.TEAM,
         source=None,
         source_document_id=None,
+        structured_fields={
+            "goal_type": None,
+            "accountability": None,
+            "success_criteria": [],
+            "deliverables": [],
+            "outcome": None,
+            "impact": None,
+            "measurement": None,
+            "baseline": None,
+            "target": None,
+            "dependencies": [],
+            "role_alignment": None,
+        },
+        created_by_user_id="user-1",
     )
     session.commit.assert_called_once()
 

@@ -9,3 +9,4 @@ class LLMRequest(BaseModel):
 class LLMResponse(BaseModel):
     content: str
     model: str | None = None
+    provider: str | None = None

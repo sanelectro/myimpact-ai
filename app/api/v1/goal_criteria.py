@@ -159,7 +159,7 @@ def retire_goal_criterion(
 ) -> None:
     _owned_goal(goal_id, user_id, goal_service)
     try:
-        service.retire(goal_id, criterion_id)
+        service.retire(goal_id, criterion_id, user_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

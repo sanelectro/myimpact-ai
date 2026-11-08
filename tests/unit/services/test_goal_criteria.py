@@ -7,10 +7,11 @@ from unittest.mock import Mock
 from sqlalchemy import Column, String, Table, create_engine
 from sqlalchemy.orm import Session
 
-from app.db.base import Base
 import app.db.models
+from app.db.base import Base
 from app.db.models.goal import GoalDB
 from app.db.models.goal_criterion import GoalCriterionDB, GoalCriterionVersionDB
+from app.db.models.goal_version import GoalVersionDB
 from app.db.models.user import UserDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
@@ -75,6 +76,7 @@ def test_generation_persists_proposed_criteria_for_a_goal():
                 GoalDB.__table__,
                 GoalCriterionDB.__table__,
                 GoalCriterionVersionDB.__table__,
+                GoalVersionDB.__table__,
             ],
         )
         with Session(engine) as session:
@@ -146,6 +148,8 @@ def test_generation_persists_proposed_criteria_for_a_goal():
                 item.versions[0].model_version == "synthetic-test-model"
                 for item in generated
             )
+            goal_version = session.query(GoalVersionDB).one()
+            assert len(goal_version.content["criterion_versions"]) == 2
     finally:
         engine.dispose()
         if created_teams_table and teams is not None:
