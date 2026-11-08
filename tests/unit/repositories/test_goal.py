@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
+from app.db.models.goal_version import GoalVersionDB
 from app.models.goal import GoalScope, GoalStatus
 from app.repositories.goal import GoalRepository
 
@@ -77,6 +78,7 @@ def test_get_by_user_id_returns_empty_list_when_no_goals():
     
 def test_create_goal():
     session = MagicMock(spec=Session)
+    session.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
 
     repository = GoalRepository(session)
 
@@ -107,5 +109,12 @@ def test_create_goal():
     assert result.created_at.tzinfo == UTC
     assert result.updated_at == result.created_at
 
-    session.add.assert_called_once_with(result)
-    session.flush.assert_called_once()
+    assert session.add.call_count == 2
+    assert session.add.call_args_list[0].args[0] is result
+    version = session.add.call_args_list[1].args[0]
+    assert isinstance(version, GoalVersionDB)
+    assert version.goal_id == result.id
+    assert version.version == 1
+    assert version.origin == "USER"
+    assert version.content["title"] == result.title
+    assert session.flush.call_count == 2

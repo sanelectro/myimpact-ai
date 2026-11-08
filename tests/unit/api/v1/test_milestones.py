@@ -36,6 +36,7 @@ def _goal(user_id: str = "user-1") -> GoalDB:
         scope=GoalScope.PERSONAL,
         status=GoalStatus.ACTIVE,
         sub_status=GoalSubStatus.ON_TRACK,
+        structured_fields={},
         created_at=now,
         updated_at=now,
     )

@@ -17,6 +17,7 @@ def _goal():
     return GoalDB(
         id="goal-1", user_id="user-1", title="Improve reliability",
         scope=GoalScope.TEAM, status=GoalStatus.ACTIVE, sub_status=GoalSubStatus.ON_TRACK, created_at=now, updated_at=now,
+        structured_fields={},
     )
 
 
