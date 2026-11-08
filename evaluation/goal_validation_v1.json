@@ -1,0 +1,2202 @@
+{
+  "dataset_id": "goal-validation",
+  "dataset_version": "goal-validation-v1",
+  "label_status": "DRAFT_UNREVIEWED",
+  "dataset_status": "DRAFT_UNREVIEWED",
+  "human_review": {
+    "status": "PENDING",
+    "review_mode": "DUAL_REVIEW_WITH_ADJUDICATION",
+    "reviewer_slots": [
+      {
+        "reviewer_id": null,
+        "reviewer_name": null,
+        "status": "PENDING"
+      },
+      {
+        "reviewer_id": null,
+        "reviewer_name": null,
+        "status": "PENDING"
+      }
+    ],
+    "adjudication_status": "PENDING",
+    "adjudicated_by": null,
+    "adjudicated_at": null,
+    "notes": null
+  },
+  "threshold_approval": {
+    "status": "NOT_APPROVED",
+    "approved_by": null,
+    "approved_at": null,
+    "thresholds": {
+      "dimension_f1": null,
+      "finding_precision": null,
+      "finding_recall": null,
+      "missing_information_recall": null,
+      "status_accuracy": null,
+      "ready_false_positive_rate": null,
+      "ready_false_negative_rate": null,
+      "accountability_preservation_rate": null,
+      "structured_output_validity": null,
+      "repeatability": null
+    }
+  },
+  "cases": [
+    {
+      "case_id": "gv-01",
+      "category": "clarity_structure",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve platform quality",
+          "description": "Make the platform better for everyone.",
+          "goal_type": null,
+          "accountability": null,
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure"
+        ],
+        "expected_findings": [
+          "ambiguous_intent"
+        ],
+        "expected_questions": [
+          "Which platform quality issue should this goal address, and what observable result would show improvement?"
+        ],
+        "expected_improvement": "Name the quality dimension and a verifiable result; do not assume a target.",
+        "expected_missing_information": [
+          "desired_quality_dimension",
+          "observable_result"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "Broad intent does not identify a specific quality concern or observable result."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-02",
+      "category": "clarity_structure",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Deliver customer insights",
+          "description": "Analyze customer feedback and recommend product changes.",
+          "goal_type": "Delivery",
+          "accountability": "Product analyst",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Feedback analysis",
+            "Recommendations"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Product analyst",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure",
+          "deliverables"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The intended deliverables and accountable role are explicit; quantitative success criteria are not always necessary for a delivery goal."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-03",
+      "category": "clarity_structure",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve onboarding",
+          "description": "Improve onboarding for new users by simplifying the first-use flow.",
+          "goal_type": "Outcome",
+          "accountability": "UX designer",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "UX designer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure",
+          "success_criteria"
+        ],
+        "expected_findings": [
+          "missing_success_criteria"
+        ],
+        "expected_questions": [
+          "What observable change or completion condition should define improved onboarding?"
+        ],
+        "expected_improvement": "Add an observable completion condition that reflects the intended onboarding change.",
+        "expected_missing_information": [
+          "observable_completion_condition"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "The intent is understandable, but no condition identifies when the goal is complete."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-04",
+      "category": "clarity_structure",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Build internal knowledge hub",
+          "description": "Create a searchable internal knowledge hub for support procedures.",
+          "goal_type": "Delivery",
+          "accountability": "Support operations lead",
+          "scope": null,
+          "success_criteria": [
+            "Hub is launched and accepted by support operations"
+          ],
+          "deliverables": [
+            "Searchable knowledge hub"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Support operations lead",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure",
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "A concrete deliverable and acceptance condition make this delivery goal assessable."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-05",
+      "category": "clarity_structure",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Modernize customer experience",
+          "description": "Use technology and collaboration to transform customer experience and work better together.",
+          "goal_type": null,
+          "accountability": null,
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure"
+        ],
+        "expected_findings": [
+          "ambiguous_intent"
+        ],
+        "expected_questions": [
+          "What customer experience change is intended, and what work is within your responsibility?"
+        ],
+        "expected_improvement": "State the intended change and your own contribution without assigning unconfirmed responsibilities.",
+        "expected_missing_information": [
+          "specific_customer_experience_change",
+          "employee_deliverable"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "Several broad aspirations are combined without a clear intent or concrete commitment."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-06",
+      "category": "ownership_accountability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Reduce deployment failures",
+          "description": "Reduce deployment failures across the product group by 30%.",
+          "goal_type": "Impact",
+          "accountability": null,
+          "scope": "Team",
+          "success_criteria": [
+            "Deployment failures decrease by 30%"
+          ],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "measurement"
+        ],
+        "expected_findings": [
+          "missing_accountability"
+        ],
+        "expected_questions": [
+          "What part of this team target are you personally accountable for?"
+        ],
+        "expected_improvement": "Separate the team-level outcome from the employee-owned deliverable or contribution.",
+        "expected_missing_information": [
+          "individual_contribution",
+          "owner_for_team_target"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "A team outcome is stated, but the employee's owned contribution is not specified."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-07",
+      "category": "ownership_accountability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Migrate billing service",
+          "description": "I will lead the billing service migration.",
+          "goal_type": "Delivery",
+          "accountability": "Engineering lead",
+          "scope": null,
+          "success_criteria": [
+            "Migration accepted by service owners"
+          ],
+          "deliverables": [
+            "Billing service migration"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Engineering lead",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The accountable role and delivery commitment are stated directly."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-08",
+      "category": "ownership_accountability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve incident response",
+          "description": "The team will improve incident response and publish a new runbook.",
+          "goal_type": "Delivery",
+          "accountability": null,
+          "scope": "Team",
+          "success_criteria": [],
+          "deliverables": [
+            "Incident response runbook"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables"
+        ],
+        "expected_findings": [
+          "missing_accountability"
+        ],
+        "expected_questions": [
+          "Who owns publishing and obtaining acceptance for the runbook?"
+        ],
+        "expected_improvement": "Identify the person or role accountable for the deliverable; leave team outcome ownership at team level.",
+        "expected_missing_information": [
+          "owner_for_runbook"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "The team and deliverable are named but no individual or accountable role is assigned."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-09",
+      "category": "ownership_accountability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Support accessibility rollout",
+          "description": "Coordinate accessibility reviews and resolve findings in my assigned components.",
+          "goal_type": "Delivery",
+          "accountability": "Frontend engineer",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Accessibility reviews for assigned components"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [
+            "Accessibility team review"
+          ],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Frontend engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The goal confines accountability to assigned components and identifies an external dependency without assigning it to the employee."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-10",
+      "category": "ownership_accountability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Increase renewal rate",
+          "description": "Increase renewal rate for the enterprise segment by 10%.",
+          "goal_type": "Impact",
+          "accountability": null,
+          "scope": "Team",
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": "10% increase",
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "measurement"
+        ],
+        "expected_findings": [
+          "missing_accountability",
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "What contribution is yours, and what baseline and period define the 10% change?"
+        ],
+        "expected_improvement": "Clarify the employee-owned contribution and add measurement context only when confirmed.",
+        "expected_missing_information": [
+          "employee_contribution",
+          "baseline",
+          "measurement_period"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "Neither individual ownership nor the baseline and measurement period are available."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-11",
+      "category": "delivery_outcome_impact",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Automate reporting",
+          "description": "Deliver an automated reporting feature to reduce support effort.",
+          "goal_type": "Delivery",
+          "accountability": "Software engineer",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Automated reporting feature"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Software engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [
+          "missing_success_criteria"
+        ],
+        "expected_questions": [
+          "What acceptance condition will show that the feature has been delivered?"
+        ],
+        "expected_improvement": "Define feature acceptance separately from the downstream support-effort outcome.",
+        "expected_missing_information": [
+          "feature_acceptance_condition"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "Delivery is owned, while the intended support impact is not an explicit delivery acceptance condition."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-12",
+      "category": "delivery_outcome_impact",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Launch self-service analytics",
+          "description": "Launch a self-service analytics dashboard and achieve 70% adoption among operations users within two quarters.",
+          "goal_type": "Outcome",
+          "accountability": "Analytics product manager",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Self-service analytics dashboard"
+          ],
+          "outcome": "Operations users adopt the dashboard",
+          "impact": null,
+          "measurement": "Adoption rate",
+          "baseline": null,
+          "target": "70% within two quarters",
+          "timeframe": "Two quarters",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Analytics product manager",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "deliverables",
+          "success_criteria",
+          "measurement",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The deliverable is distinguished from an adoption outcome with a measure, target and timeframe."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-13",
+      "category": "delivery_outcome_impact",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Reduce support effort",
+          "description": "Reduce monthly support effort by 20% after launch of the new workflow.",
+          "goal_type": "Impact",
+          "accountability": null,
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": "Lower monthly support effort",
+          "measurement": "Monthly support hours",
+          "baseline": null,
+          "target": "20% reduction",
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Not specified",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "measurement",
+          "timeframe"
+        ],
+        "expected_findings": [
+          "missing_accountability",
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "What delivery or contribution is within your ownership, and what baseline and period apply?"
+        ],
+        "expected_improvement": "Keep the impact distinct from the owned delivery and identify measurement context before judging results.",
+        "expected_missing_information": [
+          "owned_deliverable_or_contribution",
+          "baseline",
+          "impact_period"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "The impact target lacks a baseline, timeframe and attributable individual contribution."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-14",
+      "category": "delivery_outcome_impact",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Publish migration guide",
+          "description": "Publish a migration guide that helps customers move to the new API.",
+          "goal_type": "Delivery",
+          "accountability": "Technical writer",
+          "scope": null,
+          "success_criteria": [
+            "Guide reviewed and published"
+          ],
+          "deliverables": [
+            "Customer migration guide"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Technical writer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The employee owns a concrete guide and its publication; customer migration benefit is an intended outcome rather than a promised impact."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-15",
+      "category": "delivery_outcome_impact",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve service reliability",
+          "description": "Deliver retry handling and reduce service errors for all customers.",
+          "goal_type": "Outcome",
+          "accountability": "Backend engineer",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Retry handling"
+          ],
+          "outcome": "Fewer service errors",
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Backend engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "deliverables",
+          "success_criteria",
+          "measurement"
+        ],
+        "expected_findings": [
+          "missing_success_criteria",
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "How will retry handling be accepted, and which error measure should track the intended outcome?"
+        ],
+        "expected_improvement": "Define delivery acceptance and a suitable error measure separately; do not infer a numeric target.",
+        "expected_missing_information": [
+          "acceptance_for_retry_handling",
+          "error_measure"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "A delivery and intended outcome are named but neither has an explicit completion or measurement condition."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-16",
+      "category": "smart_measurability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Reduce API latency",
+          "description": "Reduce checkout API p95 latency from 800 ms to 500 ms by the end of Q3.",
+          "goal_type": "Outcome",
+          "accountability": "API team engineer",
+          "scope": null,
+          "success_criteria": [
+            "Checkout API p95 latency is at or below 500 ms"
+          ],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": "Checkout API p95 latency",
+          "baseline": "800 ms",
+          "target": "500 ms",
+          "timeframe": "End of Q3",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "API team engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "A relevant measure, baseline, target and deadline are specified."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-17",
+      "category": "smart_measurability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve code quality",
+          "description": "Improve code quality substantially soon.",
+          "goal_type": "Outcome",
+          "accountability": "Software engineer",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Software engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "timeframe",
+          "success_criteria"
+        ],
+        "expected_findings": [
+          "ambiguous_success_criteria",
+          "ambiguous_timeframe"
+        ],
+        "expected_questions": [
+          "Which quality indicator and completion condition should be used, and by when?"
+        ],
+        "expected_improvement": "Specify a relevant indicator and timeframe; do not assume a numerical target is appropriate.",
+        "expected_missing_information": [
+          "quality_indicator",
+          "observable_target",
+          "deadline"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "Substantially and soon are not observable completion or time criteria."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-18",
+      "category": "smart_measurability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Complete security training",
+          "description": "Complete the required annual security training.",
+          "goal_type": "Development",
+          "accountability": "Platform engineer",
+          "scope": null,
+          "success_criteria": [
+            "Required training completion recorded"
+          ],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": "This calendar year",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Platform engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The binary completion condition is measurable without an invented quantitative target."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-19",
+      "category": "smart_measurability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Increase automation",
+          "description": "Increase automated test coverage from 60% to 80% by September 30.",
+          "goal_type": "Outcome",
+          "accountability": "Quality engineer",
+          "scope": null,
+          "success_criteria": [
+            "Coverage report shows at least 80%"
+          ],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": "Automated test coverage",
+          "baseline": "60%",
+          "target": "80%",
+          "timeframe": "September 30",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Quality engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "Baseline, target, deadline and a verification source are present."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-20",
+      "category": "smart_measurability",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve customer satisfaction",
+          "description": "Raise customer satisfaction to 90% by year end.",
+          "goal_type": "Impact",
+          "accountability": "Customer success manager",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": "90%",
+          "timeframe": "Year end",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Customer success manager",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "success_criteria"
+        ],
+        "expected_findings": [
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "Which satisfaction measure and baseline define the 90% target?"
+        ],
+        "expected_improvement": "Specify a consistent measure and baseline before interpreting the target.",
+        "expected_missing_information": [
+          "satisfaction_measure",
+          "baseline",
+          "survey_or_data_source"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "A target and timeframe are stated, but the measure and baseline are unspecified."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-21",
+      "category": "feasibility_role_alignment",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Ship audit export",
+          "description": "Ship an audit export endpoint this quarter.",
+          "goal_type": "Delivery",
+          "accountability": "Backend developer",
+          "scope": null,
+          "success_criteria": [
+            "Endpoint meets documented API requirements"
+          ],
+          "deliverables": [
+            "Audit export endpoint"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": "This quarter",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Backend developer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables",
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The deliverable aligns with the supplied backend role and is bounded by an acceptance condition and quarter."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-22",
+      "category": "feasibility_role_alignment",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Own global sales expansion",
+          "description": "Personally deliver 40% revenue growth in every region this year.",
+          "goal_type": "Impact",
+          "accountability": "Junior data analyst",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": "40% revenue growth in every region",
+          "timeframe": "This year",
+          "dependencies": [],
+          "role_alignment": "Analyst role supports sales reporting, not regional revenue ownership"
+        },
+        "context": {
+          "role": "Junior data analyst",
+          "role_expectations": "Analyst role supports sales reporting, not regional revenue ownership",
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "measurement"
+        ],
+        "expected_findings": [
+          "ambiguous_accountability",
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "Which analysis or reporting contribution is within your role, and who owns regional revenue outcomes?"
+        ],
+        "expected_improvement": "Reframe as a role-aligned contribution; do not treat organizational revenue ownership as confirmed.",
+        "expected_missing_information": [
+          "role_supported_contribution",
+          "regional_scope_and_measurement"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "The stated outcome appears beyond the supplied analyst role context and requires human clarification."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-23",
+      "category": "feasibility_role_alignment",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Complete service certification",
+          "description": "Complete the assigned cloud service certification by November 30.",
+          "goal_type": "Development",
+          "accountability": "Cloud engineer",
+          "scope": null,
+          "success_criteria": [
+            "Certification exam passed"
+          ],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": "November 30",
+          "dependencies": [
+            "Training budget approval"
+          ],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Cloud engineer",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The goal is role-related and bounded; the approval dependency is context, not proof of infeasibility."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-24",
+      "category": "feasibility_role_alignment",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Replace all legacy systems",
+          "description": "Replace every company legacy system in two weeks.",
+          "goal_type": "Delivery",
+          "accountability": "IT support specialist",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": "Every company legacy system",
+          "timeframe": "Two weeks",
+          "dependencies": [],
+          "role_alignment": "Supports desktop operations"
+        },
+        "context": {
+          "role": "IT support specialist",
+          "role_expectations": "Supports desktop operations",
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "timeframe",
+          "structure"
+        ],
+        "expected_findings": [
+          "ambiguous_intent"
+        ],
+        "expected_questions": [
+          "Which systems and delivery phase are within your remit, and what constraints apply?"
+        ],
+        "expected_improvement": "Clarify scope and role ownership before judging feasibility; do not assert impossibility from limited context.",
+        "expected_missing_information": [
+          "defined_system_scope",
+          "role_owned_phase",
+          "feasibility_context"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "Broad organization-wide scope and a short timeframe conflict with limited role context, but no capacity evidence is supplied."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-25",
+      "category": "feasibility_role_alignment",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve analyst documentation",
+          "description": "Document the data pipeline and review it with the analytics team.",
+          "goal_type": "Delivery",
+          "accountability": "Data analyst",
+          "scope": null,
+          "success_criteria": [
+            "Documentation reviewed by analytics team"
+          ],
+          "deliverables": [
+            "Pipeline documentation"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Data analyst",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "The deliverable fits the supplied analyst role; team review is an appropriate dependency and acceptance step."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-26",
+      "category": "conflicting_incomplete",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Complete rollout",
+          "description": "Complete rollout by June 30. The implementation plan says the rollout finishes August 15.",
+          "goal_type": "Delivery",
+          "accountability": "Release manager",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [
+            "Rollout"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": "June 30",
+          "dependencies": [
+            "Implementation plan: August 15"
+          ],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Release manager",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "structure",
+          "timeframe"
+        ],
+        "expected_findings": [
+          "conflicting_details",
+          "inconsistent_timeframe"
+        ],
+        "expected_questions": [
+          "Which date should govern: June 30 or August 15?"
+        ],
+        "expected_improvement": "Resolve the conflicting dates with the relevant owner before treating either as committed.",
+        "expected_missing_information": [
+          "governing_deadline"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "Two different deadlines are present and cannot safely be reconciled from the supplied information."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-27",
+      "category": "conflicting_incomplete",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Publish quarterly report",
+          "description": "Publish the quarterly report on October 10.",
+          "goal_type": "Delivery",
+          "accountability": "Finance analyst",
+          "scope": null,
+          "success_criteria": [
+            "Report published"
+          ],
+          "deliverables": [
+            "Quarterly report"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": "October 10",
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Finance analyst",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables",
+          "success_criteria",
+          "timeframe"
+        ],
+        "expected_findings": [],
+        "expected_questions": [],
+        "expected_improvement": null,
+        "expected_missing_information": [],
+        "expected_status": "READY",
+        "reference_rationale": "No conflicting details are present; the goal has an owner, deliverable and date."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-28",
+      "category": "conflicting_incomplete",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Reduce cloud spend",
+          "description": "Reduce cloud spend by 15%. Current planning notes say 10%.",
+          "goal_type": "Impact",
+          "accountability": "Cloud operations team",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": "15%",
+          "timeframe": null,
+          "dependencies": [
+            "Planning notes target: 10%"
+          ],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Cloud operations team",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "accountability"
+        ],
+        "expected_findings": [
+          "conflicting_details",
+          "incomplete_measurement_context"
+        ],
+        "expected_questions": [
+          "Which target is approved, and what baseline and period apply? What is your owned contribution?"
+        ],
+        "expected_improvement": "Confirm the governing target and measurement context; preserve team-level ownership unless an individual commitment is agreed.",
+        "expected_missing_information": [
+          "approved_target",
+          "baseline_and_period",
+          "individual_contribution"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "Target values conflict and the team-level target has no individual attribution or measurement baseline."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-29",
+      "category": "conflicting_incomplete",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Improve data retention",
+          "description": "Improve retention and reduce churn, with no deadline or measure agreed.",
+          "goal_type": "Outcome",
+          "accountability": "Customer success team",
+          "scope": null,
+          "success_criteria": [],
+          "deliverables": [],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Customer success team",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "measurement",
+          "timeframe",
+          "accountability"
+        ],
+        "expected_findings": [
+          "ambiguous_intent",
+          "incomplete_measurement_context",
+          "missing_success_criteria"
+        ],
+        "expected_questions": [
+          "Which retention outcome is intended, how will it be measured, and what timeframe applies?"
+        ],
+        "expected_improvement": "Clarify intended measure, timeframe and role-owned contribution before setting a readiness conclusion.",
+        "expected_missing_information": [
+          "retention_or_churn_measure",
+          "deadline",
+          "individual_contribution"
+        ],
+        "expected_status": "NEEDS_REVIEW",
+        "reference_rationale": "The goal explicitly lacks a measure and date, and team ownership does not specify individual contribution."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    },
+    {
+      "case_id": "gv-30",
+      "category": "conflicting_incomplete",
+      "label_status": "DRAFT_UNREVIEWED",
+      "input": {
+        "goal": {
+          "title": "Deliver privacy review",
+          "description": "Complete the privacy review before launch. The launch date has not been set.",
+          "goal_type": "Delivery",
+          "accountability": "Privacy specialist",
+          "scope": null,
+          "success_criteria": [
+            "Review findings documented and shared"
+          ],
+          "deliverables": [
+            "Privacy review"
+          ],
+          "outcome": null,
+          "impact": null,
+          "measurement": null,
+          "baseline": null,
+          "target": null,
+          "timeframe": null,
+          "dependencies": [],
+          "role_alignment": null
+        },
+        "context": {
+          "role": "Privacy specialist",
+          "role_expectations": null,
+          "organizational_constraints": [],
+          "additional_context": "Starter scenario context; verify relevance during review."
+        }
+      },
+      "provisional_reference": {
+        "expected_dimensions": [
+          "accountability",
+          "deliverables",
+          "success_criteria"
+        ],
+        "expected_findings": [
+          "ambiguous_timeframe"
+        ],
+        "expected_questions": [
+          "When is the review due, given that the launch date is not set?"
+        ],
+        "expected_improvement": "Retain the review deliverable and clarify a due date when the launch schedule is established.",
+        "expected_missing_information": [
+          "launch_date_or_review_due_date"
+        ],
+        "expected_status": "NEEDS_IMPROVEMENT",
+        "reference_rationale": "The delivery and acceptance are explicit; timing cannot be assessed because launch is unscheduled."
+      },
+      "human_review": {
+        "status": "PENDING",
+        "reviewer_slots": [
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          },
+          {
+            "reviewer_id": null,
+            "reviewer_name": null,
+            "decision": "PENDING",
+            "reviewed_at": null,
+            "notes": null
+          }
+        ],
+        "adjudication_status": "PENDING",
+        "adjudicated_by": null,
+        "adjudicated_at": null,
+        "notes": null
+      }
+    }
+  ]
+}
