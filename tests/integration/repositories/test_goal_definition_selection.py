@@ -41,6 +41,7 @@ from app.services.goal_definition_proposals import (
     GoalProposalConflict,
 )
 from app.services.goal_hierarchy import GoalHierarchyNotFound, GoalHierarchyService
+from app.services.goal_proposal_previews import GoalProposalPreviewService
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.milestone import MilestoneService
 
@@ -919,6 +920,64 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
         )
         assert run.goal_version_id == reverted.version_id
         assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_prepared_proposal_date_preview_rechecks_exact_head(goal_version_engine, monkeypatch):
+    owner_id, goal_id, _ = _create_selected_baseline(goal_version_engine)
+    child_id = str(uuid4())
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.update(
+            goal_id, {"start_date": date(2026, 1, 1), "end_date": date(2026, 12, 31)}, owner_id
+        )
+        base_id = repository.get_latest_version(goal_id).id
+        goal.operative_goal_version_id = base_id
+        child = repository.create(goal_id=child_id, user_id=owner_id, title="Child")
+        child.start_date, child.end_date = date(2026, 3, 1), date(2026, 6, 1)
+        session.commit()
+        GoalHierarchyService(session).set_parent(child_id, owner_id, goal_id, 0, None)
+
+        arguments = {
+            "goal_id": goal_id, "actor_user_id": owner_id, "expected_base_version_id": base_id,
+            "expected_relationship_revision": 0,
+        }
+        proposal = GoalDefinitionProposalService(session).stage_proposal(
+            **arguments, idempotency_key="preview", expected_proposal_revision=0,
+            changes=GoalProposalChanges(start_date=date(2026, 4, 1)),
+        )
+        session.commit()
+        previewer = GoalProposalPreviewService(session)
+        preview = previewer.preview_dates(goal_id, proposal.version_id, owner_id)
+        assert preview.goal_id == goal_id
+        assert preview.proposal_version_id == proposal.version_id
+        assert [(item.child_goal_id, item.child_field) for item in preview.conflicts] == [
+            (child_id, "start_date"),
+        ]
+        session.rollback()
+        with pytest.raises(ValueError, match="Goal proposal not found"):
+            previewer.preview_dates(goal_id, proposal.version_id, "other")
+        session.rollback()
+
+        original_preview = previewer.hierarchy.preview_proposed_date_conflicts
+
+        def supersede_before_lock(*args):
+            with Session(goal_version_engine) as writer:
+                GoalDefinitionProposalService(writer).stage_proposal(
+                    **arguments, idempotency_key="newer-preview", expected_proposal_revision=1,
+                    changes=GoalProposalChanges(start_date=date(2026, 2, 1)),
+                )
+                writer.commit()
+            return original_preview(*args)
+
+        monkeypatch.setattr(
+            previewer.hierarchy, "preview_proposed_date_conflicts", supersede_before_lock
+        )
+        with pytest.raises(GoalProposalConflict, match="superseded"):
+            previewer.preview_dates(goal_id, proposal.version_id, owner_id)
+        session.rollback()
+        assert repository.get_by_id(goal_id).start_date == date(2026, 1, 1)
+        assert repository.get_by_id(child_id).start_date == date(2026, 3, 1)
 
 
 @pytest.mark.integration

@@ -184,6 +184,33 @@ class GoalDefinitionProposalService:
             raise GoalProposalConflict("The live goal no longer matches the selected baseline")
         return base
 
+    def require_prepared_proposal(
+        self, goal_id: str, proposal_version_id: str, actor_user_id: str
+    ) -> GoalVersionDB:
+        """Check current prepared state; callers provide any required serialization."""
+        goal = self.session.execute(
+            select(GoalDB).where(GoalDB.id == goal_id).execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if goal is None or goal.user_id != actor_user_id:
+            raise ValueError("Goal proposal not found")
+        head = self.session.execute(
+            select(GoalDefinitionProposalHeadDB)
+            .where(GoalDefinitionProposalHeadDB.goal_id == goal_id)
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if head is None or head.proposal_version_id != proposal_version_id:
+            raise GoalProposalConflict("Goal proposal not found or superseded")
+        self.require_matching_baseline(goal, head.base_version_id, head.relationship_revision)
+        version = self.session.get(GoalVersionDB, proposal_version_id)
+        if (
+            version is None
+            or version.goal_id != goal_id
+            or version.definition_kind != "PROPOSAL"
+            or version.origin != "USER"
+        ):
+            raise GoalProposalConflict("Goal proposal not found or superseded")
+        return version
+
     def stage_proposal(
         self,
         *,

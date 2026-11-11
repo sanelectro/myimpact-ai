@@ -6,7 +6,6 @@ from uuid import uuid4
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.db.models.goal import GoalDB
 from app.db.models.goal_definition_proposal import GoalDefinitionProposalHeadDB
 from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
@@ -131,11 +130,15 @@ class GoalValidationRunService(BaseService):
     async def validate_prepared_proposal(
         self, goal_id: str, proposal_version_id: str, actor_user_id: str
     ) -> GoalValidationRunDB:
-        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        version = GoalDefinitionProposalService(self.session).require_prepared_proposal(
+            goal_id, proposal_version_id, actor_user_id
+        )
         self._require_supported_milestone_validation(version)
         run = await self._validate_version(version, actor_user_id)
         try:
-            self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+            GoalDefinitionProposalService(self.session).require_prepared_proposal(
+                goal_id, proposal_version_id, actor_user_id
+            )
         except ValueError as exc:
             logger.warning(
                 "goal_prepared_proposal_validation_superseded",
@@ -160,12 +163,16 @@ class GoalValidationRunService(BaseService):
         isolation = self.session.execute(text("SHOW transaction_isolation")).scalar_one()
         if isolation != "read committed":
             raise RuntimeError("Transactional proposal validation requires READ COMMITTED isolation")
-        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        version = GoalDefinitionProposalService(self.session).require_prepared_proposal(
+            goal_id, proposal_version_id, actor_user_id
+        )
         self._require_supported_milestone_validation(version)
         run, started_at = await self._evaluate_version(version, actor_user_id)
         with self.session.begin_nested():
             self.goal_repository.get_by_id_for_update(goal_id)
-            version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+            version = GoalDefinitionProposalService(self.session).require_prepared_proposal(
+                goal_id, proposal_version_id, actor_user_id
+            )
             self._require_supported_milestone_validation(version)
             self.repository.create(run)
         self._log_validation("goal_validation_staged", run, started_at)
@@ -178,7 +185,9 @@ class GoalValidationRunService(BaseService):
 
         This check does not authorize publication or cover hierarchy, evidence, and history.
         """
-        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        version = GoalDefinitionProposalService(self.session).require_prepared_proposal(
+            goal_id, proposal_version_id, actor_user_id
+        )
         self._require_supported_milestone_validation(version)
         run = self.repository.get_latest_for_version(goal_id, proposal_version_id)
         if run is None or run.id != validation_run_id or run.status != GoalValidationStatus.READY.value:
@@ -194,34 +203,6 @@ class GoalValidationRunService(BaseService):
         if validate_goal(validation_input, as_of=datetime.now(UTC).date()).status != GoalValidationStatus.READY:
             raise GoalProposalConflict("The proposal no longer passes deterministic validation")
         return run
-
-    def _require_prepared_proposal(
-        self, goal_id: str, proposal_version_id: str, actor_user_id: str
-    ) -> GoalVersionDB:
-        goal = self.session.execute(
-            select(GoalDB).where(GoalDB.id == goal_id).execution_options(populate_existing=True)
-        ).scalar_one_or_none()
-        if goal is None or goal.user_id != actor_user_id:
-            raise ValueError("Goal proposal not found")
-        head = self.session.execute(
-            select(GoalDefinitionProposalHeadDB)
-            .where(GoalDefinitionProposalHeadDB.goal_id == goal_id)
-            .execution_options(populate_existing=True)
-        ).scalar_one_or_none()
-        if head is None or head.proposal_version_id != proposal_version_id:
-            raise GoalProposalConflict("Goal proposal not found or superseded")
-        GoalDefinitionProposalService(self.session).require_matching_baseline(
-            goal, head.base_version_id, head.relationship_revision
-        )
-        version = self.session.get(GoalVersionDB, proposal_version_id)
-        if (
-            version is None
-            or version.goal_id != goal_id
-            or version.definition_kind != "PROPOSAL"
-            or version.origin != "USER"
-        ):
-            raise GoalProposalConflict("Goal proposal not found or superseded")
-        return version
 
     def _require_supported_milestone_validation(self, version: GoalVersionDB) -> None:
         head = self.session.execute(
