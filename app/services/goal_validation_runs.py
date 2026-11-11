@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
@@ -142,6 +142,30 @@ class GoalValidationRunService(BaseService):
             ) from exc
         return run
 
+    async def stage_prepared_proposal_validation(
+        self, goal_id: str, proposal_version_id: str, actor_user_id: str
+    ) -> GoalValidationRunDB:
+        """Stage a rechecked run; the caller owns the outer transaction.
+
+        Pending session changes are flushed before the savepoint. Callers must
+        respect the wider command lock order and roll back failed outer batches.
+        """
+        if self.session.get_bind().dialect.name != "postgresql":
+            raise RuntimeError("Transactional proposal validation requires PostgreSQL")
+        isolation = self.session.execute(text("SHOW transaction_isolation")).scalar_one()
+        if isolation != "read committed":
+            raise RuntimeError("Transactional proposal validation requires READ COMMITTED isolation")
+        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        self._require_supported_milestone_validation(version)
+        run, started_at = await self._evaluate_version(version, actor_user_id)
+        with self.session.begin_nested():
+            self.goal_repository.get_by_id_for_update(goal_id)
+            version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+            self._require_supported_milestone_validation(version)
+            self.repository.create(run)
+        self._log_validation("goal_validation_staged", run, started_at)
+        return run
+
     def _require_prepared_proposal(
         self, goal_id: str, proposal_version_id: str, actor_user_id: str
     ) -> GoalVersionDB:
@@ -193,6 +217,23 @@ class GoalValidationRunService(BaseService):
         version: GoalVersionDB,
         actor_user_id: str,
     ) -> GoalValidationRunDB:
+        run, started_at = await self._evaluate_version(version, actor_user_id)
+        try:
+            self.repository.create(run)
+            self.commit()
+        except Exception:
+            self.rollback()
+            logger.error(
+                "goal_validation_persistence_failed",
+                extra={"goal_id": version.goal_id, "goal_version_id": version.id},
+            )
+            raise
+        self._log_validation("goal_validation_completed", run, started_at)
+        return run
+
+    async def _evaluate_version(
+        self, version: GoalVersionDB, actor_user_id: str
+    ) -> tuple[GoalValidationRunDB, float]:
         started_at = perf_counter()
         goal_id = version.goal_id
         validation_input = _validation_input(version.content)
@@ -236,32 +277,25 @@ class GoalValidationRunService(BaseService):
             actor_user_id=actor_user_id,
             created_at=datetime.now(UTC),
         )
-        try:
-            self.repository.create(run)
-            self.commit()
-        except Exception:
-            self.rollback()
-            logger.error(
-                "goal_validation_persistence_failed",
-                extra={"goal_id": goal_id, "goal_version_id": version.id},
-            )
-            raise
+        return run, started_at
+
+    @staticmethod
+    def _log_validation(event: str, run: GoalValidationRunDB, started_at: float) -> None:
         logger.info(
-            "goal_validation_completed",
+            event,
             extra={
-                "goal_id": goal_id,
+                "goal_id": run.goal_id,
                 "goal_version_id": run.goal_version_id,
                 "validation_run_id": run.id,
                 "validation_status": run.status,
-                "finding_dimensions": [finding.dimension.value for finding in result.findings],
-                "model_provider": model_provider,
-                "model_version": model_version,
+                "finding_dimensions": [finding["dimension"] for finding in run.findings],
+                "model_provider": run.model_provider,
+                "model_version": run.model_version,
                 "prompt_version": GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION,
                 "rule_set_version": GOAL_RULE_SET_VERSION,
                 "duration_ms": round((perf_counter() - started_at) * 1000),
             },
         )
-        return run
 
     def get_history(self, goal_id: str) -> list[GoalValidationRunDB]:
         return self.repository.list_for_goal(goal_id)

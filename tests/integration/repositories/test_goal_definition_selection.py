@@ -884,7 +884,11 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
                 raise AssertionError("Unsupported milestone changes must not reach validation")
 
         validator = GoalValidationRunService(session, UnexpectedLLM())
-        for validate in (validator.validate_prepared_proposal, validator.validate_proposal):
+        for validate in (
+            validator.validate_prepared_proposal,
+            validator.validate_proposal,
+            validator.stage_prepared_proposal_validation,
+        ):
             with pytest.raises(GoalProposalConflict, match="milestone definitions is not supported"):
                 asyncio.run(validate(goal_id, proposal.version_id, owner_id))
         assert session.scalar(
@@ -914,6 +918,164 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
         )
         assert run.goal_version_id == reverted.version_id
         assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_staged_validation_is_owned_by_outer_transaction(goal_version_engine, monkeypatch):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="stage-validation")
+        session.commit()
+
+        class NormalLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        validator = GoalValidationRunService(session, NormalLLM())
+        run = asyncio.run(
+            validator.stage_prepared_proposal_validation(goal_id, proposal.version_id, owner_id)
+        )
+        with Session(goal_version_engine) as reader:
+            assert reader.get(app.db.models.GoalValidationRunDB, run.id) is None
+        session.rollback()
+        assert session.get(app.db.models.GoalValidationRunDB, run.id) is None
+
+        original_create = validator.repository.create
+
+        def fail_after_flush(value):
+            original_create(value)
+            raise RuntimeError("Injected validation persistence failure")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(validator.repository, "create", fail_after_flush)
+            with pytest.raises(RuntimeError, match="Injected validation persistence failure"):
+                asyncio.run(
+                    validator.stage_prepared_proposal_validation(
+                        goal_id, proposal.version_id, owner_id
+                    )
+                )
+        session.commit()
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == proposal.version_id
+            )
+        ) == 0
+
+        committed = asyncio.run(
+            validator.stage_prepared_proposal_validation(goal_id, proposal.version_id, owner_id)
+        )
+        committed_id = committed.id
+        session.commit()
+    with Session(goal_version_engine) as reader:
+        assert reader.get(app.db.models.GoalValidationRunDB, committed_id).goal_version_id == proposal.version_id
+
+
+@pytest.mark.integration
+def test_staged_validation_rejects_proposal_changed_during_provider_call(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="first-for-stage")
+        session.commit()
+
+        class ChangingLLM:
+            async def generate(self, _request):
+                with Session(goal_version_engine) as writer:
+                    _stage_text(
+                        writer, owner_id, goal_id, base_id,
+                        key="newer-for-stage", revision=1, title="Newer proposal",
+                    )
+                    writer.commit()
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        with pytest.raises(GoalProposalConflict, match="superseded"):
+            asyncio.run(
+                GoalValidationRunService(session, ChangingLLM()).stage_prepared_proposal_validation(
+                    goal_id, proposal.version_id, owner_id
+                )
+            )
+        session.commit()
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == proposal.version_id
+            )
+        ) == 0
+
+
+@pytest.mark.integration
+def test_staged_validation_checks_owner_and_isolation_before_provider(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="stage-auth")
+        session.commit()
+
+    class UnexpectedLLM:
+        async def generate(self, _request):
+            raise AssertionError("Invalid validation requests must not reach the provider")
+
+    with Session(goal_version_engine) as session:
+        with pytest.raises(ValueError, match="Goal proposal not found"):
+            asyncio.run(
+                GoalValidationRunService(session, UnexpectedLLM()).stage_prepared_proposal_validation(
+                    goal_id, proposal.version_id, "other-user"
+                )
+            )
+    with goal_version_engine.connect().execution_options(isolation_level="SERIALIZABLE") as connection:
+        with Session(connection) as session:
+            with pytest.raises(RuntimeError, match="requires READ COMMITTED"):
+                asyncio.run(
+                    GoalValidationRunService(session, UnexpectedLLM()).stage_prepared_proposal_validation(
+                        goal_id, proposal.version_id, owner_id
+                    )
+                )
+
+
+@pytest.mark.integration
+def test_staged_validation_holds_goal_lock_until_outer_commit(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="lock-validation")
+        session.commit()
+
+        class NormalLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        asyncio.run(
+            GoalValidationRunService(session, NormalLLM()).stage_prepared_proposal_validation(
+                goal_id, proposal.version_id, owner_id
+            )
+        )
+
+        def update():
+            with Session(goal_version_engine) as writer:
+                @event.listens_for(writer.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                result = _stage_text(
+                    writer, owner_id, goal_id, base_id,
+                    key="after-validation", revision=1, title="Changed proposal",
+                )
+                writer.commit()
+                return result
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(update)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                session.commit()
+                assert pending.result(timeout=10).revision == 2
+            finally:
+                session.rollback()
 
 
 @pytest.mark.integration
