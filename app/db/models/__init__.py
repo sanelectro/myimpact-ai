@@ -8,6 +8,7 @@ from app.db.models.evidence_mapping import EvidenceMappingDB
 from app.db.models.evidence_version import EvidenceVersionDB
 from app.db.models.expectation import DocumentExpectationDB
 from app.db.models.goal import GoalDB
+from app.db.models.goal_baseline_observation import GoalBaselineObservationDB
 from app.db.models.goal_definition_proposal import (
     GoalCommandReceiptDB,
     GoalDefinitionProposalHeadDB,
@@ -83,6 +84,7 @@ __all__ = [
     "EvidenceMappingDB",
     "EvidenceVersionDB",
     "GoalDB",
+    "GoalBaselineObservationDB",
     "GoalCommandReceiptDB",
     "GoalDefinitionProposalHeadDB",
     "GoalVersionDB",

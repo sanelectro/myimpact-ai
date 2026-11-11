@@ -27,6 +27,10 @@ from app.models.llm import LLMResponse
 from app.models.milestone import MilestoneCreate
 from app.repositories.goal import GoalRepository
 from app.services.goal import GoalService
+from app.services.goal_baseline_observations import (
+    GoalBaselineConflict,
+    GoalBaselineObservationService,
+)
 from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
 from app.services.goal_definition_proposals import (
     GoalDefinitionProposalService,
@@ -102,6 +106,146 @@ def _create_selected_baseline(engine):
         goal.sub_status = GoalSubStatus.ON_TRACK
         session.commit()
     return owner_id, goal_id, base_id
+
+
+def _create_unselected_ongoing_goal(engine):
+    owner_id, goal_id = _create_committed_goal(engine)
+    with Session(engine) as session:
+        goal = GoalRepository(session).get_by_id(goal_id)
+        goal.status = GoalStatus.ACTIVE
+        goal.sub_status = GoalSubStatus.ON_TRACK
+        base_id = GoalRepository(session).get_latest_version(goal_id).id
+        session.commit()
+    return owner_id, goal_id, base_id
+
+
+def _observe_baseline(session, owner_id, goal_id, base_id):
+    return GoalBaselineObservationService(session).stage_matching_baseline(
+        goal_id=goal_id,
+        actor_user_id=owner_id,
+        expected_version_id=base_id,
+        expected_relationship_revision=0,
+    )
+
+
+@pytest.mark.integration
+def test_baseline_observation_selects_only_matching_current_snapshot(goal_version_engine):
+    owner_id, goal_id, base_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        observation = _observe_baseline(session, owner_id, goal_id, base_id)
+        assert observation.historical_effectivity == "UNKNOWN"
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id == base_id
+        session.rollback()
+
+    with Session(goal_version_engine) as session:
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        observation = _observe_baseline(session, owner_id, goal_id, base_id)
+        session.commit()
+        observed_at = observation.observed_at
+        retry = _observe_baseline(session, owner_id, goal_id, base_id)
+        assert retry.observed_at == observed_at
+        assert retry.historical_effectivity == "UNKNOWN"
+        assert GoalRepository(session).get_by_id(goal_id).title == "Original goal"
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionApprovalDB)
+            .where(app.db.models.GoalVersionApprovalDB.goal_id == goal_id)
+        ) == 0
+        with pytest.raises(DBAPIError):
+            with session.begin_nested():
+                session.execute(
+                    text("UPDATE goal_baseline_observations SET historical_effectivity='UNKNOWN' WHERE goal_id=:goal"),
+                    {"goal": goal_id},
+                )
+        session.rollback()
+        assert GoalRepository(session).delete(goal_id)
+        session.commit()
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+
+
+@pytest.mark.integration
+def test_baseline_observation_rejects_mismatch_and_unauthorized_owner(goal_version_engine):
+    owner_id, goal_id, base_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        with pytest.raises(ValueError, match="Goal not found"):
+            _observe_baseline(session, "another-user", goal_id, base_id)
+        session.rollback()
+        with pytest.raises(GoalBaselineConflict, match="version changed"):
+            _observe_baseline(session, owner_id, goal_id, "stale-version")
+        session.rollback()
+        MilestoneService(session).create_milestone(goal_id, MilestoneCreate(title="New milestone"))
+        with pytest.raises(GoalBaselineConflict, match="does not match"):
+            _observe_baseline(session, owner_id, goal_id, base_id)
+        session.rollback()
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+
+
+@pytest.mark.integration
+def test_baseline_observation_rejects_incomplete_legacy_snapshot(goal_version_engine):
+    owner_id, goal_id, _ = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        legacy = app.db.models.GoalVersionDB(
+            id=f"phase1-incomplete-{uuid4().hex}",
+            goal_id=goal_id,
+            version=2,
+            origin="LEGACY",
+            definition_kind="STANDARD",
+            content={"title": "Original goal"},
+            created_at=datetime.now(UTC),
+        )
+        session.add(legacy)
+        session.commit()
+        with pytest.raises(GoalBaselineConflict, match="does not match"):
+            _observe_baseline(session, owner_id, goal_id, legacy.id)
+        session.rollback()
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+
+
+@pytest.mark.integration
+def test_baseline_observation_preserves_existing_user_cascade(goal_version_engine):
+    owner_id, goal_id, base_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        _observe_baseline(session, owner_id, goal_id, base_id)
+        session.commit()
+        session.execute(text("DELETE FROM users WHERE id = :owner"), {"owner": owner_id})
+        session.commit()
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert GoalRepository(session).get_by_id(goal_id) is None
+
+
+@pytest.mark.integration
+def test_concurrent_baseline_observations_reuse_one_record(goal_version_engine):
+    owner_id, goal_id, base_id = _create_unselected_ongoing_goal(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        original = _observe_baseline(first, owner_id, goal_id, base_id)
+
+        def observe():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                result = _observe_baseline(second, owner_id, goal_id, base_id)
+                return result.goal_version_id, result.observed_at
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(observe)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                assert pending.result(timeout=10) == (base_id, original.observed_at)
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalBaselineObservationDB)
+            .where(app.db.models.GoalBaselineObservationDB.goal_id == goal_id)
+        ) == 1
 
 
 def _stage_text(session, owner_id, goal_id, base_id, *, key, revision=0, title="Revised goal"):
