@@ -9,7 +9,8 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, func, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 import app.db.models
@@ -27,6 +28,11 @@ from app.models.milestone import MilestoneCreate
 from app.repositories.goal import GoalRepository
 from app.services.goal import GoalService
 from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
+from app.services.goal_definition_proposals import (
+    GoalDefinitionProposalService,
+    GoalProposalConflict,
+    GoalProposalTextChanges,
+)
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.milestone import MilestoneService
 
@@ -84,6 +90,265 @@ def _create_committed_goal(engine):
         GoalRepository(session).create(goal_id=goal_id, user_id=owner_id, title="Original goal")
         session.commit()
     return owner_id, goal_id
+
+
+def _create_selected_baseline(engine):
+    owner_id, goal_id = _create_committed_goal(engine)
+    with Session(engine) as session:
+        goal = GoalRepository(session).get_by_id(goal_id)
+        base_id = GoalRepository(session).get_latest_version(goal_id).id
+        goal.operative_goal_version_id = base_id
+        goal.status = GoalStatus.ACTIVE
+        session.commit()
+    return owner_id, goal_id, base_id
+
+
+def _stage_text(session, owner_id, goal_id, base_id, *, key, revision=0, title="Revised goal"):
+    return GoalDefinitionProposalService(session).stage_text_proposal(
+        goal_id=goal_id,
+        actor_user_id=owner_id,
+        idempotency_key=key,
+        expected_base_version_id=base_id,
+        expected_proposal_revision=revision,
+        expected_relationship_revision=0,
+        changes=GoalProposalTextChanges(title=title),
+    )
+
+
+@pytest.mark.integration
+def test_text_proposal_is_isolated_and_retry_returns_original_receipt(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        first = _stage_text(session, owner_id, goal_id, base_id, key="first")
+        session.commit()
+        second = _stage_text(session, owner_id, goal_id, base_id, key="second", revision=1)
+        assert second.outcome == "NO_CHANGE"
+        session.commit()
+        third = _stage_text(
+            session, owner_id, goal_id, base_id, key="third", revision=1, title="Another goal"
+        )
+        session.commit()
+        retry = _stage_text(session, owner_id, goal_id, base_id, key="first")
+        assert retry == first
+        assert first.outcome == "CREATED"
+        assert first.revision == 1
+        assert third.revision == 2
+        assert third.version_id != first.version_id
+        with pytest.raises(GoalProposalConflict, match="different request"):
+            _stage_text(session, owner_id, goal_id, base_id, key="first", title="Different")
+        session.rollback()
+
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.get_by_id(goal_id)
+        assert goal.title == "Original goal"
+        assert goal.status == GoalStatus.ACTIVE
+        assert goal.operative_goal_version_id == base_id
+        assert repository.get_latest_version(goal_id).id == base_id
+        assert session.get(app.db.models.GoalVersionDB, first.version_id).content["title"] == "Revised goal"
+        assert session.get(app.db.models.GoalVersionDB, third.version_id).content["title"] == "Another goal"
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id).revision == 2
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalCommandReceiptDB)
+            .where(app.db.models.GoalCommandReceiptDB.goal_id == goal_id)
+        ) == 3
+
+
+@pytest.mark.integration
+def test_text_proposal_noop_and_rollback_do_not_create_versions(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        noop = _stage_text(
+            session, owner_id, goal_id, base_id, key="noop", title="  Original   goal  "
+        )
+        assert (noop.outcome, noop.revision, noop.version_id) == ("NO_CHANGE", 0, base_id)
+        session.commit()
+        created = _stage_text(session, owner_id, goal_id, base_id, key="rollback")
+        assert created.outcome == "CREATED"
+        session.rollback()
+
+    with Session(goal_version_engine) as session:
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(app.db.models.GoalVersionDB, created.version_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "rollback")
+        ) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "noop")
+        ) is not None
+
+
+@pytest.mark.integration
+def test_text_proposal_rechecks_owner_revisions_and_live_baseline(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        with pytest.raises(ValueError, match="Goal not found"):
+            _stage_text(session, "another-user", goal_id, base_id, key="other")
+        session.rollback()
+        with pytest.raises(GoalProposalConflict, match="proposal changed"):
+            _stage_text(session, owner_id, goal_id, base_id, key="stale", revision=1)
+        session.rollback()
+        with pytest.raises(GoalProposalConflict, match="definition changed"):
+            _stage_text(session, owner_id, goal_id, "different-base", key="wrong-base")
+        session.rollback()
+        MilestoneService(session).create_milestone(goal_id, MilestoneCreate(title="New milestone"))
+        with pytest.raises(GoalProposalConflict, match="no longer matches"):
+            _stage_text(session, owner_id, goal_id, base_id, key="changed-baseline")
+        session.rollback()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("status", [GoalStatus.DRAFT, GoalStatus.COMPLETED, GoalStatus.ARCHIVED])
+def test_text_proposal_rejects_nonongoing_lifecycle(goal_version_engine, status):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        goal = GoalRepository(session).get_by_id(goal_id)
+        goal.status = status
+        session.commit()
+        with pytest.raises(GoalProposalConflict, match="approved or active"):
+            _stage_text(session, owner_id, goal_id, base_id, key="nonongoing")
+        session.rollback()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+
+
+@pytest.mark.integration
+def test_text_proposal_requires_selected_baseline_and_relationship_revision(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        goal = GoalRepository(session).get_by_id(goal_id)
+        goal.operative_goal_version_id = None
+        session.commit()
+        with pytest.raises(GoalProposalConflict, match="not selected"):
+            _stage_text(session, owner_id, goal_id, base_id, key="no-baseline")
+        session.rollback()
+        goal.operative_goal_version_id = base_id
+        session.commit()
+        with pytest.raises(GoalProposalConflict, match="relationship changed"):
+            GoalDefinitionProposalService(session).stage_text_proposal(
+                goal_id=goal_id,
+                actor_user_id=owner_id,
+                idempotency_key="relationship",
+                expected_base_version_id=base_id,
+                expected_proposal_revision=0,
+                expected_relationship_revision=1,
+                changes=GoalProposalTextChanges(title="Revised goal"),
+            )
+        session.rollback()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+
+
+@pytest.mark.integration
+def test_concurrent_text_proposal_retry_serializes_on_idempotency_key(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        original = _stage_text(first, owner_id, goal_id, base_id, key="same")
+
+        def retry():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "pg_advisory_xact_lock" in statement:
+                        attempted.set()
+
+                result = _stage_text(second, owner_id, goal_id, base_id, key="same")
+                second.commit()
+                return result
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(retry)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                assert pending.result(timeout=10) == original
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionDB)
+            .where(app.db.models.GoalVersionDB.goal_id == goal_id)
+        ) == 2
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalCommandReceiptDB)
+            .where(app.db.models.GoalCommandReceiptDB.goal_id == goal_id)
+        ) == 1
+
+
+@pytest.mark.integration
+def test_concurrent_distinct_proposals_recheck_head_revision(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        original = _stage_text(first, owner_id, goal_id, base_id, key="first")
+
+        def competing():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                with pytest.raises(GoalProposalConflict, match="proposal changed"):
+                    _stage_text(second, owner_id, goal_id, base_id, key="second", title="Competing")
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(competing)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                pending.result(timeout=10)
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        head = session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id)
+        assert head.proposal_version_id == original.version_id
+        assert head.revision == 1
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "second")
+        ) is None
+
+
+@pytest.mark.integration
+def test_proposal_storage_enforces_same_goal_and_immutable_receipts(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    _, _, other_base = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="stored")
+        session.commit()
+        for statement, params in [
+            (
+                "UPDATE goal_definition_proposal_heads SET base_version_id = :version WHERE goal_id = :goal",
+                {"version": other_base, "goal": goal_id},
+            ),
+            (
+                "UPDATE goal_definition_proposal_heads SET proposal_version_id = :version WHERE goal_id = :goal",
+                {"version": base_id, "goal": goal_id},
+            ),
+            (
+                "UPDATE goal_command_receipts SET result_revision = 99 WHERE goal_id = :goal",
+                {"goal": goal_id},
+            ),
+            (
+                "DELETE FROM goal_command_receipts WHERE goal_id = :goal",
+                {"goal": goal_id},
+            ),
+        ]:
+            with pytest.raises(DBAPIError):
+                with session.begin_nested():
+                    session.execute(text(statement), params)
+
+        head = session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id)
+        assert head.base_version_id == base_id
+        assert head.proposal_version_id == proposal.version_id
+        assert GoalRepository(session).delete(goal_id)
+        session.commit()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "stored")
+        ) is None
 
 
 @pytest.mark.integration
