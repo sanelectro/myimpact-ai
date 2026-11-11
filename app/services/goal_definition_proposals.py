@@ -19,6 +19,7 @@ from app.db.models.goal_definition_proposal import (
 from app.db.models.goal_version import GoalVersionDB
 from app.models.goal import GoalStatus, GoalStructuredFields
 from app.repositories.goal import GoalRepository
+from app.services.goal_baseline_observations import GoalBaselineObservationService
 
 _COMMAND_KIND = "PREPARE_DEFINITION"
 _PLAIN_TEXT = re.compile(r"[A-Za-z0-9 ]*\Z")
@@ -152,26 +153,77 @@ class GoalDefinitionProposalService:
         expected_relationship_revision: int,
         changes: GoalProposalChanges,
     ) -> GoalProposalResult:
-        if not idempotency_key.strip() or len(idempotency_key) > 128:
-            raise ValueError("An idempotency key of at most 128 characters is required")
+        return self._stage_proposal(
+            goal_id=goal_id,
+            actor_user_id=actor_user_id,
+            idempotency_key=idempotency_key,
+            expected_base_version_id=expected_base_version_id,
+            expected_proposal_revision=expected_proposal_revision,
+            expected_relationship_revision=expected_relationship_revision,
+            changes=changes,
+            observation_source_version_id=None,
+        )
+
+    def stage_observed_proposal(
+        self,
+        *,
+        goal_id: str,
+        actor_user_id: str,
+        idempotency_key: str,
+        expected_source_version_id: str,
+        expected_proposal_revision: int,
+        expected_relationship_revision: int,
+        changes: GoalProposalChanges,
+    ) -> GoalProposalResult:
+        """Stage both operations; the caller must commit or roll back the outer transaction.
+
+        A nested transaction flushes pending session changes before its savepoint.
+        Callers must also respect idempotency-before-Goal lock ordering.
+        """
+        if not expected_source_version_id:
+            raise ValueError("An expected standard source version is required")
         if expected_proposal_revision < 0 or expected_relationship_revision < 0:
             raise ValueError("Expected revisions cannot be negative")
+        with self.session.begin_nested():
+            self._lock_prepare(actor_user_id, idempotency_key)
+            goal = self.goals.get_by_id_for_update(goal_id)
+            if goal is None or goal.user_id != actor_user_id:
+                raise ValueError("Goal not found")
+            receipt = self.session.get(
+                GoalCommandReceiptDB, (actor_user_id, _COMMAND_KIND, idempotency_key)
+            )
+            if receipt is not None:
+                if receipt.goal_id != goal_id:
+                    raise GoalProposalConflict("Idempotency key was already used for a different request")
+                observation = self.session.get(GoalBaselineObservationDB, goal_id)
+                if observation is None:
+                    raise GoalProposalConflict("Idempotency key was already used for a different request")
+            else:
+                observation = GoalBaselineObservationService(self.session).stage_observed_baseline(
+                    goal_id=goal_id,
+                    actor_user_id=actor_user_id,
+                    expected_source_version_id=expected_source_version_id,
+                    expected_relationship_revision=expected_relationship_revision,
+                )
+            return self._stage_proposal(
+                goal_id=goal_id,
+                actor_user_id=actor_user_id,
+                idempotency_key=idempotency_key,
+                expected_base_version_id=observation.goal_version_id,
+                expected_proposal_revision=expected_proposal_revision,
+                expected_relationship_revision=expected_relationship_revision,
+                changes=changes,
+                observation_source_version_id=expected_source_version_id,
+            )
+
+    def _lock_prepare(self, actor_user_id: str, idempotency_key: str) -> None:
+        if not idempotency_key.strip() or len(idempotency_key) > 128:
+            raise ValueError("An idempotency key of at most 128 characters is required")
         if self.session.get_bind().dialect.name != "postgresql":
             raise RuntimeError("Proposal preparation requires PostgreSQL")
         isolation = self.session.execute(text("SHOW transaction_isolation")).scalar_one()
         if isolation != "read committed":
             raise RuntimeError("Proposal preparation requires READ COMMITTED isolation")
-
-        payload = {
-            "goal_id": goal_id,
-            "expected_base_version_id": expected_base_version_id,
-            "expected_proposal_revision": expected_proposal_revision,
-            "expected_relationship_revision": expected_relationship_revision,
-            "changes": changes.model_dump(mode="json", exclude_unset=True),
-        }
-        request_hash = hashlib.sha256(
-            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
-        ).hexdigest()
         lock_input = json.dumps(
             [_COMMAND_KIND, actor_user_id, idempotency_key],
             ensure_ascii=False,
@@ -180,6 +232,33 @@ class GoalDefinitionProposalService:
         lock_id = int.from_bytes(hashlib.sha256(lock_input).digest()[:8], "big", signed=True)
         self.session.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": lock_id})
 
+    def _stage_proposal(
+        self,
+        *,
+        goal_id: str,
+        actor_user_id: str,
+        idempotency_key: str,
+        expected_base_version_id: str,
+        expected_proposal_revision: int,
+        expected_relationship_revision: int,
+        changes: GoalProposalChanges,
+        observation_source_version_id: str | None,
+    ) -> GoalProposalResult:
+        if expected_proposal_revision < 0 or expected_relationship_revision < 0:
+            raise ValueError("Expected revisions cannot be negative")
+        payload = {
+            "goal_id": goal_id,
+            "expected_base_version_id": expected_base_version_id,
+            "expected_proposal_revision": expected_proposal_revision,
+            "expected_relationship_revision": expected_relationship_revision,
+            "changes": changes.model_dump(mode="json", exclude_unset=True),
+        }
+        if observation_source_version_id is not None:
+            payload["observation_source_version_id"] = observation_source_version_id
+        request_hash = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        ).hexdigest()
+        self._lock_prepare(actor_user_id, idempotency_key)
         goal = self.goals.get_by_id_for_update(goal_id)
         if goal is None or goal.user_id != actor_user_id:
             raise ValueError("Goal not found")

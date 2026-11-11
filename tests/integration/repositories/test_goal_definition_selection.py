@@ -505,6 +505,237 @@ def _stage_text(session, owner_id, goal_id, base_id, *, key, revision=0, title="
     )
 
 
+def _stage_observed_text(
+    session, owner_id, goal_id, source_id, *, key, revision=0, title="Revised goal"
+):
+    return GoalDefinitionProposalService(session).stage_observed_proposal(
+        goal_id=goal_id,
+        actor_user_id=owner_id,
+        idempotency_key=key,
+        expected_source_version_id=source_id,
+        expected_proposal_revision=revision,
+        expected_relationship_revision=0,
+        changes=GoalProposalChanges(title=title),
+    )
+
+
+@pytest.mark.integration
+def test_observation_and_proposal_commit_and_retry_as_one_command(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        result = _stage_observed_text(session, owner_id, goal_id, source_id, key="combined")
+        observed_id = session.get(app.db.models.GoalBaselineObservationDB, goal_id).goal_version_id
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id).base_version_id == observed_id
+        assert GoalRepository(session).get_by_id(goal_id).title == "Original goal"
+        session.commit()
+
+        GoalService(session).update_goal(
+            goal_id, {"title": "Changed after preparation"}, changed_by_user_id=owner_id
+        )
+        retry = _stage_observed_text(session, owner_id, goal_id, source_id, key="combined")
+        assert retry == result
+        with pytest.raises(GoalProposalConflict, match="different request"):
+            _stage_observed_text(
+                session, owner_id, goal_id, source_id, key="combined", title="Different request"
+            )
+        with pytest.raises(GoalProposalConflict, match="different request"):
+            _stage_observed_text(session, owner_id, goal_id, "other-source", key="combined")
+        session.rollback()
+
+    with Session(goal_version_engine) as session:
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id).goal_version_id == observed_id
+        assert session.get(app.db.models.GoalVersionDB, result.version_id).content["title"] == "Revised goal"
+        assert GoalRepository(session).get_by_id(goal_id).title == "Changed after preparation"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("failure", ["invalid_dates", "receipt_write"])
+def test_combined_preparation_failure_leaves_no_partial_changes(goal_version_engine, failure):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        service = GoalDefinitionProposalService(session)
+        connection = session.connection()
+
+        def fail_receipt(_conn, _cursor, statement, _parameters, _context, _executemany):
+            if "INSERT INTO goal_command_receipts" in statement:
+                raise RuntimeError("Injected receipt failure")
+
+        if failure == "receipt_write":
+            event.listen(connection, "before_cursor_execute", fail_receipt)
+        try:
+            changes = (
+                GoalProposalChanges(start_date=date(2027, 1, 1), end_date=date(2026, 12, 31))
+                if failure == "invalid_dates"
+                else GoalProposalChanges(title="Revised goal")
+            )
+            expected_error = ValueError if failure == "invalid_dates" else RuntimeError
+            with pytest.raises(expected_error):
+                service.stage_observed_proposal(
+                    goal_id=goal_id,
+                    actor_user_id=owner_id,
+                    idempotency_key="failing",
+                    expected_source_version_id=source_id,
+                    expected_proposal_revision=0,
+                    expected_relationship_revision=0,
+                    changes=changes,
+                )
+        finally:
+            if failure == "receipt_write":
+                event.remove(connection, "before_cursor_execute", fail_receipt)
+        session.commit()
+
+    with Session(goal_version_engine) as session:
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "failing")
+        ) is None
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionDB).where(
+                app.db.models.GoalVersionDB.goal_id == goal_id,
+                app.db.models.GoalVersionDB.definition_kind != "STANDARD",
+            )
+        ) == 0
+
+
+@pytest.mark.integration
+def test_combined_preparation_rollback_removes_all_staged_changes(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        result = _stage_observed_text(session, owner_id, goal_id, source_id, key="rollback-both")
+        observed_id = session.get(app.db.models.GoalBaselineObservationDB, goal_id).goal_version_id
+        session.rollback()
+    with Session(goal_version_engine) as session:
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(app.db.models.GoalVersionDB, observed_id) is None
+        assert session.get(app.db.models.GoalVersionDB, result.version_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "rollback-both")
+        ) is None
+
+
+@pytest.mark.integration
+def test_combined_noop_records_observation_but_no_proposal(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        with pytest.raises(ValueError, match="Goal not found"):
+            _stage_observed_text(session, "other-user", goal_id, source_id, key="unauthorized")
+        session.rollback()
+        result = _stage_observed_text(
+            session, owner_id, goal_id, source_id, key="noop-combined", title="Original   goal"
+        )
+        observation = session.get(app.db.models.GoalBaselineObservationDB, goal_id)
+        assert result.outcome == "NO_CHANGE"
+        assert result.revision == 0
+        assert result.version_id == observation.goal_version_id
+        session.commit()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionDB).where(
+                app.db.models.GoalVersionDB.goal_id == goal_id,
+                app.db.models.GoalVersionDB.definition_kind == "PROPOSAL",
+            )
+        ) == 0
+        assert GoalRepository(session).get_latest_version(goal_id).id == source_id
+
+
+@pytest.mark.integration
+def test_concurrent_combined_retry_returns_one_receipt(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        result = _stage_observed_text(first, owner_id, goal_id, source_id, key="same-combined")
+
+        def retry():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "pg_advisory_xact_lock" in statement:
+                        attempted.set()
+
+                retried = _stage_observed_text(second, owner_id, goal_id, source_id, key="same-combined")
+                second.commit()
+                return retried
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(retry)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                assert pending.result(timeout=10) == result
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionDB).where(
+                app.db.models.GoalVersionDB.goal_id == goal_id,
+                app.db.models.GoalVersionDB.definition_kind == "OBSERVED",
+            )
+        ) == 1
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalCommandReceiptDB)
+            .where(app.db.models.GoalCommandReceiptDB.goal_id == goal_id)
+        ) == 1
+
+
+@pytest.mark.integration
+def test_concurrent_combined_requests_recheck_proposal_revision(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        result = _stage_observed_text(first, owner_id, goal_id, source_id, key="first-combined")
+
+        def competing():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                with pytest.raises(GoalProposalConflict, match="proposal changed"):
+                    _stage_observed_text(
+                        second, owner_id, goal_id, source_id,
+                        key="second-combined", title="Competing proposal",
+                    )
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(competing)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                pending.result(timeout=10)
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        head = session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id)
+        assert head.proposal_version_id == result.version_id
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "second-combined")
+        ) is None
+
+
+@pytest.mark.integration
+def test_combined_command_cannot_reuse_key_from_direct_preparation(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        observation = GoalBaselineObservationService(session).stage_observed_baseline(
+            goal_id=goal_id, actor_user_id=owner_id,
+            expected_source_version_id=source_id, expected_relationship_revision=0,
+        )
+        observed_id = observation.goal_version_id
+        session.commit()
+        _stage_text(session, owner_id, goal_id, observed_id, key="direct")
+        session.commit()
+        with pytest.raises(GoalProposalConflict, match="different request"):
+            _stage_observed_text(session, owner_id, goal_id, source_id, key="direct")
+        session.rollback()
+
+
 @pytest.mark.integration
 def test_text_proposal_is_isolated_and_retry_returns_original_receipt(goal_version_engine):
     owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)

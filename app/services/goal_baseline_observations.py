@@ -16,7 +16,7 @@ class GoalBaselineConflict(ValueError):
 
 
 class GoalBaselineObservationService:
-    """Stage an observation in a transaction separate from proposal preparation."""
+    """Stage an observation after any required proposal idempotency lock."""
 
     def __init__(self, session: Session):
         self.session = session
