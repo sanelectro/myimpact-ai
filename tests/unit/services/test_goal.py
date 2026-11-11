@@ -146,7 +146,7 @@ def test_deactivate_goal_archives_with_normalized_reason():
     repository = MagicMock(spec=GoalRepository)
     goal = MagicMock(spec=GoalDB)
     goal.status = GoalStatus.ACTIVE
-    repository.get_by_id.return_value = goal
+    repository.get_by_id_for_update.return_value = goal
     repository.update.return_value = goal
 
     service = GoalService(session)
@@ -175,7 +175,7 @@ def test_deactivate_goal_requires_a_reason():
     repository = MagicMock(spec=GoalRepository)
     goal = MagicMock(spec=GoalDB)
     goal.status = GoalStatus.ACTIVE
-    repository.get_by_id.return_value = goal
+    repository.get_by_id_for_update.return_value = goal
 
     service = GoalService(session)
     service.repository = repository
@@ -195,7 +195,7 @@ def test_completed_goal_can_be_reopened_with_reason_and_history():
     repository = MagicMock(spec=GoalRepository)
     goal = MagicMock(spec=GoalDB)
     goal.status = GoalStatus.COMPLETED
-    repository.get_by_id.return_value = goal
+    repository.get_by_id_for_update.return_value = goal
 
     def update_goal(_goal_id, updates):
         goal.status = updates["status"]
@@ -231,7 +231,7 @@ def test_reopening_completed_goal_requires_a_reason():
     repository = MagicMock(spec=GoalRepository)
     goal = MagicMock(spec=GoalDB)
     goal.status = GoalStatus.COMPLETED
-    repository.get_by_id.return_value = goal
+    repository.get_by_id_for_update.return_value = goal
 
     service = GoalService(session)
     service.repository = repository

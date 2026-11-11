@@ -12,7 +12,7 @@ from app.models.goal_criteria import (
     GoalCriterionUpdateRequest,
 )
 from app.services.goal import GoalService
-from app.services.goal_criteria import GoalCriteriaService
+from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
 from app.services.llm.factory import create_llm_service
 
 router = APIRouter(prefix="/goals/{goal_id}/criteria", tags=["goal-criteria"])
@@ -63,6 +63,11 @@ async def generate_goal_criteria(
     goal = _owned_goal(goal_id, user_id, goal_service)
     try:
         criteria = await service.generate(goal, user_id)
+    except GoalCriteriaGenerationConflict as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
     except GoalCriteriaGenerationError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

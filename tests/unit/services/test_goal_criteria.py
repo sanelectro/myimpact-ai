@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+from fastapi import HTTPException
 from sqlalchemy import Column, String, Table, create_engine
 from sqlalchemy.orm import Session
 
@@ -17,12 +19,14 @@ from app.db.models.user import UserDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
     GoalCriterionApprovalStatus,
+    GoalCriterionCreateRequest,
     GoalCriterionDefinition,
     GoalCriterionType,
     GoalCriterionUpdateRequest,
 )
 from app.models.llm import LLMResponse
-from app.services.goal_criteria import GoalCriteriaService
+from app.api.v1.goal_criteria import generate_goal_criteria
+from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
 
 
 def test_adding_a_criterion_version_obsoletes_previous_assessments():
@@ -57,6 +61,35 @@ def test_adding_a_criterion_version_obsoletes_previous_assessments():
         "criterion-1",
         "Criterion definition edited",
     )
+
+
+def test_criterion_creation_rejects_missing_goal_before_mutation():
+    service = GoalCriteriaService(Mock())
+    service.goal_repository.get_by_id_for_update = Mock(return_value=None)
+    service.repository.create_criterion = Mock()
+    request = GoalCriterionCreateRequest(
+        definition=GoalCriterionDefinition(
+            criterion_type=GoalCriterionType.BINARY,
+            description="Complete the deployment migration",
+            completion_conditions="The production deployment is complete.",
+        )
+    )
+    with pytest.raises(ValueError, match="Goal not found"):
+        service.create_manual("missing-goal", "user-1", request)
+    service.repository.create_criterion.assert_not_called()
+
+
+def test_generation_stale_context_is_reported_as_conflict():
+    goal_service = Mock()
+    goal_service.get_goal_by_id.return_value = SimpleNamespace(user_id="user-1")
+
+    class StaleService:
+        async def generate(self, _goal, _user_id):
+            raise GoalCriteriaGenerationConflict("Goal changed during generation")
+
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(generate_goal_criteria("goal-1", "user-1", goal_service, StaleService()))
+    assert error.value.status_code == 409
 
 
 def test_generation_persists_proposed_criteria_for_a_goal():

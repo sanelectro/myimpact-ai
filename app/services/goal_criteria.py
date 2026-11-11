@@ -26,6 +26,10 @@ from app.services.llm.interface import ILLMService
 CRITERIA_PROMPT_VERSION = "m66-criteria-v1"
 
 
+class GoalCriteriaGenerationConflict(ValueError):
+    pass
+
+
 def _normalize_json_response(content: str) -> str:
     content = content.strip()
     if content.startswith("```"):
@@ -59,6 +63,7 @@ class GoalCriteriaService(BaseService):
         user_id: str,
         request: GoalCriterionCreateRequest,
     ):
+        self._lock_goal(goal_id)
         criterion = self.repository.create_criterion(
             criterion_id=str(uuid4()),
             goal_id=goal_id,
@@ -82,6 +87,7 @@ class GoalCriteriaService(BaseService):
         user_id: str,
         request: GoalCriterionUpdateRequest,
     ):
+        self._lock_goal(goal_id)
         criterion = self.repository.get_by_id_and_goal(criterion_id, goal_id)
         if criterion is None or criterion.is_retired:
             raise ValueError("Criterion not found")
@@ -105,6 +111,7 @@ class GoalCriteriaService(BaseService):
         version_id: str,
         user_id: str,
     ):
+        self._lock_goal(goal_id)
         criterion = self.repository.get_by_id_and_goal(criterion_id, goal_id)
         if criterion is None or criterion.is_retired:
             raise ValueError("Criterion not found")
@@ -127,6 +134,7 @@ class GoalCriteriaService(BaseService):
         criterion_id: str,
         changed_by_user_id: str | None = None,
     ) -> None:
+        self._lock_goal(goal_id)
         criterion = self.repository.get_by_id_and_goal(criterion_id, goal_id)
         if criterion is None:
             raise ValueError("Criterion not found")
@@ -144,6 +152,17 @@ class GoalCriteriaService(BaseService):
     ) -> list:
         if self.llm_service is None:
             raise GoalCriteriaGenerationError("Criteria generation is not configured.")
+        prompt_context = (
+            goal.title,
+            goal.description,
+            goal.scope,
+            goal.start_date,
+            goal.end_date,
+            goal.status,
+            goal.user_id,
+        )
+        current_version = self.goal_repository.get_latest_version(goal.id)
+        current_version_id = current_version.id if current_version is not None else None
         prompt = (
             _criteria_prompt()
             + "\n\nGOAL\n"
@@ -179,6 +198,25 @@ class GoalCriteriaService(BaseService):
 
         created_ids: list[str] = []
         try:
+            locked_goal = self.goal_repository.get_by_id_for_update(goal.id)
+            if locked_goal is None:
+                raise GoalCriteriaGenerationConflict(
+                    "The goal is no longer available; reload before generating criteria."
+                )
+            latest_version = self.goal_repository.get_latest_version(goal.id)
+            latest_version_id = latest_version.id if latest_version is not None else None
+            if current_version_id != latest_version_id or (
+                locked_goal.title,
+                locked_goal.description,
+                locked_goal.scope,
+                locked_goal.start_date,
+                locked_goal.end_date,
+                locked_goal.status,
+                locked_goal.user_id,
+            ) != prompt_context:
+                raise GoalCriteriaGenerationConflict(
+                    "The goal changed during criteria generation; retry with the current goal."
+                )
             for proposal in result.criteria:
                 criterion = self.repository.create_criterion(
                     criterion_id=str(uuid4()),
@@ -206,6 +244,12 @@ class GoalCriteriaService(BaseService):
             for criterion_id in created_ids
             if (criterion := self.repository.get_by_id(criterion_id)) is not None
         ]
+
+    def _lock_goal(self, goal_id: str) -> GoalDB:
+        goal = self.goal_repository.get_by_id_for_update(goal_id)
+        if goal is None:
+            raise ValueError("Goal not found")
+        return goal
 
     def _record_goal_version(
         self,

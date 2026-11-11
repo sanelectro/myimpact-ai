@@ -88,7 +88,7 @@ class GoalService(BaseService):
         reason: str | None = None,
         changed_by_user_id: str | None = None,
     ) -> GoalDB:
-        goal = self.repository.get_by_id(goal_id)
+        goal = self.repository.get_by_id_for_update(goal_id)
         if goal is None:
             raise ValueError("Goal not found")
 
@@ -279,11 +279,7 @@ class GoalService(BaseService):
         changed_by_user_id: str | None = None,
         expected_deferred_requirements: list[dict] | None = None,
     ) -> GoalDB:
-        existing = (
-            self.repository.get_by_id_for_update(goal_id)
-            if "structured_fields" in values
-            else self.repository.get_by_id(goal_id)
-        )
+        existing = self.repository.get_by_id_for_update(goal_id)
         if existing is None:
             raise ValueError("Goal not found")
 

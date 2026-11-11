@@ -15,8 +15,16 @@ from sqlalchemy.orm import Session
 import app.db.models
 from app.db.models.team import TeamDB as _TeamDB
 from app.db.models.user import UserDB
+from app.models.goal import GoalStatus
+from app.models.goal_criteria import (
+    GoalCriterionCreateRequest,
+    GoalCriterionDefinition,
+    GoalCriterionType,
+)
 from app.models.llm import LLMResponse
 from app.repositories.goal import GoalRepository
+from app.services.goal import GoalService
+from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
 from app.services.goal_validation_runs import GoalValidationRunService
 
 
@@ -55,6 +63,170 @@ def goal_version_engine():
         yield engine
     finally:
         engine.dispose()
+
+
+def _create_committed_goal(engine):
+    owner_id = f"phase1-owner-{uuid4().hex}"
+    goal_id = f"phase1-goal-{uuid4().hex}"
+    now = datetime.now(UTC)
+    with Session(engine) as session:
+        session.add(UserDB(
+            id=owner_id,
+            name="Owner",
+            email=f"{owner_id}@example.test",
+            created_at=now,
+            updated_at=now,
+        ))
+        session.flush()
+        GoalRepository(session).create(goal_id=goal_id, user_id=owner_id, title="Original goal")
+        session.commit()
+    return owner_id, goal_id
+
+
+@pytest.mark.integration
+def test_concurrent_lifecycle_transition_rechecks_locked_status(goal_version_engine):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    lock_attempted = Event()
+    with Session(goal_version_engine) as first:
+        assert GoalRepository(first).get_by_id_for_update(goal_id) is not None
+
+        def transition_second():
+            with Session(goal_version_engine) as session:
+                @event.listens_for(session.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        lock_attempted.set()
+
+                with pytest.raises(ValueError, match="Invalid goal status transition"):
+                    GoalService(session).transition_status(
+                        goal_id, GoalStatus.ARCHIVED, reason="Second request",
+                        changed_by_user_id=owner_id,
+                    )
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(transition_second)
+            try:
+                assert lock_attempted.wait(10)
+                assert not pending.done()
+                GoalService(first).transition_status(
+                    goal_id, GoalStatus.ARCHIVED, reason="First request",
+                    changed_by_user_id=owner_id,
+                )
+                pending.result(timeout=10)
+            finally:
+                first.rollback()
+
+    with Session(goal_version_engine) as session:
+        assert GoalRepository(session).get_by_id(goal_id).status == GoalStatus.ARCHIVED
+        history = GoalRepository(session).get_status_history(goal_id)
+        assert len(history) == 1
+        assert history[0].reason == "First request"
+
+
+@pytest.mark.integration
+def test_criterion_creation_waits_for_goal_writer(goal_version_engine):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    lock_attempted = Event()
+    request = GoalCriterionCreateRequest(
+        definition=GoalCriterionDefinition(
+            criterion_type=GoalCriterionType.BINARY,
+            description="Deploy the release",
+            completion_conditions="The release is available.",
+        )
+    )
+    with Session(goal_version_engine) as first:
+        assert GoalRepository(first).get_by_id_for_update(goal_id) is not None
+
+        def create_criterion():
+            with Session(goal_version_engine) as session:
+                @event.listens_for(session.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        lock_attempted.set()
+
+                return GoalCriteriaService(session).create_manual(goal_id, owner_id, request).id
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(create_criterion)
+            try:
+                assert lock_attempted.wait(10)
+                assert not pending.done()
+                with Session(goal_version_engine) as verification:
+                    assert GoalCriteriaService(verification).list_for_goal(goal_id) == []
+                first.commit()
+                criterion_id = pending.result(timeout=10)
+            finally:
+                first.rollback()
+
+    with Session(goal_version_engine) as verification:
+        snapshot = GoalRepository(verification).get_latest_version(goal_id)
+        assert snapshot.version == 2
+        assert snapshot.content["criterion_versions"][0]["criterion_id"] == criterion_id
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("concurrent_change", ["goal", "criterion", "status"])
+def test_generated_criteria_reject_goal_changed_during_provider_call(
+    goal_version_engine, concurrent_change
+):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+
+    class EditingLLM:
+        async def generate(self, _request):
+            with Session(goal_version_engine) as writer:
+                if concurrent_change == "goal":
+                    GoalService(writer).update_goal(
+                        goal_id, {"title": "Changed during generation"}, changed_by_user_id=owner_id
+                    )
+                elif concurrent_change == "criterion":
+                    GoalCriteriaService(writer).create_manual(
+                        goal_id,
+                        owner_id,
+                        GoalCriterionCreateRequest(
+                            definition=GoalCriterionDefinition(
+                                criterion_type=GoalCriterionType.BINARY,
+                                description="Existing concurrent criterion",
+                                completion_conditions="The outcome is verified.",
+                            )
+                        ),
+                    )
+                else:
+                    GoalService(writer).transition_status(
+                        goal_id, GoalStatus.ARCHIVED, reason="Priorities changed",
+                        changed_by_user_id=owner_id,
+                    )
+            return LLMResponse(
+                content=json.dumps({
+                    "criteria": [{
+                        "criterion_type": "BINARY",
+                        "description": "Deploy the release",
+                        "completion_conditions": "The release is available.",
+                    }]
+                }),
+                model="test-model",
+                provider="test-provider",
+            )
+
+    with Session(goal_version_engine) as session:
+        goal = GoalRepository(session).get_by_id(goal_id)
+        service = GoalCriteriaService(session, EditingLLM())
+        with pytest.raises(GoalCriteriaGenerationConflict, match="goal changed"):
+            asyncio.run(service.generate(goal, owner_id))
+
+    with Session(goal_version_engine) as verification:
+        criteria = GoalCriteriaService(verification).list_for_goal(goal_id)
+        repository = GoalRepository(verification)
+        goal = repository.get_by_id(goal_id)
+        assert len(criteria) == (1 if concurrent_change == "criterion" else 0)
+        assert goal.title == (
+            "Changed during generation" if concurrent_change == "goal" else "Original goal"
+        )
+        assert goal.status == (
+            GoalStatus.ARCHIVED if concurrent_change == "status" else GoalStatus.DRAFT
+        )
+        assert repository.get_latest_version(goal_id).version == (
+            1 if concurrent_change == "status" else 2
+        )
 
 
 @pytest.mark.integration
