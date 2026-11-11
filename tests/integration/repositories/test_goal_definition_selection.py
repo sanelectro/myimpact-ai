@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 import app.db.models
 from app.db.models.team import TeamDB as _TeamDB
 from app.db.models.user import UserDB
-from app.models.goal import GoalStatus
+from app.models.goal import GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
     GoalCriterionCreateRequest,
     GoalCriterionDefinition,
@@ -99,6 +99,7 @@ def _create_selected_baseline(engine):
         base_id = GoalRepository(session).get_latest_version(goal_id).id
         goal.operative_goal_version_id = base_id
         goal.status = GoalStatus.ACTIVE
+        goal.sub_status = GoalSubStatus.ON_TRACK
         session.commit()
     return owner_id, goal_id, base_id
 
@@ -349,6 +350,106 @@ def test_proposal_storage_enforces_same_goal_and_immutable_receipts(goal_version
         assert session.get(
             app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "stored")
         ) is None
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "concurrent_change", [None, "proposal", "goal", "criterion", "milestone", "status"]
+)
+def test_prepared_proposal_validation_rechecks_exact_context_after_provider(
+    goal_version_engine, concurrent_change
+):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="validate")
+        session.commit()
+
+    class ChangingLLM:
+        async def generate(self, _request):
+            with Session(goal_version_engine) as writer:
+                if concurrent_change == "proposal":
+                    _stage_text(
+                        writer, owner_id, goal_id, base_id,
+                        key="newer", revision=1, title="Newer proposal",
+                    )
+                    writer.commit()
+                elif concurrent_change == "goal":
+                    GoalService(writer).update_goal(
+                        goal_id, {"title": "Changed baseline"}, changed_by_user_id=owner_id
+                    )
+                elif concurrent_change == "criterion":
+                    GoalCriteriaService(writer).create_manual(
+                        goal_id,
+                        owner_id,
+                        GoalCriterionCreateRequest(
+                            definition=GoalCriterionDefinition(
+                                criterion_type=GoalCriterionType.BINARY,
+                                description="A new criterion",
+                                completion_conditions="The outcome is verified.",
+                            )
+                        ),
+                    )
+                elif concurrent_change == "milestone":
+                    MilestoneService(writer).create_milestone(
+                        goal_id, MilestoneCreate(title="New milestone")
+                    )
+                elif concurrent_change == "status":
+                    GoalService(writer).transition_status(
+                        goal_id, GoalStatus.ARCHIVED, reason="Priorities changed",
+                        changed_by_user_id=owner_id,
+                    )
+            return LLMResponse(
+                content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+            )
+
+    with Session(goal_version_engine) as session:
+        validator = GoalValidationRunService(session, ChangingLLM())
+        if concurrent_change is None:
+            run = asyncio.run(
+                validator.validate_prepared_proposal(goal_id, proposal.version_id, owner_id)
+            )
+            assert run.goal_version_id == proposal.version_id
+        else:
+            with pytest.raises(GoalProposalConflict, match="changed during validation"):
+                asyncio.run(
+                    validator.validate_prepared_proposal(goal_id, proposal.version_id, owner_id)
+                )
+
+    with Session(goal_version_engine) as session:
+        runs = session.scalars(
+            select(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == proposal.version_id
+            )
+        ).all()
+        assert len(runs) == 1
+        assert runs[0].goal_version_id == proposal.version_id
+
+
+@pytest.mark.integration
+def test_prepared_proposal_validation_rejects_stale_or_unauthorized_before_provider(
+    goal_version_engine
+):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        first = _stage_text(session, owner_id, goal_id, base_id, key="first")
+        session.commit()
+        _stage_text(session, owner_id, goal_id, base_id, key="second", revision=1, title="Newer")
+        session.commit()
+
+    class UnexpectedLLM:
+        async def generate(self, _request):
+            pytest.fail("The provider must not run for stale or unauthorized requests")
+
+    with Session(goal_version_engine) as session:
+        validator = GoalValidationRunService(session, UnexpectedLLM())
+        with pytest.raises(ValueError, match="not found"):
+            asyncio.run(validator.validate_prepared_proposal(goal_id, first.version_id, "other"))
+        with pytest.raises(GoalProposalConflict, match="superseded"):
+            asyncio.run(validator.validate_prepared_proposal(goal_id, first.version_id, owner_id))
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB)
+            .where(app.db.models.GoalValidationRunDB.goal_id == goal_id)
+        ) == 0
 
 
 @pytest.mark.integration

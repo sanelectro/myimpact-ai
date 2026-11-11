@@ -3,14 +3,18 @@ from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models.goal import GoalDB
+from app.db.models.goal_definition_proposal import GoalDefinitionProposalHeadDB
 from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
 from app.models.goal_validation import GoalValidationInput, GoalValidationTimeframe
 from app.repositories.goal import GoalRepository
 from app.repositories.goal_validation import GoalValidationRepository
 from app.services.base import BaseService
+from app.services.goal_definition_proposals import GoalDefinitionProposalService, GoalProposalConflict
 from app.services.goal_validation import (
     GOAL_RULE_SET_VERSION,
     GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION,
@@ -114,6 +118,52 @@ class GoalValidationRunService(BaseService):
                 "for the evaluated version. Revalidate the latest proposal."
             )
         return run
+
+    async def validate_prepared_proposal(
+        self, goal_id: str, proposal_version_id: str, actor_user_id: str
+    ) -> GoalValidationRunDB:
+        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        run = await self._validate_version(version, actor_user_id)
+        try:
+            self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        except ValueError as exc:
+            logger.warning(
+                "goal_prepared_proposal_validation_superseded",
+                extra={"goal_id": goal_id, "goal_version_id": proposal_version_id},
+            )
+            raise GoalProposalConflict(
+                "The proposal or its baseline changed during validation; the result was "
+                "retained for the evaluated version. Reload and revalidate."
+            ) from exc
+        return run
+
+    def _require_prepared_proposal(
+        self, goal_id: str, proposal_version_id: str, actor_user_id: str
+    ) -> GoalVersionDB:
+        goal = self.session.execute(
+            select(GoalDB).where(GoalDB.id == goal_id).execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if goal is None or goal.user_id != actor_user_id:
+            raise ValueError("Goal proposal not found")
+        head = self.session.execute(
+            select(GoalDefinitionProposalHeadDB)
+            .where(GoalDefinitionProposalHeadDB.goal_id == goal_id)
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if head is None or head.proposal_version_id != proposal_version_id:
+            raise GoalProposalConflict("Goal proposal not found or superseded")
+        GoalDefinitionProposalService(self.session).require_matching_baseline(
+            goal, head.base_version_id, head.relationship_revision
+        )
+        version = self.session.get(GoalVersionDB, proposal_version_id)
+        if (
+            version is None
+            or version.goal_id != goal_id
+            or version.definition_kind != "PROPOSAL"
+            or version.origin != "USER"
+        ):
+            raise GoalProposalConflict("Goal proposal not found or superseded")
+        return version
 
     async def _validate_version(
         self,

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from app.db.models.goal import GoalDB
 from app.db.models.goal_definition_proposal import (
     GoalCommandReceiptDB,
     GoalDefinitionProposalHeadDB,
@@ -75,6 +76,29 @@ class GoalDefinitionProposalService:
         self.session = session
         self.goals = GoalRepository(session)
 
+    def require_matching_baseline(
+        self, goal: GoalDB, expected_base_version_id: str, expected_relationship_revision: int
+    ) -> GoalVersionDB:
+        """Check observed state; callers provide authorization and serialization."""
+        if goal.status not in {GoalStatus.APPROVED, GoalStatus.ACTIVE}:
+            raise GoalProposalConflict("Only approved or active goals can have a revised proposal")
+        if goal.operative_goal_version_id != expected_base_version_id:
+            raise GoalProposalConflict("The operative goal definition changed or is not selected")
+        if goal.relationship_revision != expected_relationship_revision:
+            raise GoalProposalConflict("The goal relationship changed")
+        base = self.goals.get_operative_version(goal.id)
+        latest_standard = self.goals.get_latest_version(goal.id)
+        if base is None or base.definition_kind != "STANDARD" or (
+            latest_standard is None or latest_standard.id != base.id
+        ):
+            raise GoalProposalConflict("The current baseline is not supported or has changed")
+        self.session.expire(goal, ["criteria", "milestones"])
+        for criterion in goal.criteria:
+            self.session.expire(criterion, ["versions"])
+        if self.goals.compare_live_definition(goal, base.content):
+            raise GoalProposalConflict("The live goal no longer matches the selected baseline")
+        return base
+
     def stage_text_proposal(
         self,
         *,
@@ -130,23 +154,9 @@ class GoalDefinitionProposalService:
                 outcome=receipt.outcome,
             )
 
-        if goal.status not in {GoalStatus.APPROVED, GoalStatus.ACTIVE}:
-            raise GoalProposalConflict("Only approved or active goals can have a revised proposal")
-        if goal.operative_goal_version_id != expected_base_version_id:
-            raise GoalProposalConflict("The operative goal definition changed or is not selected")
-        if goal.relationship_revision != expected_relationship_revision:
-            raise GoalProposalConflict("The goal relationship changed")
-        base = self.goals.get_operative_version(goal_id)
-        latest_standard = self.goals.get_latest_version(goal_id)
-        if base is None or base.definition_kind != "STANDARD" or (
-            latest_standard is None or latest_standard.id != base.id
-        ):
-            raise GoalProposalConflict("The current baseline is not supported or has changed")
-        self.session.expire(goal, ["criteria", "milestones"])
-        for criterion in goal.criteria:
-            self.session.expire(criterion, ["versions"])
-        if self.goals.compare_live_definition(goal, base.content):
-            raise GoalProposalConflict("The live goal no longer matches the selected baseline")
+        base = self.require_matching_baseline(
+            goal, expected_base_version_id, expected_relationship_revision
+        )
 
         head = self.session.execute(
             select(GoalDefinitionProposalHeadDB)
