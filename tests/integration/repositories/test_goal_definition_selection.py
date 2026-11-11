@@ -23,10 +23,12 @@ from app.models.goal_criteria import (
     GoalCriterionUpdateRequest,
 )
 from app.models.llm import LLMResponse
+from app.models.milestone import MilestoneCreate
 from app.repositories.goal import GoalRepository
 from app.services.goal import GoalService
 from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
 from app.services.goal_validation_runs import GoalValidationRunService
+from app.services.milestone import MilestoneService
 
 
 @pytest.fixture
@@ -199,6 +201,84 @@ def test_criterion_creation_waits_for_goal_writer(goal_version_engine):
         snapshot = GoalRepository(verification).get_latest_version(goal_id)
         assert snapshot.version == 2
         assert snapshot.content["criterion_versions"][0]["criterion_id"] == criterion_id
+
+
+@pytest.mark.integration
+def test_milestone_creation_waits_for_goal_writer(goal_version_engine):
+    _, goal_id = _create_committed_goal(goal_version_engine)
+    lock_attempted = Event()
+    with Session(goal_version_engine) as first:
+        assert GoalRepository(first).get_by_id_for_update(goal_id) is not None
+
+        def create_milestone():
+            with Session(goal_version_engine) as session:
+                @event.listens_for(session.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        lock_attempted.set()
+
+                return MilestoneService(session).create_milestone(
+                    goal_id, MilestoneCreate(title="Deploy the release")
+                ).id
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(create_milestone)
+            try:
+                assert lock_attempted.wait(10)
+                assert not pending.done()
+                with Session(goal_version_engine) as verification:
+                    assert MilestoneService(verification).get_milestones_by_goal_id(goal_id) == []
+                first.commit()
+                milestone_id = pending.result(timeout=10)
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as verification:
+        assert MilestoneService(verification).get_milestone_by_id_and_goal(
+            milestone_id, goal_id
+        ).title == "Deploy the release"
+
+
+@pytest.mark.integration
+def test_milestone_writer_rechecks_preloaded_archived_state(goal_version_engine):
+    _, goal_id = _create_committed_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        milestone_id = MilestoneService(session).create_milestone(
+            goal_id, MilestoneCreate(title="Deploy the release")
+        ).id
+
+    lock_attempted = Event()
+    with Session(goal_version_engine) as first:
+        assert GoalRepository(first).get_by_id_for_update(goal_id) is not None
+
+        def update_milestone():
+            with Session(goal_version_engine) as session:
+                service = MilestoneService(session)
+                stale = service.get_milestone_by_id_and_goal(milestone_id, goal_id)
+                assert stale.archived_at is None
+
+                @event.listens_for(session.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        lock_attempted.set()
+
+                with pytest.raises(ValueError, match="Milestone not found"):
+                    service.update_milestone(goal_id, milestone_id, {"title": "Stale edit"})
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(update_milestone)
+            try:
+                assert lock_attempted.wait(10)
+                assert not pending.done()
+                MilestoneService(first).archive_milestone(goal_id, milestone_id)
+                pending.result(timeout=10)
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as verification:
+        milestone = MilestoneService(verification).get_milestone_by_id_and_goal(
+            milestone_id, goal_id
+        )
+        assert milestone.archived_at is not None
+        assert milestone.title == "Deploy the release"
 
 
 @pytest.mark.integration

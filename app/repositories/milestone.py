@@ -12,12 +12,14 @@ class MilestoneRepository(BaseRepository):
     def __init__(self, session: Session):
         super().__init__(session)
 
-    def get_by_id_and_goal(self, milestone_id: str, goal_id: str) -> MilestoneDB | None:
-        return (
+    def get_by_id_and_goal(
+        self, milestone_id: str, goal_id: str, *, refresh: bool = False
+    ) -> MilestoneDB | None:
+        query = (
             self.session.query(MilestoneDB)
             .filter(MilestoneDB.id == milestone_id, MilestoneDB.goal_id == goal_id)
-            .one_or_none()
         )
+        return (query.populate_existing() if refresh else query).one_or_none()
 
     def get_by_goal_id(
         self,
