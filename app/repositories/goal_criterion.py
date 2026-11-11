@@ -41,6 +41,7 @@ class GoalCriterionRepository(BaseRepository):
                 GoalCriterionDB.id == criterion_id,
                 GoalCriterionDB.goal_id == goal_id,
             )
+            .populate_existing()
             .one_or_none()
         )
 

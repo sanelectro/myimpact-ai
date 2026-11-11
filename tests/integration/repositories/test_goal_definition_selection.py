@@ -773,6 +773,74 @@ def test_criterion_creation_waits_for_goal_writer(goal_version_engine):
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("concurrent_change", ["retire", "add_version"])
+def test_criterion_writer_refreshes_preloaded_state_after_goal_lock(
+    goal_version_engine, concurrent_change
+):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    original = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Deploy the release",
+        completion_conditions="The release is available.",
+    )
+    changed = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Deploy the revised release",
+        completion_conditions="The revised release is available.",
+    )
+    with Session(goal_version_engine) as session:
+        criterion_id = GoalCriteriaService(session).create_manual(
+            goal_id, owner_id, GoalCriterionCreateRequest(definition=original)
+        ).id
+
+    attempted = Event()
+    with Session(goal_version_engine) as first:
+        assert GoalRepository(first).get_by_id_for_update(goal_id) is not None
+
+        def update():
+            with Session(goal_version_engine) as session:
+                service = GoalCriteriaService(session)
+                stale = service.repository.get_by_id_and_goal(criterion_id, goal_id)
+                assert not stale.is_retired
+                assert len(stale.versions) == 1
+
+                @event.listens_for(session.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                request = GoalCriterionUpdateRequest(definition=changed)
+                if concurrent_change == "retire":
+                    with pytest.raises(ValueError, match="Criterion not found"):
+                        service.add_version(goal_id, criterion_id, owner_id, request)
+                    return None
+                _, version = service.add_version(goal_id, criterion_id, owner_id, request)
+                return version.version
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(update)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                service = GoalCriteriaService(first)
+                if concurrent_change == "retire":
+                    service.retire(goal_id, criterion_id, owner_id)
+                else:
+                    service.add_version(
+                        goal_id, criterion_id, owner_id, GoalCriterionUpdateRequest(definition=changed)
+                    )
+                assert pending.result(timeout=10) == (
+                    None if concurrent_change == "retire" else 3
+                )
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as verification:
+        criterion = GoalCriteriaService(verification).repository.get_by_id(criterion_id)
+        assert criterion.is_retired is (concurrent_change == "retire")
+        assert len(criterion.versions) == (1 if concurrent_change == "retire" else 3)
+
+
+@pytest.mark.integration
 def test_milestone_creation_waits_for_goal_writer(goal_version_engine):
     _, goal_id = _create_committed_goal(goal_version_engine)
     lock_attempted = Event()
