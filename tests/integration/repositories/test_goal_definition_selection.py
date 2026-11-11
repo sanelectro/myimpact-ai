@@ -9,13 +9,17 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event, func, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 import app.db.models
+from app.auth import AuthenticatedUser, get_current_user
 from app.db.models.team import TeamDB as _TeamDB
 from app.db.models.user import UserDB
+from app.db.session import get_db
+from app.main import app as fastapi_app
 from app.models.goal import DEFAULT_SUB_STATUS_BY_GOAL_STATUS, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
     GoalCriterionCreateRequest,
@@ -920,6 +924,80 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
         )
         assert run.goal_version_id == reverted.version_id
         assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_authenticated_proposal_api_prepares_previews_and_validates(
+    goal_version_engine, monkeypatch
+):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    identity = {"user": owner_id}
+
+    def override_db():
+        with Session(goal_version_engine) as db:
+            yield db
+
+    class NormalLLM:
+        async def generate(self, _request):
+            return LLMResponse(
+                content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+            )
+
+    overrides = fastapi_app.dependency_overrides.copy()
+    fastapi_app.dependency_overrides[get_db] = override_db
+    fastapi_app.dependency_overrides[get_current_user] = lambda: AuthenticatedUser(
+        identity["user"], "owner@example.test", None, {"myimpact-ai"}
+    )
+    monkeypatch.setattr("app.services.goal_validation.create_llm_service", lambda: NormalLLM())
+    try:
+        with TestClient(fastapi_app) as client:
+            path = f"/api/v1/goals/{goal_id}/definition-proposal"
+            state = client.get(path)
+            assert state.status_code == 200, state.text
+            assert state.json()["latest_standard_version_id"] == source_id
+            assert state.json()["proposal"] is None
+            request = {
+                "idempotency_key": "api-first",
+                "expected_source_version_id": source_id,
+                "expected_proposal_revision": 0,
+                "expected_relationship_revision": 0,
+                "changes": {"title": "Revised goal"},
+            }
+            response = client.post(path, json=request)
+            assert response.status_code == 200, response.text
+            result = response.json()
+            assert result["outcome"] == "CREATED"
+            assert client.post(path, json=request).json() == result
+            conflict = client.post(path, json={**request, "changes": {"title": "Different"}})
+            assert conflict.status_code == 409, conflict.text
+            state = client.get(path).json()
+            assert state["proposal"]["content"]["title"] == "Revised goal"
+            version = {"proposal_version_id": result["version_id"]}
+            preview = client.post(f"{path}/date-preview", json=version)
+            assert preview.status_code == 200, preview.text
+            assert preview.json()["conflicts"] == []
+            validation = client.post(f"{path}/validate", json=version)
+            assert validation.status_code == 200, validation.text
+            assert validation.json()["goal_version_id"] == result["version_id"]
+            assert client.get(path).json()["proposal"]["latest_validation_id"] == validation.json()["id"]
+            with Session(goal_version_engine) as reader:
+                assert GoalRepository(reader).get_by_id(goal_id).title == "Original goal"
+            with Session(goal_version_engine) as writer:
+                GoalService(writer).update_goal(
+                    goal_id, {"title": "Changed separately"}, changed_by_user_id=owner_id
+                )
+            assert client.get(path).status_code == 409
+            assert client.post(f"{path}/date-preview", json=version).status_code == 409
+            identity["user"] = "other-user"
+            assert client.get(path).status_code == 404
+            assert client.post(path, json=request).status_code == 404
+            assert client.post(f"{path}/validate", json=version).status_code == 404
+            assert client.post(f"{path}/date-preview", json=version).status_code == 404
+        with Session(goal_version_engine) as reader:
+            assert GoalRepository(reader).get_by_id(goal_id).title == "Changed separately"
+    finally:
+        fastapi_app.dependency_overrides.clear()
+        fastapi_app.dependency_overrides.update(overrides)
 
 
 @pytest.mark.integration

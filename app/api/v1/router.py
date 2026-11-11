@@ -10,6 +10,7 @@ from app.api.v1.evidence_approvals import router as evidence_approvals_router
 from app.api.v1.expectations import router as expectations_router
 from app.api.v1.goal_assessment import router as goal_assessment_router
 from app.api.v1.goal_criteria import router as goal_criteria_router
+from app.api.v1.goal_definition_proposals import router as goal_definition_proposals_router
 from app.api.v1.goal_import import router as goal_import_router
 from app.api.v1.goals import router as goals_router
 from app.api.v1.goal_hierarchy import router as goal_hierarchy_router
@@ -45,6 +46,7 @@ def get_api_v1_info() -> ApiV1Info:
 router.include_router(knowledge_router)
 router.include_router(expectations_router)
 router.include_router(goals_router)
+router.include_router(goal_definition_proposals_router)
 router.include_router(goal_hierarchy_router)
 router.include_router(goal_evidence_context_router)
 router.include_router(goal_measures_router)
