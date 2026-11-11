@@ -10,7 +10,11 @@ from app.db.models.goal import GoalDB
 from app.db.models.goal_definition_proposal import GoalDefinitionProposalHeadDB
 from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
-from app.models.goal_validation import GoalValidationInput, GoalValidationTimeframe
+from app.models.goal_validation import (
+    GoalValidationInput,
+    GoalValidationStatus,
+    GoalValidationTimeframe,
+)
 from app.repositories.goal import GoalRepository
 from app.repositories.goal_validation import GoalValidationRepository
 from app.services.base import BaseService
@@ -24,6 +28,7 @@ from app.services.goal_validation import (
     GoalSemanticValidationError,
     GoalSemanticValidationService,
     evaluate_goal_requirements,
+    validate_goal,
 )
 from app.services.llm.interface import ILLMService
 
@@ -164,6 +169,30 @@ class GoalValidationRunService(BaseService):
             self._require_supported_milestone_validation(version)
             self.repository.create(run)
         self._log_validation("goal_validation_staged", run, started_at)
+        return run
+
+    def require_ready_proposal_validation(
+        self, goal_id: str, proposal_version_id: str, actor_user_id: str, validation_run_id: str
+    ) -> GoalValidationRunDB:
+        """Check basic readiness; callers must hold the Goal lock and recheck all other context.
+
+        This check does not authorize publication or cover hierarchy, evidence, and history.
+        """
+        version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        self._require_supported_milestone_validation(version)
+        run = self.repository.get_latest_for_version(goal_id, proposal_version_id)
+        if run is None or run.id != validation_run_id or run.status != GoalValidationStatus.READY.value:
+            raise GoalProposalConflict("The latest proposal validation is not the selected READY result")
+        validation_input = _validation_input(version.content)
+        if (
+            run.actor_user_id != actor_user_id
+            or run.rule_set_version != GOAL_RULE_SET_VERSION
+            or run.prompt_version != GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION
+            or run.input_context != validation_input.model_dump(mode="json")
+        ):
+            raise GoalProposalConflict("The proposal validation context changed; revalidate")
+        if validate_goal(validation_input, as_of=datetime.now(UTC).date()).status != GoalValidationStatus.READY:
+            raise GoalProposalConflict("The proposal no longer passes deterministic validation")
         return run
 
     def _require_prepared_proposal(

@@ -9,13 +9,13 @@ from sqlalchemy.orm import Session
 from app.db.models.goal import GoalDB
 from app.db.models.goal_criterion import GoalCriterionVersionDB
 from app.db.models.goal_status_history import GoalStatusHistoryDB
-from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
 from app.db.models.goal_version_approval import GoalVersionApprovalDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import GoalCriterionApprovalStatus
 from app.models.milestone import MilestoneSource
 from app.repositories.base import BaseRepository
+from app.repositories.goal_validation import GoalValidationRepository
 
 _MATERIAL_GOAL_FIELDS = {
     "title",
@@ -227,19 +227,10 @@ class GoalRepository(BaseRepository):
         goal_id: str,
         goal_version_id: str,
     ) -> bool:
-        latest_run = (
-            self.session.query(GoalValidationRunDB.status)
-            .filter(
-                GoalValidationRunDB.goal_id == goal_id,
-                GoalValidationRunDB.goal_version_id == goal_version_id,
-            )
-            .order_by(
-                GoalValidationRunDB.created_at.desc(),
-                GoalValidationRunDB.id.desc(),
-            )
-            .first()
+        latest_run = GoalValidationRepository(self.session).get_latest_for_version(
+            goal_id, goal_version_id
         )
-        return latest_run is not None and latest_run[0] == "READY"
+        return latest_run is not None and latest_run.status == "READY"
 
     def has_approval_for_version(self, goal_version_id: str) -> bool:
         return (

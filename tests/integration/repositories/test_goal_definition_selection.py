@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from threading import Event
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -918,6 +918,153 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
         )
         assert run.goal_version_id == reverted.version_id
         assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_proposal_readiness_requires_latest_exact_supported_result(goal_version_engine):
+    owner_id, goal_id, _ = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.update(goal_id, {"structured_fields": {
+            "accountability": "Employee owner",
+            "success_criteria": [{
+                "criterion_type": "BINARY",
+                "description": "Deliver the result",
+                "completion_conditions": "The result is available",
+            }],
+        }}, owner_id)
+        base_id = repository.get_latest_version(goal_id).id
+        goal.operative_goal_version_id = base_id
+        session.commit()
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="ready-exact")
+        session.commit()
+
+        class NormalLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        validator = GoalValidationRunService(session, NormalLLM())
+        repository.get_by_id_for_update(goal_id)
+        with pytest.raises(GoalProposalConflict, match="latest proposal validation"):
+            validator.require_ready_proposal_validation(goal_id, proposal.version_id, owner_id, "missing")
+        session.rollback()
+        ready = asyncio.run(
+            validator.stage_prepared_proposal_validation(goal_id, proposal.version_id, owner_id)
+        )
+        assert ready.status == "READY"
+        ready_id = ready.id
+        session.commit()
+        repository.get_by_id_for_update(goal_id)
+        assert validator.require_ready_proposal_validation(
+            goal_id, proposal.version_id, owner_id, ready_id
+        ).id == ready_id
+        with pytest.raises(ValueError, match="Goal proposal not found"):
+            validator.require_ready_proposal_validation(goal_id, proposal.version_id, "other", ready_id)
+        with pytest.raises(GoalProposalConflict, match="latest proposal validation"):
+            validator.require_ready_proposal_validation(goal_id, proposal.version_id, owner_id, "other")
+        session.rollback()
+
+        for field, value in (
+            ("actor_user_id", "other"),
+            ("rule_set_version", "outdated-rules"),
+            ("prompt_version", "outdated-prompt"),
+            ("input_context", {}),
+        ):
+            source = session.get(app.db.models.GoalValidationRunDB, ready_id)
+            values = {
+                name: getattr(source, name)
+                for name in (
+                    "goal_id", "goal_version_id", "status", "findings", "input_context",
+                    "result_context", "rule_set_version", "prompt_version",
+                    "model_provider", "model_version", "actor_user_id",
+                )
+            }
+            values[field] = value
+            run = app.db.models.GoalValidationRunDB(
+                id=str(uuid4()), created_at=source.created_at + timedelta(seconds=1), **values
+            )
+            session.add(run)
+            session.flush()
+            repository.get_by_id_for_update(goal_id)
+            with pytest.raises(GoalProposalConflict, match="validation context changed"):
+                validator.require_ready_proposal_validation(goal_id, proposal.version_id, owner_id, run.id)
+            session.rollback()
+
+        class AmbiguousLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": [{
+                        "code": "ambiguous_intent",
+                        "evidence": [{"field": "title", "quote": "Revised goal"}],
+                    }]}),
+                    model="test-model", provider="test-provider",
+                )
+
+        latest = asyncio.run(
+            GoalValidationRunService(session, AmbiguousLLM()).stage_prepared_proposal_validation(
+                goal_id, proposal.version_id, owner_id
+            )
+        )
+        assert latest.status != "READY"
+        latest_id = latest.id
+        session.commit()
+        repository.get_by_id_for_update(goal_id)
+        for run_id in (ready_id, latest_id):
+            with pytest.raises(GoalProposalConflict, match="latest proposal validation"):
+                validator.require_ready_proposal_validation(goal_id, proposal.version_id, owner_id, run_id)
+        assert not repository.has_ready_validation_for_version(goal_id, proposal.version_id)
+
+
+@pytest.mark.integration
+def test_proposal_readiness_rechecks_time_sensitive_requirements(goal_version_engine, monkeypatch):
+    owner_id, goal_id, _ = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.update(goal_id, {"structured_fields": {
+            "accountability": "Employee owner",
+            "success_criteria": [{
+                "criterion_type": "BINARY",
+                "description": "Deliver the result",
+                "completion_conditions": "The result is available",
+            }],
+            "deferred_requirements": [{
+                "requirement": "baseline",
+                "reason": "Await measurement",
+                "due_date": (datetime.now(UTC).date() - timedelta(days=1)).isoformat(),
+                "state": "OPEN",
+            }],
+        }}, owner_id)
+        base_id = repository.get_latest_version(goal_id).id
+        goal.operative_goal_version_id = base_id
+        session.commit()
+        proposal = _stage_text(session, owner_id, goal_id, base_id, key="ready-dynamic")
+        session.commit()
+
+        class NormalLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        class EarlierDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime.now(tz) - timedelta(days=2)
+
+        validator = GoalValidationRunService(session, NormalLLM())
+        with monkeypatch.context() as patch:
+            patch.setattr("app.services.goal_validation_runs.datetime", EarlierDatetime)
+            run = asyncio.run(
+                validator.stage_prepared_proposal_validation(goal_id, proposal.version_id, owner_id)
+            )
+        assert run.status == "READY"
+        run_id = run.id
+        session.commit()
+        repository.get_by_id_for_update(goal_id)
+        with pytest.raises(GoalProposalConflict, match="no longer passes deterministic validation"):
+            validator.require_ready_proposal_validation(goal_id, proposal.version_id, owner_id, run_id)
 
 
 @pytest.mark.integration
