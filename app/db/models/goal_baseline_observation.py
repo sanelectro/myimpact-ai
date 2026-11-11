@@ -13,6 +13,7 @@ class GoalBaselineObservationDB(Base):
         String(64), ForeignKey("goals.id", ondelete="CASCADE"), primary_key=True
     )
     goal_version_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_standard_version_id: Mapped[str | None] = mapped_column(String(64))
     observed_by_user_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -26,6 +27,11 @@ class GoalBaselineObservationDB(Base):
             ["goal_version_id", "goal_id"],
             ["goal_versions.id", "goal_versions.goal_id"],
             name="fk_goal_baseline_observation_version",
+        ),
+        ForeignKeyConstraint(
+            ["source_standard_version_id", "goal_id"],
+            ["goal_versions.id", "goal_versions.goal_id"],
+            name="fk_goal_baseline_observation_source",
         ),
         CheckConstraint(
             "historical_effectivity = 'UNKNOWN'", name="ck_goal_baseline_observation_history"

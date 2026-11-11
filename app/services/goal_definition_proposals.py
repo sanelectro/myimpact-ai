@@ -11,6 +11,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
+from app.db.models.goal_baseline_observation import GoalBaselineObservationDB
 from app.db.models.goal_definition_proposal import (
     GoalCommandReceiptDB,
     GoalDefinitionProposalHeadDB,
@@ -114,9 +115,24 @@ class GoalDefinitionProposalService:
             raise GoalProposalConflict("The goal relationship changed")
         base = self.goals.get_operative_version(goal.id)
         latest_standard = self.goals.get_latest_version(goal.id)
-        if base is None or base.definition_kind != "STANDARD" or (
-            latest_standard is None or latest_standard.id != base.id
-        ):
+        if base is None or latest_standard is None:
+            raise GoalProposalConflict("The current baseline is not supported or has changed")
+        if base.definition_kind == "STANDARD":
+            matches_source = latest_standard.id == base.id
+        elif base.definition_kind == "OBSERVED":
+            observation = self.session.execute(
+                select(GoalBaselineObservationDB)
+                .where(GoalBaselineObservationDB.goal_id == goal.id)
+                .execution_options(populate_existing=True)
+            ).scalar_one_or_none()
+            matches_source = (
+                observation is not None
+                and observation.goal_version_id == base.id
+                and observation.source_standard_version_id == latest_standard.id
+            )
+        else:
+            matches_source = False
+        if not matches_source:
             raise GoalProposalConflict("The current baseline is not supported or has changed")
         self.session.expire(goal, ["criteria", "milestones"])
         for criterion in goal.criteria:

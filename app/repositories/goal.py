@@ -146,6 +146,16 @@ class GoalRepository(BaseRepository):
         *,
         origin: str = "USER",
     ) -> GoalVersionDB:
+        return self._add_version(goal, created_by_user_id, origin, "STANDARD")
+
+    def add_observed_baseline_version(
+        self, goal: GoalDB, observed_by_user_id: str
+    ) -> GoalVersionDB:
+        return self._add_version(goal, observed_by_user_id, "USER", "OBSERVED")
+
+    def _add_version(
+        self, goal: GoalDB, created_by_user_id: str | None, origin: str, definition_kind: str
+    ) -> GoalVersionDB:
         self.session.flush()
         self.session.execute(
             select(GoalDB.id).where(GoalDB.id == goal.id).with_for_update()
@@ -165,7 +175,12 @@ class GoalRepository(BaseRepository):
             goal_id=goal.id,
             version=(latest_version[0] + 1) if latest_version else 1,
             origin=origin,
-            content=self._version_content(goal),
+            definition_kind=definition_kind,
+            content=(
+                self.live_definition_content(goal)
+                if definition_kind == "OBSERVED"
+                else self._version_content(goal)
+            ),
             created_by_user_id=created_by_user_id,
             created_at=datetime.now(UTC),
         )
@@ -259,22 +274,7 @@ class GoalRepository(BaseRepository):
         This comparison does not establish historical approval or serialize writers.
         Callers must provide their own authorization and concurrency safeguards.
         """
-        expected = GoalRepository._version_content(goal)
-        current_criteria = []
-        for criterion in goal.criteria:
-            if criterion.is_retired or criterion.current_version is None:
-                continue
-            current = next(
-                (item for item in criterion.versions if item.version == criterion.current_version),
-                None,
-            )
-            if current is None or current.approval_status != GoalCriterionApprovalStatus.APPROVED:
-                raise ValueError("Current criterion version is missing or not approved")
-            current_criteria.append(GoalRepository._criterion_version_content(criterion.id, current))
-        expected["criterion_versions"] = sorted(
-            current_criteria, key=lambda item: item["criterion_id"]
-        )
-
+        expected = GoalRepository.live_definition_content(goal)
         actual = dict(content)
         criteria = actual.get("criterion_versions")
         if isinstance(criteria, list) and all(
@@ -291,6 +291,25 @@ class GoalRepository(BaseRepository):
             or field not in actual
             or json.dumps(expected[field], sort_keys=True) != json.dumps(actual[field], sort_keys=True)
         )
+
+    @staticmethod
+    def live_definition_content(goal: GoalDB) -> dict:
+        expected = GoalRepository._version_content(goal)
+        current_criteria = []
+        for criterion in goal.criteria:
+            if criterion.is_retired or criterion.current_version is None:
+                continue
+            current = next(
+                (item for item in criterion.versions if item.version == criterion.current_version),
+                None,
+            )
+            if current is None or current.approval_status != GoalCriterionApprovalStatus.APPROVED:
+                raise ValueError("Current criterion version is missing or not approved")
+            current_criteria.append(GoalRepository._criterion_version_content(criterion.id, current))
+        expected["criterion_versions"] = sorted(
+            current_criteria, key=lambda item: item["criterion_id"]
+        )
+        return expected
 
     @staticmethod
     def _criterion_version_content(

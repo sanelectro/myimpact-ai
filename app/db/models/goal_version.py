@@ -45,7 +45,7 @@ class GoalVersionDB(Base):
         CheckConstraint("version > 0", name="ck_goal_version_positive"),
         CheckConstraint("origin IN ('LEGACY', 'USER')", name="ck_goal_version_origin"),
         CheckConstraint(
-            "definition_kind IN ('STANDARD', 'PROPOSAL')",
+            "definition_kind IN ('STANDARD', 'PROPOSAL', 'OBSERVED')",
             name="ck_goal_version_definition_kind",
         ),
         Index("ix_goal_versions_goal_version", "goal_id", "version"),

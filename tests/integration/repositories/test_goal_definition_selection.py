@@ -204,6 +204,251 @@ def test_baseline_observation_rejects_incomplete_legacy_snapshot(goal_version_en
 
 
 @pytest.mark.integration
+def test_observed_baseline_preserves_legacy_reads_and_uses_approved_criterion(goal_version_engine):
+    owner_id, goal_id, _ = _create_unselected_ongoing_goal(goal_version_engine)
+    original = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Deploy the release",
+        completion_conditions="The release is available.",
+    )
+    pending = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Pending revision",
+        completion_conditions="The new release is available.",
+    )
+    with Session(goal_version_engine) as session:
+        criteria = GoalCriteriaService(session)
+        criterion = criteria.create_manual(
+            goal_id, owner_id, GoalCriterionCreateRequest(definition=original)
+        )
+        approved_id = criterion.versions[0].id
+        criteria.approve_version(goal_id, criterion.id, approved_id, owner_id)
+        criteria.add_version(
+            goal_id, criterion.id, owner_id, GoalCriterionUpdateRequest(definition=pending)
+        )
+        MilestoneService(session).create_milestone(goal_id, MilestoneCreate(title="New milestone"))
+        repository = GoalRepository(session)
+        source_id = repository.get_latest_version(goal_id).id
+        before_eligibility = GoalService(session).get_evidence_submission_eligibility(
+            repository.get_by_id(goal_id)
+        )
+
+        service = GoalBaselineObservationService(session)
+        observation = service.stage_observed_baseline(
+            goal_id=goal_id,
+            actor_user_id=owner_id,
+            expected_source_version_id=source_id,
+            expected_relationship_revision=0,
+        )
+        observed_id = observation.goal_version_id
+        session.commit()
+        observed = session.get(app.db.models.GoalVersionDB, observed_id)
+        assert observed.definition_kind == "OBSERVED"
+        assert observed.content["criterion_versions"][0]["version_id"] == approved_id
+        assert observed.content["criterion_versions"][0]["definition"]["description"] == original.description
+        assert observed.content["milestone_definitions"][0]["title"] == "New milestone"
+        assert observation.historical_effectivity == "UNKNOWN"
+        assert observation.source_standard_version_id == source_id
+        assert repository.get_latest_version(goal_id).id == source_id
+        assert GoalService(session).get_evidence_submission_eligibility(
+            repository.get_by_id(goal_id)
+        ) == before_eligibility
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionApprovalDB)
+            .where(app.db.models.GoalVersionApprovalDB.goal_id == goal_id)
+        ) == 0
+        retry = service.stage_observed_baseline(
+            goal_id=goal_id,
+            actor_user_id=owner_id,
+            expected_source_version_id=source_id,
+            expected_relationship_revision=0,
+        )
+        assert retry.goal_version_id == observed_id
+        session.commit()
+
+        proposal = _stage_text(session, owner_id, goal_id, observed_id, key="observed-proposal")
+        session.commit()
+        assert proposal.outcome == "CREATED"
+        assert session.get(app.db.models.GoalVersionDB, proposal.version_id).content[
+            "criterion_versions"
+        ][0]["version_id"] == approved_id
+        assert repository.get_latest_version(goal_id).id == source_id
+
+        GoalService(session).update_goal(
+            goal_id, {"title": "Changed after observation"}, changed_by_user_id=owner_id
+        )
+        with pytest.raises(GoalProposalConflict, match="baseline.*changed"):
+            _stage_text(
+                session, owner_id, goal_id, observed_id,
+                key="stale-observation", revision=1,
+            )
+        session.rollback()
+
+
+@pytest.mark.integration
+def test_observed_baseline_rolls_back_without_fabricating_history(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        service = GoalBaselineObservationService(session)
+        with pytest.raises(ValueError, match="Goal not found"):
+            service.stage_observed_baseline(
+                goal_id=goal_id, actor_user_id="other", expected_source_version_id=source_id,
+                expected_relationship_revision=0,
+            )
+        session.rollback()
+        with pytest.raises(GoalBaselineConflict, match="version changed"):
+            service.stage_observed_baseline(
+                goal_id=goal_id, actor_user_id=owner_id, expected_source_version_id="stale",
+                expected_relationship_revision=0,
+            )
+        session.rollback()
+        observation = service.stage_observed_baseline(
+            goal_id=goal_id, actor_user_id=owner_id, expected_source_version_id=source_id,
+            expected_relationship_revision=0,
+        )
+        observed_id = observation.goal_version_id
+        session.rollback()
+
+    with Session(goal_version_engine) as session:
+        assert session.get(app.db.models.GoalVersionDB, observed_id) is None
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+        assert GoalRepository(session).get_latest_version(goal_id).id == source_id
+
+
+@pytest.mark.integration
+def test_observed_baseline_rejects_unapproved_current_criterion(goal_version_engine):
+    owner_id, goal_id, _ = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        criterion = GoalCriteriaService(session).create_manual(
+            goal_id,
+            owner_id,
+            GoalCriterionCreateRequest(
+                definition=GoalCriterionDefinition(
+                    criterion_type=GoalCriterionType.BINARY,
+                    description="Deploy the release",
+                    completion_conditions="The release is available.",
+                )
+            ),
+        )
+        criterion.current_version = 1
+        session.commit()
+        source_id = GoalRepository(session).get_latest_version(goal_id).id
+        with pytest.raises(ValueError, match="missing or not approved"):
+            GoalBaselineObservationService(session).stage_observed_baseline(
+                goal_id=goal_id, actor_user_id=owner_id,
+                expected_source_version_id=source_id, expected_relationship_revision=0,
+            )
+        session.rollback()
+        assert session.get(app.db.models.GoalBaselineObservationDB, goal_id) is None
+        assert GoalRepository(session).get_by_id(goal_id).operative_goal_version_id is None
+
+
+@pytest.mark.integration
+def test_concurrent_observed_baseline_reuses_original_observation(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    attempted = Event()
+    arguments = {
+        "goal_id": goal_id,
+        "actor_user_id": owner_id,
+        "expected_source_version_id": source_id,
+        "expected_relationship_revision": 0,
+    }
+    with Session(goal_version_engine) as first:
+        observation = GoalBaselineObservationService(first).stage_observed_baseline(**arguments)
+        observed_id = observation.goal_version_id
+
+        def retry():
+            with Session(goal_version_engine) as second:
+                @event.listens_for(second.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "FOR UPDATE" in statement.upper():
+                        attempted.set()
+
+                result = GoalBaselineObservationService(second).stage_observed_baseline(**arguments)
+                return result.goal_version_id
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(retry)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                first.commit()
+                assert pending.result(timeout=10) == observed_id
+            finally:
+                first.rollback()
+    with Session(goal_version_engine) as session:
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalVersionDB).where(
+                app.db.models.GoalVersionDB.goal_id == goal_id,
+                app.db.models.GoalVersionDB.definition_kind == "OBSERVED",
+            )
+        ) == 1
+        assert GoalRepository(session).get_latest_version(goal_id).id == source_id
+
+
+@pytest.mark.integration
+def test_observed_baseline_validation_rechecks_source_after_provider(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        observation = GoalBaselineObservationService(session).stage_observed_baseline(
+            goal_id=goal_id, actor_user_id=owner_id,
+            expected_source_version_id=source_id, expected_relationship_revision=0,
+        )
+        observed_id = observation.goal_version_id
+        session.commit()
+        proposal = _stage_text(session, owner_id, goal_id, observed_id, key="validate-observed")
+        session.commit()
+
+    class ChangingLLM:
+        async def generate(self, _request):
+            with Session(goal_version_engine) as writer:
+                GoalService(writer).update_goal(
+                    goal_id, {"title": "Changed during validation"}, changed_by_user_id=owner_id
+                )
+            return LLMResponse(
+                content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+            )
+
+    with Session(goal_version_engine) as session:
+        validator = GoalValidationRunService(session, ChangingLLM())
+        with pytest.raises(GoalProposalConflict, match="changed during validation"):
+            asyncio.run(
+                validator.validate_prepared_proposal(goal_id, proposal.version_id, owner_id)
+            )
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == proposal.version_id
+            )
+        ) == 1
+
+
+@pytest.mark.integration
+def test_observed_baseline_requires_same_goal_standard_source(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    _, _, other_source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        version = GoalRepository(session).add_observed_baseline_version(
+            GoalRepository(session).get_by_id_for_update(goal_id), owner_id
+        )
+        session.flush()
+        for source in (None, other_source_id, version.id):
+            with pytest.raises(DBAPIError):
+                with session.begin_nested():
+                    session.execute(
+                        text("""
+                            INSERT INTO goal_baseline_observations
+                                (goal_id, goal_version_id, source_standard_version_id,
+                                 observed_by_user_id, observed_at)
+                            VALUES (:goal, :version, :source, :owner, now())
+                        """),
+                        {"goal": goal_id, "version": version.id, "source": source, "owner": owner_id},
+                    )
+        session.rollback()
+        assert GoalRepository(session).get_latest_version(goal_id).id == source_id
+
+
+@pytest.mark.integration
 def test_baseline_observation_preserves_existing_user_cascade(goal_version_engine):
     owner_id, goal_id, base_id = _create_unselected_ongoing_goal(goal_version_engine)
     with Session(goal_version_engine) as session:
