@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from threading import Event
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -31,7 +31,7 @@ from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCrite
 from app.services.goal_definition_proposals import (
     GoalDefinitionProposalService,
     GoalProposalConflict,
-    GoalProposalTextChanges,
+    GoalProposalChanges,
 )
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.milestone import MilestoneService
@@ -105,14 +105,14 @@ def _create_selected_baseline(engine):
 
 
 def _stage_text(session, owner_id, goal_id, base_id, *, key, revision=0, title="Revised goal"):
-    return GoalDefinitionProposalService(session).stage_text_proposal(
+    return GoalDefinitionProposalService(session).stage_proposal(
         goal_id=goal_id,
         actor_user_id=owner_id,
         idempotency_key=key,
         expected_base_version_id=base_id,
         expected_proposal_revision=revision,
         expected_relationship_revision=0,
-        changes=GoalProposalTextChanges(title=title),
+        changes=GoalProposalChanges(title=title),
     )
 
 
@@ -180,6 +180,65 @@ def test_text_proposal_noop_and_rollback_do_not_create_versions(goal_version_eng
 
 
 @pytest.mark.integration
+def test_date_proposal_checks_merged_range_and_preserves_live_dates(goal_version_engine):
+    owner_id, goal_id, _ = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.update(
+            goal_id,
+            {"start_date": date(2026, 1, 1), "end_date": date(2026, 12, 31)},
+            owner_id,
+        )
+        base_id = repository.get_latest_version(goal_id).id
+        goal.operative_goal_version_id = base_id
+        session.commit()
+
+        service = GoalDefinitionProposalService(session)
+        arguments = {
+            "goal_id": goal_id,
+            "actor_user_id": owner_id,
+            "expected_base_version_id": base_id,
+            "expected_relationship_revision": 0,
+        }
+        with pytest.raises(ValueError, match="before start"):
+            service.stage_proposal(
+                **arguments,
+                idempotency_key="invalid",
+                expected_proposal_revision=0,
+                changes=GoalProposalChanges(start_date=date(2027, 1, 1)),
+            )
+        session.rollback()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "invalid")
+        ) is None
+
+        proposal = service.stage_proposal(
+            **arguments,
+            idempotency_key="valid",
+            expected_proposal_revision=0,
+            changes=GoalProposalChanges(end_date=date(2027, 2, 1)),
+        )
+        session.commit()
+        candidate = session.get(app.db.models.GoalVersionDB, proposal.version_id)
+        assert candidate.content["start_date"] == "2026-01-01"
+        assert candidate.content["end_date"] == "2027-02-01"
+        current = repository.get_by_id(goal_id)
+        assert current.start_date == date(2026, 1, 1)
+        assert current.end_date == date(2026, 12, 31)
+        assert current.operative_goal_version_id == base_id
+
+        cleared = service.stage_proposal(
+            **arguments,
+            idempotency_key="clear",
+            expected_proposal_revision=1,
+            changes=GoalProposalChanges(start_date=None),
+        )
+        session.commit()
+        assert session.get(app.db.models.GoalVersionDB, cleared.version_id).content["start_date"] is None
+
+
+@pytest.mark.integration
 def test_text_proposal_rechecks_owner_revisions_and_live_baseline(goal_version_engine):
     owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
     with Session(goal_version_engine) as session:
@@ -226,14 +285,14 @@ def test_text_proposal_requires_selected_baseline_and_relationship_revision(goal
         goal.operative_goal_version_id = base_id
         session.commit()
         with pytest.raises(GoalProposalConflict, match="relationship changed"):
-            GoalDefinitionProposalService(session).stage_text_proposal(
+            GoalDefinitionProposalService(session).stage_proposal(
                 goal_id=goal_id,
                 actor_user_id=owner_id,
                 idempotency_key="relationship",
                 expected_base_version_id=base_id,
                 expected_proposal_revision=0,
                 expected_relationship_revision=1,
-                changes=GoalProposalTextChanges(title="Revised goal"),
+                changes=GoalProposalChanges(title="Revised goal"),
             )
         session.rollback()
         assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None

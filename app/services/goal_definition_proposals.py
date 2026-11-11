@@ -3,7 +3,7 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -27,11 +27,13 @@ class GoalProposalConflict(ValueError):
     pass
 
 
-class GoalProposalTextChanges(BaseModel):
+class GoalProposalChanges(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, max_length=300)
     description: str | None = Field(default=None, max_length=5000)
+    start_date: date | None = None
+    end_date: date | None = None
 
     @field_validator("title")
     @classmethod
@@ -70,7 +72,7 @@ def _equivalent_text(original: object, proposed: object) -> bool:
 
 
 class GoalDefinitionProposalService:
-    """Stage an internal text-only proposal; the caller owns the transaction."""
+    """Stage an internal proposal; the caller owns the transaction."""
 
     def __init__(self, session: Session):
         self.session = session
@@ -99,7 +101,7 @@ class GoalDefinitionProposalService:
             raise GoalProposalConflict("The live goal no longer matches the selected baseline")
         return base
 
-    def stage_text_proposal(
+    def stage_proposal(
         self,
         *,
         goal_id: str,
@@ -108,7 +110,7 @@ class GoalDefinitionProposalService:
         expected_base_version_id: str,
         expected_proposal_revision: int,
         expected_relationship_revision: int,
-        changes: GoalProposalTextChanges,
+        changes: GoalProposalChanges,
     ) -> GoalProposalResult:
         if not idempotency_key.strip() or len(idempotency_key) > 128:
             raise ValueError("An idempotency key of at most 128 characters is required")
@@ -179,9 +181,18 @@ class GoalDefinitionProposalService:
         content = deepcopy(source.content)
         changed = False
         for field, value in payload["changes"].items():
-            if not _equivalent_text(content[field], value):
+            equivalent = (
+                _equivalent_text(content[field], value)
+                if field in {"title", "description"}
+                else content[field] == value
+            )
+            if not equivalent:
                 content[field] = value
                 changed = True
+        start = date.fromisoformat(content["start_date"]) if content["start_date"] else None
+        end = date.fromisoformat(content["end_date"]) if content["end_date"] else None
+        if start is not None and end is not None and end < start:
+            raise ValueError("Target date cannot be before start date")
 
         if changed:
             latest_number = self.session.execute(
