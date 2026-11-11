@@ -1,7 +1,8 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime, timedelta
+from copy import deepcopy
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import Column, String, Table, create_engine
@@ -10,10 +11,17 @@ from sqlalchemy.orm import Session
 import app.db.models
 from app.db.base import Base
 from app.db.models.goal_validation_run import GoalValidationRunDB
+from app.db.models.milestone import MilestoneDB
+from app.db.models.organization import OrganizationDB
 from app.db.models.user import UserDB
 from app.models.goal import GoalScope, GoalStatus
 from app.models.api_v1_goals import GoalUpdateRequest
-from app.models.goal_criteria import GoalCriterionDefinition, GoalCriterionType
+from app.models.goal_criteria import (
+    GoalCriterionApprovalStatus,
+    GoalCriterionDefinition,
+    GoalCriterionType,
+)
+from app.models.milestone import MilestoneSource, MilestoneStatus
 from app.repositories.goal import GoalRepository
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
@@ -91,6 +99,25 @@ def _create_goal(session):
     )
 
 
+def _add_proposal(session, goal, version_number, title):
+    current = GoalRepository(session).get_latest_version(goal.id)
+    content = deepcopy(current.content)
+    content["title"] = title
+    proposal = app.db.models.GoalVersionDB(
+        id=f"proposal-{version_number}",
+        goal_id=goal.id,
+        version=version_number,
+        origin="USER",
+        definition_kind="PROPOSAL",
+        content=content,
+        created_by_user_id="owner-1",
+        created_at=datetime.now(UTC),
+    )
+    session.add(proposal)
+    session.flush()
+    return proposal
+
+
 @pytest.mark.parametrize("level", ["ANNUAL", "QUARTERLY", "MONTHLY", "SPRINT", None])
 def test_goal_level_is_optional_and_versioned(level):
     engine, session = _session()
@@ -120,6 +147,24 @@ def test_goal_level_request_rejects_unknown_value():
 
     with pytest.raises(ValidationError):
         GoalCreateRequest(title="Goal", goal_level="WEEKLY")
+
+
+def test_new_versions_do_not_implicitly_select_an_operative_version():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        repository = GoalRepository(session)
+        first_version = repository.get_latest_version(goal.id)
+        assert goal.operative_goal_version_id is None
+
+        goal.operative_goal_version_id = first_version.id
+        repository.update(goal.id, {"title": "Revised title"}, changed_by_user_id="owner-1")
+        session.expire_all()
+        assert goal.operative_goal_version_id == first_version.id
+        assert repository.get_latest_version(goal.id).id != first_version.id
+    finally:
+        session.close()
+        engine.dispose()
 
 
 def test_old_structured_fields_writer_preserves_deferrals_and_versions_them():
@@ -239,6 +284,132 @@ def test_material_goal_edit_appends_immutable_version_and_status_edit_does_not()
         engine.dispose()
 
 
+def test_snapshot_refreshes_loaded_criteria_and_copies_nested_definitions():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        assert goal.criteria == []
+        now = datetime.now(UTC)
+        criterion = app.db.models.GoalCriterionDB(
+            id="criterion-1",
+            goal_id=goal.id,
+            created_by_user_id="owner-1",
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(criterion)
+        session.flush()
+        assert criterion.versions == []
+        definition = {
+            "criterion_type": "BINARY",
+            "description": "Original criterion",
+            "completion_conditions": "Original conditions",
+        }
+        criterion_version = app.db.models.GoalCriterionVersionDB(
+            id="criterion-version-1",
+            criterion_id=criterion.id,
+            version=1,
+            criterion_type=GoalCriterionType.BINARY,
+            definition=definition,
+            approval_status=GoalCriterionApprovalStatus.PROPOSED,
+            created_by_user_id="owner-1",
+            created_at=now,
+        )
+        session.add(criterion_version)
+        version = GoalRepository(session).add_version(goal, "owner-1")
+
+        assert version.content["criterion_versions"][0]["version_id"] == criterion_version.id
+        assert version.content["criterion_versions"][0]["definition"]["description"] == "Original criterion"
+
+        goal.structured_fields["deliverables"].append("Later change")
+        criterion_version.definition["description"] = "Later change"
+        assert "Later change" not in version.content["structured_fields"]["deliverables"]
+        assert version.content["criterion_versions"][0]["definition"]["description"] == "Original criterion"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_goal_version_snapshots_organization_and_active_milestone_definitions():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        now = datetime.now(UTC)
+        session.add(
+            OrganizationDB(
+                id="org-1",
+                name="Example",
+                normalized_name="example",
+                created_at=now,
+            )
+        )
+        session.add_all(
+            [
+                MilestoneDB(
+                    id="milestone-1",
+                    goal_id=goal.id,
+                    title="Ship the release",
+                    description="Release to users",
+                    completion_criteria="The release is available",
+                    status=MilestoneStatus.IN_PROGRESS,
+                    source=MilestoneSource.MANUAL,
+                    due_date=date(2027, 3, 15),
+                    created_at=now,
+                    updated_at=now,
+                ),
+                MilestoneDB(
+                    id="archived-milestone",
+                    goal_id=goal.id,
+                    title="Old milestone",
+                    status=MilestoneStatus.COMPLETED,
+                    source=MilestoneSource.MANUAL,
+                    archived_at=now,
+                    created_at=now,
+                    updated_at=now,
+                ),
+            ]
+        )
+        session.flush()
+        repository = GoalRepository(session)
+        repository.update(
+            goal.id,
+            {"organization_id": "org-1", "title": "Deliver the revised onboarding refresh"},
+            changed_by_user_id="owner-1",
+        )
+        version = repository.get_latest_version(goal.id)
+        assert version.content["organization_id"] == "org-1"
+        assert version.content["milestone_definitions"] == [
+            {
+                "milestone_id": "milestone-1",
+                "title": "Ship the release",
+                "description": "Release to users",
+                "completion_criteria": "The release is available",
+                "source": "manual",
+                "due_date": "2027-03-15",
+            }
+        ]
+
+        milestone = session.get(MilestoneDB, "milestone-1")
+        milestone.title = "Updated release"
+        milestone.status = MilestoneStatus.COMPLETED
+        session.flush()
+        session.expire(version)
+        assert version.content["milestone_definitions"][0]["title"] == "Ship the release"
+        assert "status" not in version.content["milestone_definitions"][0]
+
+        assert goal.milestones
+        milestone.title = "Pending definition"
+        milestone.due_date = date(2027, 4, 1)
+        next_version = repository.add_version(goal, "owner-1")
+        assert next_version.content["milestone_definitions"][0]["title"] == "Pending definition"
+        assert next_version.content["milestone_definitions"][0]["due_date"] == "2027-04-01"
+        assert milestone.status == MilestoneStatus.COMPLETED
+        assert version.content["milestone_definitions"][0]["title"] == "Ship the release"
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def test_validation_runs_reference_exact_versions_and_retain_history():
     engine, session = _session()
     try:
@@ -264,6 +435,113 @@ def test_validation_runs_reference_exact_versions_and_retain_history():
         assert first.model_version == "test-model"
         assert first.actor_user_id == "owner-1"
         assert {run.id for run in history} == {first.id, second.id}
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_validate_exact_proposal_preserves_current_goal_and_eligibility():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        validation = GoalValidationRunService(session, _StructuredLLM())
+        current_run = asyncio.run(validation.validate_latest(goal.id, "owner-1"))
+        goals = GoalService(session)
+        goals.transition_status(goal.id, GoalStatus.APPROVED, changed_by_user_id="owner-1")
+        goals.transition_status(goal.id, GoalStatus.ACTIVE, changed_by_user_id="owner-1")
+        proposal = _add_proposal(session, goal, 2, "Deliver the revised onboarding refresh")
+
+        run = asyncio.run(validation.validate_proposal(goal.id, proposal.id, "owner-1"))
+
+        assert run.status == "READY"
+        assert run.goal_version_id == proposal.id
+        assert run.input_context["title"] == "Deliver the revised onboarding refresh"
+        assert goal.title == "Deliver onboarding refresh"
+        assert goals.is_evidence_submission_eligible(goal)
+        assert goals.repository.has_ready_validation_for_version(goal.id, current_run.goal_version_id)
+        assert not goals.repository.has_approval_for_version(proposal.id)
+        assert goals.repository.get_latest_version(goal.id).id == current_run.goal_version_id
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "case", ["wrong-owner", "missing-goal", "standard", "superseded", "legacy-proposal"]
+)
+def test_invalid_proposal_validation_is_rejected_before_provider_call(case):
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        proposal = _add_proposal(session, goal, 2, "Proposed title")
+        if case == "superseded":
+            _add_proposal(session, goal, 3, "Newer proposal")
+        if case == "legacy-proposal":
+            proposal.origin = "LEGACY"
+            session.flush()
+
+        class _CountingLLM(_StructuredLLM):
+            calls = 0
+
+            async def generate(self, request):
+                self.calls += 1
+                return await super().generate(request)
+
+        llm = _CountingLLM()
+        validation = GoalValidationRunService(session, llm)
+        goal_id = "missing-goal" if case == "missing-goal" else goal.id
+        proposal_id = (
+            GoalRepository(session).get_latest_version(goal.id).id
+            if case == "standard"
+            else proposal.id
+        )
+        actor_id = "other-user" if case == "wrong-owner" else "owner-1"
+        with pytest.raises(ValueError, match="Goal proposal not found"):
+            asyncio.run(validation.validate_proposal(goal_id, proposal_id, actor_id))
+
+        assert llm.calls == 0
+        assert validation.get_history(goal.id) == []
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_proposal_validation_provider_failure_does_not_persist_a_run():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        proposal = _add_proposal(session, goal, 2, "Proposed title")
+        validation = GoalValidationRunService(session, _FailedLLM())
+        with pytest.raises(GoalSemanticValidationError):
+            asyncio.run(validation.validate_proposal(goal.id, proposal.id, "owner-1"))
+        assert validation.get_history(goal.id) == []
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_new_proposal_during_validation_retains_result_only_for_old_proposal():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        proposal = _add_proposal(session, goal, 2, "First proposal")
+
+        class _EditingLLM(_StructuredLLM):
+            async def generate(self, request):
+                _add_proposal(session, goal, 3, "Second proposal")
+                return await super().generate(request)
+
+        validation = GoalValidationRunService(session, _EditingLLM())
+        with pytest.raises(ValueError, match="proposal changed during validation"):
+            asyncio.run(validation.validate_proposal(goal.id, proposal.id, "owner-1"))
+
+        history = validation.get_history(goal.id)
+        assert len(history) == 1
+        assert history[0].goal_version_id == proposal.id
+        latest = GoalRepository(session).get_latest_proposal_version(goal.id)
+        assert latest.version == 3
+        assert not GoalRepository(session).has_ready_validation_for_version(goal.id, latest.id)
+        assert goal.title == "Deliver onboarding refresh"
     finally:
         session.close()
         engine.dispose()

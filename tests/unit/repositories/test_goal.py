@@ -117,4 +117,6 @@ def test_create_goal():
     assert version.version == 1
     assert version.origin == "USER"
     assert version.content["title"] == result.title
-    assert session.flush.call_count == 2
+    assert session.flush.call_count == 3
+    session.refresh.assert_called_once_with(result)
+    session.expire.assert_called_once_with(result, ["criteria", "milestones"])

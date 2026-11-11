@@ -1,6 +1,8 @@
+from copy import deepcopy
 from datetime import UTC, date, datetime
 from uuid import uuid4
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
@@ -9,6 +11,7 @@ from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
 from app.db.models.goal_version_approval import GoalVersionApprovalDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
+from app.models.milestone import MilestoneSource
 from app.repositories.base import BaseRepository
 
 _MATERIAL_GOAL_FIELDS = {
@@ -140,6 +143,14 @@ class GoalRepository(BaseRepository):
         *,
         origin: str = "USER",
     ) -> GoalVersionDB:
+        self.session.flush()
+        self.session.execute(
+            select(GoalDB.id).where(GoalDB.id == goal.id).with_for_update()
+        ).scalar_one()
+        self.session.refresh(goal)
+        self.session.expire(goal, ["criteria", "milestones"])
+        for criterion in goal.criteria:
+            self.session.expire(criterion, ["versions"])
         latest_version = (
             self.session.query(GoalVersionDB.version)
             .filter(GoalVersionDB.goal_id == goal.id)
@@ -162,7 +173,33 @@ class GoalRepository(BaseRepository):
     def get_latest_version(self, goal_id: str) -> GoalVersionDB | None:
         return (
             self.session.query(GoalVersionDB)
-            .filter(GoalVersionDB.goal_id == goal_id)
+            .filter(
+                GoalVersionDB.goal_id == goal_id,
+                GoalVersionDB.definition_kind == "STANDARD",
+            )
+            .order_by(GoalVersionDB.version.desc())
+            .first()
+        )
+
+    def get_operative_version(self, goal_id: str) -> GoalVersionDB | None:
+        return (
+            self.session.query(GoalVersionDB)
+            .join(
+                GoalDB,
+                (GoalDB.operative_goal_version_id == GoalVersionDB.id)
+                & (GoalDB.id == GoalVersionDB.goal_id),
+            )
+            .filter(GoalDB.id == goal_id)
+            .one_or_none()
+        )
+
+    def get_latest_proposal_version(self, goal_id: str) -> GoalVersionDB | None:
+        return (
+            self.session.query(GoalVersionDB)
+            .filter(
+                GoalVersionDB.goal_id == goal_id,
+                GoalVersionDB.definition_kind == "PROPOSAL",
+            )
             .order_by(GoalVersionDB.version.desc())
             .first()
         )
@@ -225,7 +262,7 @@ class GoalRepository(BaseRepository):
                     "version_id": latest.id,
                     "version": latest.version,
                     "approval_status": latest.approval_status.value,
-                    "definition": latest.definition,
+                    "definition": deepcopy(latest.definition),
                 }
             )
         return {
@@ -233,12 +270,29 @@ class GoalRepository(BaseRepository):
             "description": goal.description,
             "scope": goal.scope.value if goal.scope is not None else None,
             "goal_level": goal.goal_level,
+            "organization_id": goal.organization_id,
             "start_date": goal.start_date.isoformat() if goal.start_date else None,
             "end_date": goal.end_date.isoformat() if goal.end_date else None,
             "source": goal.source,
             "source_document_id": goal.source_document_id,
-            "structured_fields": goal.structured_fields or {},
+            "structured_fields": deepcopy(goal.structured_fields or {}),
             "criterion_versions": criterion_versions,
+            "milestone_definitions": [
+                {
+                    "milestone_id": milestone.id,
+                    "title": milestone.title,
+                    "description": milestone.description,
+                    "completion_criteria": milestone.completion_criteria,
+                    "source": (
+                        milestone.source.value
+                        if isinstance(milestone.source, MilestoneSource)
+                        else milestone.source
+                    ),
+                    "due_date": milestone.due_date.isoformat() if milestone.due_date else None,
+                }
+                for milestone in sorted(goal.milestones, key=lambda item: item.id)
+                if milestone.archived_at is None
+            ],
         }
 
     def add_status_history(self, history: GoalStatusHistoryDB) -> None:

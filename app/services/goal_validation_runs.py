@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from app.db.models.goal_validation_run import GoalValidationRunDB
+from app.db.models.goal_version import GoalVersionDB
 from app.models.goal_validation import GoalValidationInput, GoalValidationTimeframe
 from app.repositories.goal import GoalRepository
 from app.repositories.goal_validation import GoalValidationRepository
@@ -63,7 +64,6 @@ class GoalValidationRunService(BaseService):
         goal_id: str,
         actor_user_id: str,
     ) -> GoalValidationRunDB:
-        started_at = perf_counter()
         version = self.goal_repository.get_latest_version(goal_id)
         if version is None:
             raise ValueError("Goal version not found")
@@ -72,6 +72,56 @@ class GoalValidationRunService(BaseService):
                 "Legacy goal versions cannot be validated; edit the goal to create a user-managed version"
             )
 
+        run = await self._validate_version(version, actor_user_id)
+        latest_version = self.goal_repository.get_latest_version(goal_id)
+        if latest_version is None or latest_version.id != run.goal_version_id:
+            logger.warning(
+                "goal_validation_superseded",
+                extra={"goal_id": goal_id, "goal_version_id": run.goal_version_id},
+            )
+            raise ValueError(
+                "The goal changed during validation; the result was retained for "
+                "the evaluated version. Revalidate the latest goal version."
+            )
+        return run
+
+    async def validate_proposal(
+        self,
+        goal_id: str,
+        proposal_version_id: str,
+        actor_user_id: str,
+    ) -> GoalValidationRunDB:
+        goal = self.goal_repository.get_by_id(goal_id)
+        if goal is None or goal.user_id != actor_user_id:
+            raise ValueError("Goal proposal not found")
+        version = self.goal_repository.get_latest_proposal_version(goal_id)
+        if (
+            version is None
+            or version.id != proposal_version_id
+            or version.origin != "USER"
+        ):
+            raise ValueError("Goal proposal not found or superseded")
+
+        run = await self._validate_version(version, actor_user_id)
+        latest_proposal = self.goal_repository.get_latest_proposal_version(goal_id)
+        if latest_proposal is None or latest_proposal.id != run.goal_version_id:
+            logger.warning(
+                "goal_proposal_validation_superseded",
+                extra={"goal_id": goal_id, "goal_version_id": run.goal_version_id},
+            )
+            raise ValueError(
+                "The goal proposal changed during validation; the result was retained "
+                "for the evaluated version. Revalidate the latest proposal."
+            )
+        return run
+
+    async def _validate_version(
+        self,
+        version: GoalVersionDB,
+        actor_user_id: str,
+    ) -> GoalValidationRunDB:
+        started_at = perf_counter()
+        goal_id = version.goal_id
         validation_input = _validation_input(version.content)
         evaluated_on = datetime.now(UTC).date()
         try:
@@ -138,16 +188,6 @@ class GoalValidationRunService(BaseService):
                 "duration_ms": round((perf_counter() - started_at) * 1000),
             },
         )
-        latest_version = self.goal_repository.get_latest_version(goal_id)
-        if latest_version is None or latest_version.id != run.goal_version_id:
-            logger.warning(
-                "goal_validation_superseded",
-                extra={"goal_id": goal_id, "goal_version_id": run.goal_version_id},
-            )
-            raise ValueError(
-                "The goal changed during validation; the result was retained for "
-                "the evaluated version. Revalidate the latest goal version."
-            )
         return run
 
     def get_history(self, goal_id: str) -> list[GoalValidationRunDB]:

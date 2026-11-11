@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, ForeignKeyConstraint, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,6 +17,7 @@ class GoalDB(Base):
     scope: Mapped[GoalScope] = mapped_column(Enum(GoalScope, name="goal_scope"), nullable=False, default=GoalScope.PERSONAL)
     goal_level: Mapped[str | None] = mapped_column(String(16))
     parent_goal_id: Mapped[str | None] = mapped_column(String(64))
+    operative_goal_version_id: Mapped[str | None] = mapped_column(String(64))
     relationship_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     organization_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("organizations.id")
@@ -54,6 +55,7 @@ class GoalDB(Base):
     versions = relationship(
         "GoalVersionDB",
         back_populates="goal",
+        foreign_keys="GoalVersionDB.goal_id",
         passive_deletes="all",
         order_by="GoalVersionDB.version",
     )
@@ -62,6 +64,17 @@ class GoalDB(Base):
         back_populates="goal",
         passive_deletes="all",
         order_by="GoalValidationRunDB.created_at",
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["operative_goal_version_id", "id"],
+            ["goal_versions.id", "goal_versions.goal_id"],
+            name="fk_goals_operative_version_goal",
+            deferrable=True,
+            initially="DEFERRED",
+            use_alter=True,
+        ),
     )
 
     @property

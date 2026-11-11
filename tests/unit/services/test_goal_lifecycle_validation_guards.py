@@ -125,6 +125,45 @@ def test_ready_latest_version_can_be_approved_and_activated():
         engine.dispose()
 
 
+def test_proposal_version_does_not_change_live_validation_or_evidence_eligibility():
+    engine, session, goal = _session()
+    try:
+        service = GoalService(session)
+        ready = _validate(session, goal.id)
+        service.transition_status(goal.id, GoalStatus.APPROVED, changed_by_user_id="owner-1")
+        service.transition_status(goal.id, GoalStatus.ACTIVE, changed_by_user_id="owner-1")
+        initial = service.repository.get_latest_version(goal.id)
+        goal.operative_goal_version_id = initial.id
+        session.add(
+            app.db.models.GoalVersionDB(
+                id="proposal-1",
+                goal_id=goal.id,
+                version=2,
+                origin="USER",
+                definition_kind="PROPOSAL",
+                content={**initial.content, "title": "Proposed title"},
+                created_by_user_id="owner-1",
+                created_at=datetime.now(UTC),
+            )
+        )
+        session.flush()
+
+        assert service.repository.get_latest_version(goal.id).id == initial.id
+        assert service.repository.get_operative_version(goal.id).id == initial.id
+        assert service.repository.get_operative_version("missing-goal") is None
+        assert service.is_evidence_submission_eligible(goal)
+        assert goal.title == "Deliver onboarding refresh"
+        assert _validate(session, goal.id).goal_version_id == ready.goal_version_id
+
+        next_standard = service.repository.add_version(goal, "owner-1")
+        assert next_standard.version == 3
+        assert service.repository.get_latest_version(goal.id).id == next_standard.id
+        assert service.repository.get_operative_version(goal.id).id == initial.id
+    finally:
+        session.close()
+        engine.dispose()
+
+
 def test_revised_active_goal_requires_ready_and_reapproval_for_evidence():
     engine, session, goal = _session()
     try:

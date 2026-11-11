@@ -12,6 +12,7 @@ from app.db.base import Base
 from app.db.models.goal import GoalDB
 from app.db.models.goal_criterion import GoalCriterionDB, GoalCriterionVersionDB
 from app.db.models.goal_version import GoalVersionDB
+from app.db.models.milestone import MilestoneDB
 from app.db.models.user import UserDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
@@ -77,6 +78,7 @@ def test_generation_persists_proposed_criteria_for_a_goal():
                 GoalCriterionDB.__table__,
                 GoalCriterionVersionDB.__table__,
                 GoalVersionDB.__table__,
+                MilestoneDB.__table__,
             ],
         )
         with Session(engine) as session:
@@ -134,6 +136,7 @@ def test_generation_persists_proposed_criteria_for_a_goal():
                         ),
                     )
 
+            assert goal.criteria == []
             generated = asyncio.run(
                 GoalCriteriaService(session, SyntheticLLM()).generate(goal, user.id)
             )

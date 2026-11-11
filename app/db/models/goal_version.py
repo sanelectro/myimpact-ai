@@ -23,11 +23,14 @@ class GoalVersionDB(Base):
     )
     version: Mapped[int] = mapped_column(nullable=False)
     origin: Mapped[str] = mapped_column(String(20), nullable=False)
+    definition_kind: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="STANDARD", server_default="STANDARD"
+    )
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_by_user_id: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    goal = relationship("GoalDB", back_populates="versions")
+    goal = relationship("GoalDB", back_populates="versions", foreign_keys=[goal_id])
     validation_runs = relationship(
         "GoalValidationRunDB",
         back_populates="goal_version",
@@ -41,5 +44,9 @@ class GoalVersionDB(Base):
         UniqueConstraint("id", "goal_id", name="uq_goal_version_id_goal"),
         CheckConstraint("version > 0", name="ck_goal_version_positive"),
         CheckConstraint("origin IN ('LEGACY', 'USER')", name="ck_goal_version_origin"),
+        CheckConstraint(
+            "definition_kind IN ('STANDARD', 'PROPOSAL')",
+            name="ck_goal_version_definition_kind",
+        ),
         Index("ix_goal_versions_goal_version", "goal_id", "version"),
     )
