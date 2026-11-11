@@ -20,6 +20,7 @@ from app.models.goal_criteria import (
     GoalCriterionCreateRequest,
     GoalCriterionDefinition,
     GoalCriterionType,
+    GoalCriterionUpdateRequest,
 )
 from app.models.llm import LLMResponse
 from app.repositories.goal import GoalRepository
@@ -81,6 +82,42 @@ def _create_committed_goal(engine):
         GoalRepository(session).create(goal_id=goal_id, user_id=owner_id, title="Original goal")
         session.commit()
     return owner_id, goal_id
+
+
+@pytest.mark.integration
+def test_baseline_comparison_preserves_selected_criterion_with_pending_edit(goal_version_engine):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    original = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Deploy the release",
+        completion_conditions="The release is available.",
+    )
+    revised = GoalCriterionDefinition(
+        criterion_type=GoalCriterionType.BINARY,
+        description="Deploy the revised release",
+        completion_conditions="The revised release is available.",
+    )
+    with Session(goal_version_engine) as session:
+        service = GoalCriteriaService(session)
+        criterion = service.create_manual(
+            goal_id, owner_id, GoalCriterionCreateRequest(definition=original)
+        )
+        service.approve_version(goal_id, criterion.id, criterion.versions[0].id, owner_id)
+        repository = GoalRepository(session)
+        approved_id = repository.get_latest_version(goal_id).id
+        service.add_version(
+            goal_id, criterion.id, owner_id, GoalCriterionUpdateRequest(definition=revised)
+        )
+        newest_id = repository.get_latest_version(goal_id).id
+
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        goal = repository.get_by_id(goal_id)
+        approved = session.get(app.db.models.GoalVersionDB, approved_id)
+        newest = session.get(app.db.models.GoalVersionDB, newest_id)
+        assert repository.compare_live_definition(goal, approved.content) == []
+        assert repository.compare_live_definition(goal, newest.content) == ["criterion_versions"]
+        assert goal.operative_goal_version_id is None
 
 
 @pytest.mark.integration

@@ -1,16 +1,19 @@
 from copy import deepcopy
 from datetime import UTC, date, datetime
+import json
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
+from app.db.models.goal_criterion import GoalCriterionVersionDB
 from app.db.models.goal_status_history import GoalStatusHistoryDB
 from app.db.models.goal_validation_run import GoalValidationRunDB
 from app.db.models.goal_version import GoalVersionDB
 from app.db.models.goal_version_approval import GoalVersionApprovalDB
 from app.models.goal import GoalScope, GoalStatus, GoalSubStatus
+from app.models.goal_criteria import GoalCriterionApprovalStatus
 from app.models.milestone import MilestoneSource
 from app.repositories.base import BaseRepository
 
@@ -250,6 +253,58 @@ class GoalRepository(BaseRepository):
         return approval
 
     @staticmethod
+    def compare_live_definition(goal: GoalDB, content: dict) -> list[str]:
+        """Report snapshot fields that differ from the live definition projection.
+
+        This comparison does not establish historical approval or serialize writers.
+        Callers must provide their own authorization and concurrency safeguards.
+        """
+        expected = GoalRepository._version_content(goal)
+        current_criteria = []
+        for criterion in goal.criteria:
+            if criterion.is_retired or criterion.current_version is None:
+                continue
+            current = next(
+                (item for item in criterion.versions if item.version == criterion.current_version),
+                None,
+            )
+            if current is None or current.approval_status != GoalCriterionApprovalStatus.APPROVED:
+                raise ValueError("Current criterion version is missing or not approved")
+            current_criteria.append(GoalRepository._criterion_version_content(criterion.id, current))
+        expected["criterion_versions"] = sorted(
+            current_criteria, key=lambda item: item["criterion_id"]
+        )
+
+        actual = dict(content)
+        criteria = actual.get("criterion_versions")
+        if isinstance(criteria, list) and all(
+            isinstance(item, dict) and isinstance(item.get("criterion_id"), str)
+            for item in criteria
+        ):
+            actual["criterion_versions"] = sorted(criteria, key=lambda item: item["criterion_id"])
+
+        fields = expected.keys() | actual.keys()
+        return sorted(
+            field
+            for field in fields
+            if field not in expected
+            or field not in actual
+            or json.dumps(expected[field], sort_keys=True) != json.dumps(actual[field], sort_keys=True)
+        )
+
+    @staticmethod
+    def _criterion_version_content(
+        criterion_id: str, version: GoalCriterionVersionDB
+    ) -> dict:
+        return {
+            "criterion_id": criterion_id,
+            "version_id": version.id,
+            "version": version.version,
+            "approval_status": version.approval_status.value,
+            "definition": deepcopy(version.definition),
+        }
+
+    @staticmethod
     def _version_content(goal: GoalDB) -> dict:
         criterion_versions = []
         for criterion in goal.criteria:
@@ -257,13 +312,7 @@ class GoalRepository(BaseRepository):
                 continue
             latest = max(criterion.versions, key=lambda version: version.version)
             criterion_versions.append(
-                {
-                    "criterion_id": criterion.id,
-                    "version_id": latest.id,
-                    "version": latest.version,
-                    "approval_status": latest.approval_status.value,
-                    "definition": deepcopy(latest.definition),
-                }
+                GoalRepository._criterion_version_content(criterion.id, latest)
             )
         return {
             "title": goal.title,

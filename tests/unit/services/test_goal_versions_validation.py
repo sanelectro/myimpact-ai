@@ -23,6 +23,7 @@ from app.models.goal_criteria import (
 )
 from app.models.milestone import MilestoneSource, MilestoneStatus
 from app.repositories.goal import GoalRepository
+from app.repositories.goal_criterion import GoalCriterionRepository
 from app.services.goal_validation import GoalSemanticValidationError
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.goal import GoalService
@@ -325,6 +326,95 @@ def test_snapshot_refreshes_loaded_criteria_and_copies_nested_definitions():
         criterion_version.definition["description"] = "Later change"
         assert "Later change" not in version.content["structured_fields"]["deliverables"]
         assert version.content["criterion_versions"][0]["definition"]["description"] == "Original criterion"
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_baseline_comparison_uses_selected_approved_criterion_not_latest():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        criteria = GoalCriterionRepository(session)
+        criterion = criteria.create_criterion(
+            criterion_id="criterion-1", goal_id=goal.id, created_by_user_id="owner-1"
+        )
+        first = criteria.add_version(
+            version_id="criterion-version-1",
+            criterion=criterion,
+            criterion_type=GoalCriterionType.BINARY,
+            definition={"description": "Original"},
+            created_by_user_id="owner-1",
+        )
+        criteria.approve_version(criterion, first, "owner-1")
+        repository = GoalRepository(session)
+        approved_snapshot = repository.add_version(goal, "owner-1")
+        approved_content = deepcopy(approved_snapshot.content)
+        criteria.add_version(
+            version_id="criterion-version-2",
+            criterion=criterion,
+            criterion_type=GoalCriterionType.BINARY,
+            definition={"description": "Not yet approved"},
+            created_by_user_id="owner-1",
+        )
+        newer_snapshot = repository.add_version(goal, "owner-1")
+
+        assert repository.compare_live_definition(goal, approved_content) == []
+        assert repository.compare_live_definition(goal, newer_snapshot.content) == [
+            "criterion_versions"
+        ]
+        assert approved_content["criterion_versions"][0]["version_id"] == first.id
+        assert goal.operative_goal_version_id is None
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_baseline_comparison_rejects_incomplete_or_different_snapshots():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        repository = GoalRepository(session)
+        content = deepcopy(repository.get_latest_version(goal.id).content)
+        assert repository.compare_live_definition(goal, content) == []
+
+        del content["milestone_definitions"]
+        content["title"] = "Different title"
+        content["unexpected_field"] = None
+        assert repository.compare_live_definition(goal, content) == [
+            "milestone_definitions",
+            "title",
+            "unexpected_field",
+        ]
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_baseline_comparison_rejects_invalid_current_criterion():
+    engine, session = _session()
+    try:
+        goal = _create_goal(session)
+        criteria = GoalCriterionRepository(session)
+        criterion = criteria.create_criterion(
+            criterion_id="criterion-1", goal_id=goal.id, created_by_user_id="owner-1"
+        )
+        criteria.add_version(
+            version_id="criterion-version-1",
+            criterion=criterion,
+            criterion_type=GoalCriterionType.BINARY,
+            definition={"description": "Unapproved"},
+            created_by_user_id="owner-1",
+        )
+        criterion.current_version = 1
+        session.flush()
+        repository = GoalRepository(session)
+        snapshot = repository.add_version(goal, "owner-1")
+        with pytest.raises(ValueError, match="missing or not approved"):
+            repository.compare_live_definition(goal, snapshot.content)
+        criterion.current_version = 999
+        with pytest.raises(ValueError, match="missing or not approved"):
+            repository.compare_live_definition(goal, snapshot.content)
     finally:
         session.close()
         engine.dispose()
