@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 import app.db.models
 from app.db.models.team import TeamDB as _TeamDB
 from app.db.models.user import UserDB
-from app.models.goal import GoalStatus, GoalSubStatus
+from app.models.goal import DEFAULT_SUB_STATUS_BY_GOAL_STATUS, GoalStatus, GoalSubStatus
 from app.models.goal_criteria import (
     GoalCriterionCreateRequest,
     GoalCriterionDefinition,
@@ -40,6 +40,7 @@ from app.services.goal_definition_proposals import (
     GoalProposalChanges,
     GoalProposalConflict,
 )
+from app.services.goal_hierarchy import GoalHierarchyNotFound, GoalHierarchyService
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.milestone import MilestoneService
 
@@ -918,6 +919,91 @@ def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_
         )
         assert run.goal_version_id == reverted.version_id
         assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_hierarchy_date_preview_checks_current_neighbors_without_mutation(goal_version_engine):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    parent_id, child_id, completed_id, undated_id = (str(uuid4()) for _ in range(4))
+    with Session(goal_version_engine) as session:
+        repository = GoalRepository(session)
+        for item_id, title, start, end, status in (
+            (parent_id, "Parent", date(2026, 1, 1), date(2026, 12, 31), GoalStatus.ACTIVE),
+            (child_id, "Child", date(2026, 3, 1), date(2026, 6, 1), GoalStatus.ACTIVE),
+            (completed_id, "Completed", date(2025, 1, 1), date(2027, 1, 1), GoalStatus.COMPLETED),
+            (undated_id, "Undated", None, None, GoalStatus.DRAFT),
+        ):
+            item = repository.create(goal_id=item_id, user_id=owner_id, title=title)
+            item.start_date, item.end_date, item.status = start, end, status
+            item.sub_status = DEFAULT_SUB_STATUS_BY_GOAL_STATUS[status]
+        goal = repository.get_by_id(goal_id)
+        goal.start_date, goal.end_date, goal.status = date(2026, 2, 1), date(2026, 9, 1), GoalStatus.ACTIVE
+        goal.sub_status = GoalSubStatus.ON_TRACK
+        session.commit()
+        hierarchy = GoalHierarchyService(session)
+        hierarchy.set_parent(goal_id, owner_id, parent_id, 0, None)
+        for child in (child_id, completed_id, undated_id):
+            hierarchy.set_parent(child, owner_id, goal_id, 0, None)
+
+        conflicts = hierarchy.preview_proposed_date_conflicts(
+            goal_id, owner_id, date(2026, 4, 1), date(2026, 5, 1)
+        )
+        assert [(item.child_goal_id, item.child_field, item.parent_field) for item in conflicts] == [
+            (child_id, "start_date", "start_date"),
+            (child_id, "end_date", "end_date"),
+        ]
+        session.rollback()
+        conflicts = hierarchy.preview_proposed_date_conflicts(
+            goal_id, owner_id, date(2025, 12, 1), date(2027, 1, 1)
+        )
+        assert [(item.child_goal_id, item.child_field, item.parent_field) for item in conflicts] == [
+            (goal_id, "start_date", "start_date"),
+            (goal_id, "end_date", "end_date"),
+        ]
+        session.rollback()
+        assert hierarchy.preview_proposed_date_conflicts(goal_id, owner_id, None, None) == []
+        session.rollback()
+        with pytest.raises(ValueError, match="before start"):
+            hierarchy.preview_proposed_date_conflicts(
+                goal_id, owner_id, date(2027, 1, 1), date(2026, 1, 1)
+            )
+        with pytest.raises(GoalHierarchyNotFound, match="Goal not found"):
+            hierarchy.preview_proposed_date_conflicts(goal_id, "other-user", None, None)
+        session.rollback()
+        assert repository.get_by_id(goal_id).start_date == date(2026, 2, 1)
+        assert repository.get_by_id(child_id).end_date == date(2026, 6, 1)
+
+
+@pytest.mark.integration
+def test_hierarchy_date_preview_serializes_reparenting(goal_version_engine):
+    owner_id, goal_id = _create_committed_goal(goal_version_engine)
+    child_id = str(uuid4())
+    with Session(goal_version_engine) as setup:
+        GoalRepository(setup).create(goal_id=child_id, user_id=owner_id, title="Child")
+        setup.commit()
+        GoalHierarchyService(setup).set_parent(child_id, owner_id, goal_id, 0, None)
+    attempted = Event()
+    with Session(goal_version_engine) as session:
+        GoalHierarchyService(session).preview_proposed_date_conflicts(goal_id, owner_id, None, None)
+
+        def detach():
+            with Session(goal_version_engine) as writer:
+                @event.listens_for(writer.connection(), "before_cursor_execute")
+                def signal_lock(_conn, _cursor, statement, _parameters, _context, _executemany):
+                    if "pg_advisory_xact_lock" in statement:
+                        attempted.set()
+
+                return GoalHierarchyService(writer).set_parent(child_id, owner_id, None, 1, "Move")
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(detach)
+            try:
+                assert attempted.wait(10)
+                assert not pending.done()
+                session.commit()
+                assert pending.result(timeout=10).parent_goal_id is None
+            finally:
+                session.rollback()
 
 
 @pytest.mark.integration

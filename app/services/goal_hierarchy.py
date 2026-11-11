@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+from datetime import date
 
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.db.models.goal import GoalDB
+from app.models.goal import GoalStatus
 
 
 class GoalHierarchyNotFound(ValueError):
@@ -22,6 +24,16 @@ class GoalRelationshipSnapshot:
     relationship_revision: int
 
 
+@dataclass(frozen=True)
+class GoalDateConflict:
+    parent_goal_id: str
+    child_goal_id: str
+    child_field: str
+    child_date: date
+    parent_field: str
+    parent_date: date
+
+
 class GoalHierarchyService:
     def __init__(self, session: Session):
         self.session = session
@@ -35,6 +47,59 @@ class GoalHierarchyService:
         if goal is None:
             raise GoalHierarchyNotFound("Goal not found")
         return goal
+
+    def preview_proposed_date_conflicts(
+        self, goal_id: str, user_id: str, start_date: date | None, end_date: date | None
+    ) -> list[GoalDateConflict]:
+        """Check adjacent live dates under hierarchy and ordered Goal locks.
+
+        The caller owns the transaction and must acquire no conflicting locks
+        before this method. This preview alone does not authorize publication.
+        """
+        if start_date is not None and end_date is not None and start_date > end_date:
+            raise ValueError("Target date cannot be before start date")
+        if self.session.get_bind().dialect.name != "postgresql":
+            raise RuntimeError("Hierarchy date checks require PostgreSQL")
+        if self.session.execute(text("SHOW transaction_isolation")).scalar_one() != "read committed":
+            raise RuntimeError("Hierarchy date checks require READ COMMITTED isolation")
+        self.session.execute(text("SELECT pg_advisory_xact_lock(1296650324, 1)"))
+        initial = self.require_goal(goal_id, user_id)
+        parent_id = initial.parent_goal_id
+        goals = list(self.session.scalars(
+            select(GoalDB)
+            .where(or_(
+                GoalDB.id.in_([goal_id, parent_id] if parent_id is not None else [goal_id]),
+                GoalDB.parent_goal_id == goal_id,
+            ))
+            .order_by(GoalDB.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        ))
+        by_id = {goal.id: goal for goal in goals}
+        current = by_id.get(goal_id)
+        if current is None or current.user_id != user_id:
+            raise GoalHierarchyNotFound("Goal not found")
+        if current.parent_goal_id != parent_id:
+            raise GoalHierarchyConflict("The goal hierarchy changed")
+        if any(goal.user_id != user_id for goal in goals):
+            raise GoalHierarchyConflict("A related goal is not owned by the employee")
+
+        conflicts: list[GoalDateConflict] = []
+        if parent_id is not None:
+            parent = by_id.get(parent_id)
+            if parent is None:
+                raise GoalHierarchyConflict("The parent goal is missing")
+            conflicts.extend(_date_conflicts(
+                parent.id, parent.start_date, parent.end_date, goal_id, start_date, end_date
+            ))
+        for child in goals:
+            if child.parent_goal_id == goal_id and child.status in {
+                GoalStatus.DRAFT, GoalStatus.APPROVED, GoalStatus.ACTIVE,
+            }:
+                conflicts.extend(_date_conflicts(
+                    goal_id, start_date, end_date, child.id, child.start_date, child.end_date
+                ))
+        return conflicts
 
     def set_parent(
         self,
@@ -155,3 +220,26 @@ class GoalHierarchyService:
             {"goal_id": goal_id, "limit": limit, "offset": offset},
         ).mappings()
         return [dict(row) for row in rows]
+
+
+def _date_conflicts(
+    parent_id: str,
+    parent_start: date | None,
+    parent_end: date | None,
+    child_id: str,
+    child_start: date | None,
+    child_end: date | None,
+) -> list[GoalDateConflict]:
+    conflicts = []
+    for child_field, child_date in (("start_date", child_start), ("end_date", child_end)):
+        if child_date is None:
+            continue
+        for parent_field, parent_date, outside in (
+            ("start_date", parent_start, parent_start is not None and child_date < parent_start),
+            ("end_date", parent_end, parent_end is not None and child_date > parent_end),
+        ):
+            if outside and parent_date is not None:
+                conflicts.append(GoalDateConflict(
+                    parent_id, child_id, child_field, child_date, parent_field, parent_date
+                ))
+    return conflicts
