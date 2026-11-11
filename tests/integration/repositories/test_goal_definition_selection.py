@@ -24,18 +24,21 @@ from app.models.goal_criteria import (
     GoalCriterionUpdateRequest,
 )
 from app.models.llm import LLMResponse
-from app.models.milestone import MilestoneCreate
+from app.models.milestone import MilestoneCreate, MilestoneStatus
 from app.repositories.goal import GoalRepository
 from app.services.goal import GoalService
 from app.services.goal_baseline_observations import (
     GoalBaselineConflict,
     GoalBaselineObservationService,
 )
-from app.services.goal_criteria import GoalCriteriaGenerationConflict, GoalCriteriaService
+from app.services.goal_criteria import (
+    GoalCriteriaGenerationConflict,
+    GoalCriteriaService,
+)
 from app.services.goal_definition_proposals import (
     GoalDefinitionProposalService,
-    GoalProposalConflict,
     GoalProposalChanges,
+    GoalProposalConflict,
 )
 from app.services.goal_validation_runs import GoalValidationRunService
 from app.services.milestone import MilestoneService
@@ -797,6 +800,154 @@ def test_text_proposal_noop_and_rollback_do_not_create_versions(goal_version_eng
         assert session.get(
             app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "noop")
         ) is not None
+
+
+@pytest.mark.integration
+def test_milestone_proposals_are_isolated_and_require_supported_validation(goal_version_engine):
+    owner_id, goal_id, source_id = _create_unselected_ongoing_goal(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        milestone = MilestoneService(session).create_milestone(
+            goal_id, MilestoneCreate(
+                title="Original milestone", description="Original description",
+                status=MilestoneStatus.COMPLETED, due_date=date(2026, 12, 1),
+            )
+        )
+        milestone_id = milestone.id
+        observation = GoalBaselineObservationService(session).stage_observed_baseline(
+            goal_id=goal_id, actor_user_id=owner_id,
+            expected_source_version_id=source_id, expected_relationship_revision=0,
+        )
+        base_id = observation.goal_version_id
+        session.commit()
+        service = GoalDefinitionProposalService(session)
+        arguments = {
+            "goal_id": goal_id, "actor_user_id": owner_id,
+            "expected_base_version_id": base_id, "expected_relationship_revision": 0,
+        }
+        with pytest.raises(ValueError, match="Milestone not found"):
+            service.stage_proposal(
+                **arguments, idempotency_key="missing-milestone",
+                expected_proposal_revision=0,
+                changes=GoalProposalChanges(milestone_updates=[
+                    {"milestone_id": milestone_id, "title": "Changed"},
+                    {"milestone_id": "other-goal-milestone", "title": "Invalid"},
+                ]),
+            )
+        session.rollback()
+        assert session.get(app.db.models.GoalDefinitionProposalHeadDB, goal_id) is None
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB,
+            (owner_id, "PREPARE_DEFINITION", "missing-milestone"),
+        ) is None
+
+        noop = service.stage_proposal(
+            **arguments, idempotency_key="milestone-noop", expected_proposal_revision=0,
+            changes=GoalProposalChanges(milestone_updates=[
+                {"milestone_id": milestone_id, "title": "Original  milestone"},
+            ]),
+        )
+        assert (noop.outcome, noop.revision, noop.version_id) == ("NO_CHANGE", 0, base_id)
+        session.commit()
+        proposal = service.stage_proposal(
+            **arguments, idempotency_key="milestone-change", expected_proposal_revision=0,
+            changes=GoalProposalChanges(milestone_updates=[{
+                "milestone_id": milestone_id, "title": "Revised milestone",
+                "description": None, "due_date": "2027-01-15",
+            }]),
+        )
+        session.commit()
+        candidate = session.get(app.db.models.GoalVersionDB, proposal.version_id)
+        assert candidate.content["milestone_definitions"] == [{
+            "milestone_id": milestone_id, "title": "Revised milestone",
+            "description": None, "completion_criteria": None, "source": "manual",
+            "due_date": "2027-01-15",
+        }]
+        current = session.get(app.db.models.MilestoneDB, milestone_id)
+        assert (current.title, current.description, current.due_date, current.status) == (
+            "Original milestone", "Original description", date(2026, 12, 1),
+            MilestoneStatus.COMPLETED,
+        )
+        assert GoalRepository(session).get_latest_version(goal_id).id == source_id
+        assert session.get(app.db.models.GoalVersionDB, base_id).content["milestone_definitions"][0][
+            "title"
+        ] == "Original milestone"
+        assert service.stage_proposal(
+            **arguments, idempotency_key="milestone-change", expected_proposal_revision=0,
+            changes=GoalProposalChanges(milestone_updates=[{
+                "milestone_id": milestone_id, "title": "Revised milestone",
+                "description": None, "due_date": "2027-01-15",
+            }]),
+        ) == proposal
+
+        class UnexpectedLLM:
+            async def generate(self, _request):
+                raise AssertionError("Unsupported milestone changes must not reach validation")
+
+        validator = GoalValidationRunService(session, UnexpectedLLM())
+        for validate in (validator.validate_prepared_proposal, validator.validate_proposal):
+            with pytest.raises(GoalProposalConflict, match="milestone definitions is not supported"):
+                asyncio.run(validate(goal_id, proposal.version_id, owner_id))
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == proposal.version_id
+            )
+        ) == 0
+
+        reverted = service.stage_proposal(
+            **arguments, idempotency_key="milestone-revert", expected_proposal_revision=1,
+            changes=GoalProposalChanges(milestone_updates=[{
+                "milestone_id": milestone_id, "title": "Original milestone",
+                "description": "Original description", "due_date": "2026-12-01",
+            }]),
+        )
+        session.commit()
+        class NormalLLM:
+            async def generate(self, _request):
+                return LLMResponse(
+                    content=json.dumps({"issues": []}), model="test-model", provider="test-provider"
+                )
+
+        run = asyncio.run(
+            GoalValidationRunService(session, NormalLLM()).validate_prepared_proposal(
+                goal_id, reverted.version_id, owner_id
+            )
+        )
+        assert run.goal_version_id == reverted.version_id
+        assert session.get(app.db.models.MilestoneDB, milestone_id).status == MilestoneStatus.COMPLETED
+
+
+@pytest.mark.integration
+def test_legacy_proposal_validation_rejects_head_changed_after_selection(goal_version_engine, monkeypatch):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        first = _stage_text(session, owner_id, goal_id, base_id, key="selected")
+        session.commit()
+
+        class UnexpectedLLM:
+            async def generate(self, _request):
+                raise AssertionError("Superseded proposals must not reach validation")
+
+        validator = GoalValidationRunService(session, UnexpectedLLM())
+        original_selection = validator.goal_repository.get_latest_proposal_version
+
+        def select_then_supersede(selected_goal_id):
+            selected = original_selection(selected_goal_id)
+            with Session(goal_version_engine) as writer:
+                _stage_text(
+                    writer, owner_id, goal_id, base_id,
+                    key="superseding", revision=1, title="Newer proposal",
+                )
+                writer.commit()
+            return selected
+
+        monkeypatch.setattr(validator.goal_repository, "get_latest_proposal_version", select_then_supersede)
+        with pytest.raises(GoalProposalConflict, match="superseded"):
+            asyncio.run(validator.validate_proposal(goal_id, first.version_id, owner_id))
+        assert session.scalar(
+            select(func.count()).select_from(app.db.models.GoalValidationRunDB).where(
+                app.db.models.GoalValidationRunDB.goal_version_id == first.version_id
+            )
+        ) == 0
 
 
 @pytest.mark.integration

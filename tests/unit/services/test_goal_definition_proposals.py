@@ -64,3 +64,39 @@ def test_structured_proposal_preserves_only_explicit_patch_fields():
     assert changes.model_dump(mode="json", exclude_unset=True) == {
         "structured_fields": {"outcome": "Improve reliability"}
     }
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        None,
+        [],
+        [{"milestone_id": " "}],
+        [{"milestone_id": "one"}],
+        [{"milestone_id": "one", "title": None}],
+        [{"milestone_id": "one", "title": "   "}],
+        [{"milestone_id": "one", "status": "completed"}],
+        [{"milestone_id": "one", "source": "manual"}],
+        [{"milestone_id": "one", "title": "A"}, {"milestone_id": "one", "title": "B"}],
+    ],
+)
+def test_milestone_proposal_rejects_invalid_updates(updates):
+    with pytest.raises(ValidationError):
+        GoalProposalChanges(milestone_updates=updates)
+
+
+def test_milestone_proposal_preserves_explicit_fields_and_serializes_dates():
+    changes = GoalProposalChanges(milestone_updates=[{
+        "milestone_id": "one",
+        "title": "  Revised title  ",
+        "description": None,
+        "due_date": "2026-03-01",
+    }])
+    assert changes.model_dump(mode="json", exclude_unset=True) == {
+        "milestone_updates": [{
+            "milestone_id": "one",
+            "title": "Revised title",
+            "description": None,
+            "due_date": "2026-03-01",
+        }]
+    }

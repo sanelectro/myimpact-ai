@@ -18,6 +18,7 @@ from app.db.models.goal_definition_proposal import (
 )
 from app.db.models.goal_version import GoalVersionDB
 from app.models.goal import GoalStatus, GoalStructuredFields
+from app.models.milestone import MilestoneUpdate
 from app.repositories.goal import GoalRepository
 from app.services.goal_baseline_observations import GoalBaselineObservationService
 
@@ -29,6 +30,34 @@ class GoalProposalConflict(ValueError):
     pass
 
 
+class GoalMilestoneProposalUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    milestone_id: str = Field(min_length=1, max_length=64)
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    description: str | None = Field(default=None, max_length=5000)
+    completion_criteria: str | None = Field(default=None, max_length=5000)
+    due_date: date | None = None
+
+    @field_validator("milestone_id")
+    @classmethod
+    def require_milestone_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Milestone ID cannot be blank")
+        return value
+
+    @field_validator("title")
+    @classmethod
+    def require_title(cls, value: str | None) -> str | None:
+        return MilestoneUpdate.validate_title(value)
+
+    @model_validator(mode="after")
+    def require_changes(self):
+        if not self.model_fields_set - {"milestone_id"}:
+            raise ValueError("At least one milestone definition field is required")
+        return self
+
+
 class GoalProposalChanges(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -37,6 +66,7 @@ class GoalProposalChanges(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     structured_fields: GoalStructuredFields | None = None
+    milestone_updates: list[GoalMilestoneProposalUpdate] | None = Field(default=None, min_length=1)
 
     @field_validator("title")
     @classmethod
@@ -50,6 +80,18 @@ class GoalProposalChanges(BaseModel):
     def require_structured_fields(cls, value: GoalStructuredFields | None) -> GoalStructuredFields:
         if value is None:
             raise ValueError("Structured fields cannot be null")
+        return value
+
+    @field_validator("milestone_updates")
+    @classmethod
+    def require_unique_milestone_updates(
+        cls, value: list[GoalMilestoneProposalUpdate] | None
+    ) -> list[GoalMilestoneProposalUpdate]:
+        if value is None:
+            raise ValueError("Milestone updates cannot be null")
+        ids = [update.milestone_id for update in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Milestone updates must have unique IDs")
         return value
 
     @model_validator(mode="after")
@@ -300,6 +342,19 @@ class GoalDefinitionProposalService:
         content = deepcopy(source.content)
         changed = False
         for field, value in payload["changes"].items():
+            if field == "milestone_updates":
+                definitions = {item["milestone_id"]: item for item in content["milestone_definitions"]}
+                for update in value:
+                    milestone = definitions.get(update["milestone_id"])
+                    if milestone is None:
+                        raise ValueError("Milestone not found in proposal definition")
+                    for name, proposed in update.items():
+                        if name != "milestone_id" and not _equivalent_definition(
+                            milestone[name], proposed
+                        ):
+                            milestone[name] = proposed
+                            changed = True
+                continue
             if field == "structured_fields":
                 merged = deepcopy(content[field])
                 if "deferred_requirements" in value and not _equivalent_definition(

@@ -14,7 +14,10 @@ from app.models.goal_validation import GoalValidationInput, GoalValidationTimefr
 from app.repositories.goal import GoalRepository
 from app.repositories.goal_validation import GoalValidationRepository
 from app.services.base import BaseService
-from app.services.goal_definition_proposals import GoalDefinitionProposalService, GoalProposalConflict
+from app.services.goal_definition_proposals import (
+    GoalDefinitionProposalService,
+    GoalProposalConflict,
+)
 from app.services.goal_validation import (
     GOAL_RULE_SET_VERSION,
     GOAL_SEMANTIC_VALIDATION_PROMPT_VERSION,
@@ -106,6 +109,7 @@ class GoalValidationRunService(BaseService):
         ):
             raise ValueError("Goal proposal not found or superseded")
 
+        self._require_supported_milestone_validation(version)
         run = await self._validate_version(version, actor_user_id)
         latest_proposal = self.goal_repository.get_latest_proposal_version(goal_id)
         if latest_proposal is None or latest_proposal.id != run.goal_version_id:
@@ -123,6 +127,7 @@ class GoalValidationRunService(BaseService):
         self, goal_id: str, proposal_version_id: str, actor_user_id: str
     ) -> GoalValidationRunDB:
         version = self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
+        self._require_supported_milestone_validation(version)
         run = await self._validate_version(version, actor_user_id)
         try:
             self._require_prepared_proposal(goal_id, proposal_version_id, actor_user_id)
@@ -164,6 +169,24 @@ class GoalValidationRunService(BaseService):
         ):
             raise GoalProposalConflict("Goal proposal not found or superseded")
         return version
+
+    def _require_supported_milestone_validation(self, version: GoalVersionDB) -> None:
+        head = self.session.execute(
+            select(GoalDefinitionProposalHeadDB)
+            .where(GoalDefinitionProposalHeadDB.goal_id == version.goal_id)
+            .execution_options(populate_existing=True)
+        ).scalar_one_or_none()
+        if head is None:
+            return
+        if head.proposal_version_id != version.id:
+            raise GoalProposalConflict("Goal proposal not found or superseded")
+        base = self.session.get(GoalVersionDB, head.base_version_id)
+        if base is None or base.goal_id != version.goal_id:
+            raise GoalProposalConflict("The proposal baseline is missing")
+        if version.content.get("milestone_definitions") != base.content.get("milestone_definitions"):
+            raise GoalProposalConflict(
+                "Validation of changed milestone definitions is not supported yet"
+            )
 
     async def _validate_version(
         self,
