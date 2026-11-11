@@ -16,7 +16,7 @@ from app.db.models.goal_definition_proposal import (
     GoalDefinitionProposalHeadDB,
 )
 from app.db.models.goal_version import GoalVersionDB
-from app.models.goal import GoalStatus
+from app.models.goal import GoalStatus, GoalStructuredFields
 from app.repositories.goal import GoalRepository
 
 _COMMAND_KIND = "PREPARE_DEFINITION"
@@ -34,12 +34,20 @@ class GoalProposalChanges(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     start_date: date | None = None
     end_date: date | None = None
+    structured_fields: GoalStructuredFields | None = None
 
     @field_validator("title")
     @classmethod
     def require_title(cls, value: str | None) -> str:
         if value is None or not value.strip():
             raise ValueError("Title cannot be blank")
+        return value
+
+    @field_validator("structured_fields")
+    @classmethod
+    def require_structured_fields(cls, value: GoalStructuredFields | None) -> GoalStructuredFields:
+        if value is None:
+            raise ValueError("Structured fields cannot be null")
         return value
 
     @model_validator(mode="after")
@@ -69,6 +77,22 @@ def _equivalent_text(original: object, proposed: object) -> bool:
         and len(proposed) - len(proposed.lstrip(" ")) < 4
         and original.split() == proposed.split()
     )
+
+
+def _equivalent_definition(original: object, proposed: object) -> bool:
+    if type(original) is not type(proposed):
+        return False
+    if isinstance(original, str):
+        return _equivalent_text(original, proposed)
+    if isinstance(original, dict) and isinstance(proposed, dict):
+        return original.keys() == proposed.keys() and all(
+            _equivalent_definition(original[key], proposed[key]) for key in original
+        )
+    if isinstance(original, list) and isinstance(proposed, list):
+        return len(original) == len(proposed) and all(
+            _equivalent_definition(left, right) for left, right in zip(original, proposed)
+        )
+    return original == proposed
 
 
 class GoalDefinitionProposalService:
@@ -181,9 +205,21 @@ class GoalDefinitionProposalService:
         content = deepcopy(source.content)
         changed = False
         for field, value in payload["changes"].items():
+            if field == "structured_fields":
+                merged = deepcopy(content[field])
+                if "deferred_requirements" in value and not _equivalent_definition(
+                    merged.get("deferred_requirements", []), value["deferred_requirements"]
+                ):
+                    raise ValueError("Proposal changes to deferred requirements are not supported yet")
+                merged.update(value)
+                previous = GoalStructuredFields.model_validate(content[field]).model_dump(mode="json")
+                proposed = GoalStructuredFields.model_validate(merged).model_dump(mode="json")
+                if _equivalent_definition(previous, proposed):
+                    continue
+                value = merged
             equivalent = (
-                _equivalent_text(content[field], value)
-                if field in {"title", "description"}
+                _equivalent_definition(content[field], value)
+                if field in {"title", "description", "structured_fields"}
                 else content[field] == value
             )
             if not equivalent:

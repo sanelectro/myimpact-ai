@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from app.services.goal_definition_proposals import GoalProposalChanges, _equivalent_text
+from app.services.goal_definition_proposals import (
+    GoalProposalChanges,
+    _equivalent_definition,
+    _equivalent_text,
+)
 
 
 @pytest.mark.parametrize(
@@ -25,7 +29,7 @@ def test_plain_text_whitespace_comparison_is_conservative(original, proposed, eq
 
 @pytest.mark.parametrize(
     "values",
-    [{}, {"title": None}, {"title": "   "}, {"goal_level": "ANNUAL"}],
+    [{}, {"title": None}, {"title": "   "}, {"structured_fields": None}, {"goal_level": "ANNUAL"}],
 )
 def test_text_proposal_rejects_empty_or_unsupported_changes(values):
     with pytest.raises(ValidationError):
@@ -45,3 +49,18 @@ def test_proposal_dates_are_serialized_and_invalid_dates_rejected():
     }
     with pytest.raises(ValidationError):
         GoalProposalChanges(start_date="not-a-date")
+
+
+def test_nested_proposal_comparison_preserves_types_order_and_formatting():
+    assert _equivalent_definition({"outcome": "Improve quality"}, {"outcome": "Improve  quality"})
+    assert not _equivalent_definition({"target": True}, {"target": 1})
+    assert not _equivalent_definition(["First", "Second"], ["Second", "First"])
+    assert not _equivalent_definition({"outcome": "- First"}, {"outcome": " - First"})
+    assert not _equivalent_definition({"outcome": "Value"}, {"outcome": "Value", "target": None})
+
+
+def test_structured_proposal_preserves_only_explicit_patch_fields():
+    changes = GoalProposalChanges(structured_fields={"outcome": "  Improve reliability  "})
+    assert changes.model_dump(mode="json", exclude_unset=True) == {
+        "structured_fields": {"outcome": "Improve reliability"}
+    }

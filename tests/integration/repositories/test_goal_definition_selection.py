@@ -383,6 +383,71 @@ def test_date_proposal_checks_merged_range_and_preserves_live_dates(goal_version
 
 
 @pytest.mark.integration
+def test_structured_proposal_merges_patch_without_mutating_current_goal(goal_version_engine):
+    owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
+    with Session(goal_version_engine) as session:
+        service = GoalDefinitionProposalService(session)
+        arguments = {
+            "goal_id": goal_id,
+            "actor_user_id": owner_id,
+            "expected_base_version_id": base_id,
+            "expected_relationship_revision": 0,
+        }
+        noop = service.stage_proposal(
+            **arguments,
+            idempotency_key="empty-default",
+            expected_proposal_revision=0,
+            changes=GoalProposalChanges(structured_fields={"deliverables": []}),
+        )
+        assert noop.outcome == "NO_CHANGE"
+        session.commit()
+        proposal = service.stage_proposal(
+            **arguments,
+            idempotency_key="structured",
+            expected_proposal_revision=0,
+            changes=GoalProposalChanges(structured_fields={
+                "outcome": "Improve reliability",
+                "deliverables": ["Release plan"],
+            }),
+        )
+        session.commit()
+        candidate = session.get(app.db.models.GoalVersionDB, proposal.version_id)
+        assert candidate.content["structured_fields"] == {
+            "outcome": "Improve reliability",
+            "deliverables": ["Release plan"],
+        }
+        assert GoalRepository(session).get_by_id(goal_id).structured_fields == {}
+        assert candidate.content["criterion_versions"] == []
+
+        whitespace = service.stage_proposal(
+            **arguments,
+            idempotency_key="whitespace",
+            expected_proposal_revision=1,
+            changes=GoalProposalChanges(structured_fields={"outcome": "Improve  reliability"}),
+        )
+        assert whitespace.outcome == "NO_CHANGE"
+        assert whitespace.version_id == proposal.version_id
+        session.commit()
+        with pytest.raises(ValueError, match="deferred requirements"):
+            service.stage_proposal(
+                **arguments,
+                idempotency_key="deferral",
+                expected_proposal_revision=1,
+                changes=GoalProposalChanges(structured_fields={
+                    "deferred_requirements": [{
+                        "requirement": "target",
+                        "reason": "Await planning",
+                        "resolution_stage": "Planning",
+                    }]
+                }),
+            )
+        session.rollback()
+        assert session.get(
+            app.db.models.GoalCommandReceiptDB, (owner_id, "PREPARE_DEFINITION", "deferral")
+        ) is None
+
+
+@pytest.mark.integration
 def test_text_proposal_rechecks_owner_revisions_and_live_baseline(goal_version_engine):
     owner_id, goal_id, base_id = _create_selected_baseline(goal_version_engine)
     with Session(goal_version_engine) as session:
